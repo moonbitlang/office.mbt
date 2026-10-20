@@ -90,7 +90,13 @@ fn codepoint_before(text : String, i : Int32) -> Int32 {
 /// after a space, after a hyphen-minus, or at a CJK boundary — unless a
 /// kinsoku rule forbids the surrounding characters from ending/starting a
 /// line. Index 0 (and the trail half of a surrogate pair) never breaks.
-pub fn can_break_at(text : String, i : Int32) -> Bool {
+/// `apply_default_kinsoku=false` leaves punctuation restrictions to a caller
+/// that resolves its own document or language-specific settings.
+pub fn can_break_at(
+  text : String,
+  i : Int32,
+  apply_default_kinsoku~ : Bool = true,
+) -> Bool {
   if i <= 0 || i >= text.length() {
     return false
   }
@@ -101,9 +107,11 @@ pub fn can_break_at(text : String, i : Int32) -> Bool {
   }
   let prev = codepoint_before(text, i - 1)
   let next = codepoint_at(text, i)
-  let (no_start, no_end) = kinsoku_sets()
-  if no_start.contains(next) || no_end.contains(prev) {
-    return false
+  if apply_default_kinsoku {
+    let (no_start, no_end) = kinsoku_sets()
+    if no_start.contains(next) || no_end.contains(prev) {
+      return false
+    }
   }
   if (is_space(prev) || is_tab(prev)) && !is_space(next) {
     return true

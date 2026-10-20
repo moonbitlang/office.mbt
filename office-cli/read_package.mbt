@@ -182,6 +182,7 @@ fn office_xlsx_read_limits() -> @xlsx.ReadLimits raise @xlsx.XlsxError {
 ///|
 async fn read_office_package(
   file : String,
+  presentation_render~ : Bool = false,
   cancelled~ : () -> Bool = () => false,
 ) -> OfficeReadPackage {
   check_office_read_cancelled(cancelled)
@@ -214,7 +215,14 @@ async fn read_office_package(
     error =>
       raise CliFailure(identify_error(InvalidPackage(error.to_string()), file))
   }
-  let format = detect_office_archive_format(file, archive, cancelled)
+  // Presentation rendering resolves and checks the actual referenced parts.
+  // Exporters may leave stale content-type overrides for deleted layouts; the
+  // strict identify/validate path continues to report those package findings.
+  let format = if presentation_render && expected is Pptx {
+    @lib.DocumentFormat::Pptx
+  } else {
+    detect_office_archive_format(file, archive, cancelled)
+  }
   { file, format, bytes: data, archive, }
 }
 

@@ -1,6 +1,6 @@
 # pagelayout
 
-Paginated document layout engine. Frontends (DOCX first) produce engine
+Paginated document layout engine. DOCX and [static PPTX](pptx/README.md) frontends produce engine
 input; the engine measures, line-breaks, and paginates into a format-neutral
 **page-model IR** — pages of positioned glyph runs, rectangles, images, and
 link regions; backends (SVG first, then PDF via pdflite) transcribe the IR.

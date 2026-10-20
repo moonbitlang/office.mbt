@@ -29,6 +29,7 @@ priv struct OfficePreviewStats {
   images_embedded : Int32
   images_omitted : Int32
   warnings : Array[String]
+  slides_rendered : Int32?
 }
 
 ///|
@@ -138,6 +139,7 @@ fn office_preview_render_xlsx(
     ),
     images_omitted: 0,
     warnings: [],
+    slides_rendered: None,
   }
   (html, stats)
 }
@@ -222,6 +224,7 @@ fn office_preview_render_docx(
     images_embedded,
     images_omitted,
     warnings,
+    slides_rendered: None,
   }
   (page.to_string(), stats)
 }
@@ -234,12 +237,17 @@ fn office_preview_report(
   stats : OfficePreviewStats,
 ) -> Json {
   let truncation : Map[String, Json] = {
-    "max_rows": Json::number(office_preview_max_rows.to_double()),
-    "max_cols": Json::number(office_preview_max_cols.to_double()),
-    "truncated_sheets": Json::array(
-      stats.truncated_sheets.map(name => Json::string(bounded_text(name, 80))),
-    ),
     "images_omitted": Json::number(stats.images_omitted.to_double()),
+  }
+  if source.format != Pptx {
+    truncation["max_rows"] = Json(office_preview_max_rows)
+    truncation["max_cols"] = Json(office_preview_max_cols)
+    truncation["truncated_sheets"] = Json(
+      stats.truncated_sheets.map(name => bounded_text(name, 80)),
+    )
+  }
+  if source.format == Pptx {
+    truncation["max_slides"] = Json(office_render_max_pages)
   }
   let fields : Map[String, Json] = {
     "schema": Json::string(@lib.SCHEMA_PREVIEW_RESULT),
@@ -253,6 +261,9 @@ fn office_preview_report(
     "charts_placeholder": Json::number(stats.charts_placeholder.to_double()),
     "images_embedded": Json::number(stats.images_embedded.to_double()),
     "truncation": Json::object(truncation),
+  }
+  if stats.slides_rendered is Some(count) {
+    fields["slides_rendered"] = Json(count)
   }
   if !stats.warnings.is_empty() {
     fields["warnings"] = Json::array(
@@ -275,9 +286,13 @@ async fn run_preview(matches : @argparse.Matches) -> Unit {
       ),
     )
   }
-  let source = read_office_package(file, cancelled=office_async_cancelled)
+  let source = read_office_package(
+    file,
+    cancelled=office_async_cancelled,
+    presentation_render=true,
+  )
   let (html, stats) = match source.format {
-    Pptx => raise pptx_unsupported("preview")
+    Pptx => office_preview_render_pptx(source, matches)
     Xlsx => office_preview_render_xlsx(source)
     Docx => office_preview_render_docx(source)
   }
@@ -340,11 +355,18 @@ fn preview_command() -> @argparse.Command {
     positionals=[
       PositionArg(
         "file",
-        about="path to an .xlsx or .docx file",
+        about="path to an .xlsx, .docx, or .pptx file",
         num_args=@argparse.ValueRange::single(),
       ),
     ],
-    options=[OptionArg("output", long="output", about="destination .html path")],
+    options=[
+      OptionArg("output", long="output", about="destination .html path"),
+      OptionArg(
+        "font-manifest",
+        long="font-manifest",
+        about="PPTX font catalog JSON",
+      ),
+    ],
     flags=[
       FlagArg(
         "overwrite",

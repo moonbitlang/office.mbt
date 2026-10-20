@@ -70,6 +70,7 @@ priv struct OfficeRenderStats {
   fonts_used : Int32
   unsupported : Array[String]
   unsupported_total : Int32
+  font_substitutions : Array[String]
   images_dropped : Int32
 }
 
@@ -218,16 +219,33 @@ fn office_render_select(
 /// whole so glyph runs keep their original indices, so its length describes
 /// the document rather than the selection. Rendering page 1 of a document
 /// whose later pages introduce other faces would otherwise report those too.
-fn office_render_font_count(selected : @pagelayout.PageModel) -> Int32 {
+fn office_render_used_fonts(
+  selected : @pagelayout.PageModel,
+) -> Array[@pagelayout.FontSpec] {
   let seen : Map[Int32, Unit] = Map([])
   for page in selected.pages {
     for item in page.items {
-      if item is Text(run) {
-        seen[run.font] = ()
+      match item {
+        Text(run) => seen[run.font] = ()
+        Graphic(graphic) =>
+          for op in graphic.ops {
+            match op {
+              Text(run) | PaintedText(run, _) => seen[run.font] = ()
+              _ => ()
+            }
+          }
+        _ => ()
       }
     }
   }
-  seen.length()
+  let ids = seen.keys().to_array()
+  ids.sort()
+  ids.map(id => selected.fonts[id])
+}
+
+///|
+fn office_render_font_count(selected : @pagelayout.PageModel) -> Int32 {
+  office_render_used_fonts(selected).length()
 }
 
 ///|
@@ -260,6 +278,7 @@ fn office_render_stats(
     fonts_used: office_render_font_count(selected),
     unsupported,
     unsupported_total: unsupported_all.length(),
+    font_substitutions: [],
     // "which images can this backend not embed" is a PDF question. SVG
     // embeds every image as a data URI, so asking the PDF checker about an
     // SVG render would report a malformed PNG as dropped while it sits in
@@ -350,13 +369,14 @@ async fn office_render_publish(
   overwrite : Bool,
   written : Int64,
   published : Array[String],
+  format~ : @lib.DocumentFormat = Docx,
 ) -> Int64 {
   let total = written + payload.length().to_int64()
   if payload.length() > office_render_max_output_bytes ||
     total > office_render_max_total_bytes {
     raise CliFailure(
       @lib.protocol_error(
-        "office.docx.resource_limit",
+        "office." + format.name() + ".resource_limit",
         "rendered output exceeds the configured limit",
         details=Json::object({
           "resource": Json::string(
@@ -435,7 +455,7 @@ fn office_render_report(
   written : Int64,
   stats : OfficeRenderStats,
 ) -> Json {
-  Json::object({
+  let fields : Map[String, Json] = {
     "schema": Json::string("office.render/1"),
     "file": Json::string(
       office_preview_clean_text(human_text(source.file, 512)),
@@ -471,7 +491,13 @@ fn office_render_report(
         RenderSvg => "cross-runtime"
       },
     ),
-  })
+  }
+  if !stats.font_substitutions.is_empty() {
+    fields["font_substitutions"] = Json::array(
+      stats.font_substitutions.map(Json::string),
+    )
+  }
+  Json::object(fields)
 }
 
 ///|
@@ -481,18 +507,28 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
   let overwrite = matches.flags.get_or_default("overwrite", false)
   let mode = office_validate_output_mode(matches)
   let backend = office_render_backend(output)
-  let source = read_office_package(file, cancelled=office_async_cancelled)
+  let source = read_office_package(
+    file,
+    cancelled=office_async_cancelled,
+    presentation_render=true,
+  )
   // XLSX has no frontend into the layout engine yet. Refusing by name beats
   // rendering a blank page, and beats a generic parse failure that reads like
   // the workbook is broken.
-  guard source.format is Docx else {
-    raise CliFailure(
-      @lib.protocol_error(
-        "office.xlsx.unsupported", "render currently draws DOCX only; the layout engine has no XLSX frontend",
-      ),
-    )
+  let presentation = match source.format {
+    Pptx => Some(office_pptx_layout(source, matches))
+    Docx => None
+    Xlsx =>
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.xlsx.unsupported", "the layout engine has no XLSX frontend",
+        ),
+      )
   }
-  let (model, unsupported) = office_render_layout(source)
+  let (model, unsupported) = match presentation {
+    Some(layout) => (layout.model, [])
+    None => office_render_layout(source)
+  }
   let pages = match matches.values.get("pages") {
     Some(values) if values.length() == 1 =>
       office_render_parse_pages(values[0], model.pages.length())
@@ -507,7 +543,7 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
   guard pages.length() <= office_render_max_pages else {
     raise CliFailure(
       @lib.protocol_error(
-        "office.docx.resource_limit",
+        "office." + source.format.name() + ".resource_limit",
         "render would publish more pages than the configured limit",
         details=Json::object({
           "resource": Json::string("render_pages"),
@@ -518,24 +554,56 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
     )
   }
   let selected = office_render_select(model, pages)
-  let stats = office_render_stats(model, selected, backend, unsupported)
+  let stats = {
+    ..office_render_stats(model, selected, backend, unsupported),
+    font_substitutions: presentation
+    .map(layout => layout.font_substitutions)
+    .unwrap_or([]),
+  }
   let outputs : Array[(String, Int32)] = []
   let published : Array[String] = []
   let mut written : Int64 = 0
   match backend {
     RenderPdf => {
       office_render_preflight([output], overwrite)
-      let payload = @pagelayout_pdf.render_pdf(selected) catch {
+      let options = match presentation {
+        Some(layout) => {
+          for font in office_render_used_fonts(selected) {
+            if layout.fonts.registered_face(
+                font.family,
+                bold=font.bold,
+                italic=font.italic,
+              )
+              is Some(face) &&
+              face.sfnt is Some(_) &&
+              face.program is None {
+              raise CliFailure(
+                @lib.protocol_error(
+                  "office.pptx.unsupported", "PDF cannot embed this CFF face; render SVG to retain it",
+                ),
+              )
+            }
+          }
+          @pagelayout_pdf.RenderOptions::new(fonts=layout.fonts)
+        }
+        None => @pagelayout_pdf.RenderOptions::new()
+      }
+      let payload = @pagelayout_pdf.render_pdf(selected, options~) catch {
         error =>
           raise CliFailure(
             @lib.protocol_error(
-              "office.docx.render_failed",
+              "office." + source.format.name() + ".render_failed",
               "cannot draw this document: \{error}",
             ),
           )
       }
       written = office_render_publish(
-        output, payload, overwrite, written, published,
+        output,
+        payload,
+        overwrite,
+        written,
+        published,
+        format=source.format,
       )
       outputs.push((output, payload.length()))
     }
@@ -555,7 +623,11 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
       // turns into gigabytes while each individual file stays well under the
       // per-file cap.
       for index, page in pages {
-        let document = @pagelayout_svg.render_page(selected, index)
+        let document = match presentation {
+          Some(layout) =>
+            @pagelayout_svg.render_page(selected, index, fonts=layout.fonts)
+          None => @pagelayout_svg.render_page(selected, index)
+        }
         let payload = @utf8.encode(document)
         written = office_render_publish(
           paths[index],
@@ -563,6 +635,7 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
           overwrite,
           written,
           published,
+          format=source.format,
         )
         outputs.push((paths[index], payload.length()))
         ignore(page)
@@ -575,7 +648,7 @@ async fn run_render(matches : @argparse.Matches) -> Unit {
     JsonLines => println(@lib.output_success(report).stringify())
     Human =>
       println(
-        "docx rendered to \{outputs.length()} \{backend.name()} file(s), " +
+        "\{source.format.name()} rendered to \{outputs.length()} \{backend.name()} file(s), " +
         "\{stats.pages_rendered} of \{stats.pages_total} page(s), \{written} bytes",
       )
   }
@@ -593,12 +666,17 @@ fn render_command() -> @argparse.Command {
     positionals=[
       PositionArg(
         "file",
-        about="path to a .docx file",
+        about="path to a .docx or .pptx file",
         num_args=@argparse.ValueRange::single(),
       ),
     ],
     options=[
       OptionArg("output", long="output", about="destination .pdf or .svg path"),
+      OptionArg(
+        "font-manifest",
+        long="font-manifest",
+        about="PPTX font catalog JSON",
+      ),
       OptionArg(
         "pages",
         long="pages",

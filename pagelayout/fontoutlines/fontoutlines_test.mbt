@@ -83,3 +83,35 @@ test "outline lookup falls back within a family but never across" {
     ),
   )
 }
+
+///|
+test "browser subsets preserve cmap glyphs and required tables" {
+  guard @fontoutlines.browser_sfnt("Noto Sans SC", codepoints=[
+      0x4e2d, 0x6587, 65,
+    ])
+    is Some(program) else {
+    fail("missing bundled face")
+  }
+  assert_true(program.length() < 1024 * 1024)
+  for
+    tag in [
+      "name", "OS/2", "post", "cmap", "glyf", "loca", "hhea", "hmtx", "maxp", "head",
+    ] {
+    assert_true(@pdflite.pdf_truetype_table(program, tag) is Some(_))
+  }
+  let glyphs = @pdflite.pdf_truetype_cmap_glyphs(program)
+  for (codepoint, expected) in [(0x4e2d, 8805), (0x6587, 14750), (65, 34)] {
+    assert_eq(
+      glyphs
+      .iter()
+      .find_first(entry => entry.codepoint == codepoint)
+      .map(entry => entry.glyph_index),
+      Some(expected),
+    )
+  }
+  let mut sum : UInt32 = 0
+  for at = 0; at < program.length(); at = at + 4 {
+    sum += program.unsafe_read_uint32_be(at)
+  }
+  assert_eq(sum, 0xb1b0afbaU)
+}

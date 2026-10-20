@@ -231,7 +231,7 @@ pub fn capability_formats() -> Array[CapabilityFormat] {
     {
       name: "pptx",
       aliases: ["powerpoint"],
-      description: "PresentationML presentations (identify, outline, text, and fresh creation)",
+      description: "PresentationML presentations (identify, outline, text, static preview/render, and fresh creation)",
       selector: {
         schema: "office.selector/1",
         root: "/pptx",
@@ -1502,11 +1502,16 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     {
       name: "preview",
       summary: "Render a deterministic offline HTML preview with inline assets",
-      usage: "office preview FILE --output OUT.html [--overwrite] [--json|--jsonl]",
-      formats: ["docx", "xlsx"],
+      usage: "office preview FILE --output OUT.html [--font-manifest FONTS.json] [--overwrite] [--json|--jsonl]",
+      formats: ["docx", "xlsx", "pptx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing XLSX or DOCX package"),
+        capability_field(
+          "font-manifest", "path", false, "PPTX font catalog JSON: entries name a family, path, bold/italic style, and optional fallback_for families; unsupported drawing features refuse explicitly",
+        ),
+        capability_field(
+          "file", "path", true, "existing XLSX, DOCX, or PPTX package",
+        ),
         capability_field(
           "output", "path", true, "destination .html file; created atomically, refused when present unless --overwrite",
         ),
@@ -1526,7 +1531,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("file", "path", true, "the input path, bounded"),
         capability_field(
-          "format", "enum(docx|xlsx)", true, "the structurally verified package format",
+          "format", "enum(docx|xlsx|pptx)", true, "the structurally verified package format",
         ),
         capability_field(
           "output", "path", true, "the published preview path, bounded",
@@ -1544,10 +1549,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "images_embedded", "integer", true, "images embedded as data URIs",
         ),
         capability_field(
-          "truncation", "object", true, "row/column caps, truncated sheet names, and omitted image count",
+          "truncation", "object", true, "format-specific limits: XLSX row/column caps and truncated sheet names; PPTX slide cap; omitted image count",
         ),
         capability_field(
-          "warnings", "array", false, "bounded converter warnings",
+          "slides_rendered", "integer", false, "PPTX slides included in the preview",
+        ),
+        capability_field(
+          "warnings", "array", false, "bounded converter warnings and explicit font substitutions",
         ),
       ],
       output_modes: ["human", "json", "jsonl"],
@@ -1555,12 +1563,15 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
     },
     {
       name: "render",
-      summary: "Lay out a DOCX and draw it as paginated PDF or SVG",
-      usage: "office render FILE --output OUT.(pdf|svg) [--pages RANGE] [--overwrite] [--json|--jsonl]",
-      formats: ["docx"],
+      summary: "Render DOCX pages or static PPTX slides as PDF or SVG",
+      usage: "office render FILE --output OUT.(pdf|svg) [--pages RANGE] [--font-manifest FONTS.json] [--overwrite] [--json|--jsonl]",
+      formats: ["docx", "pptx"],
       aliases: [],
       inputs: [
-        capability_field("file", "path", true, "existing DOCX package"),
+        capability_field(
+          "font-manifest", "path", false, "PPTX font catalog JSON: entries name a family, path, bold/italic style, and optional fallback_for families; unsupported drawing features refuse explicitly",
+        ),
+        capability_field("file", "path", true, "existing DOCX or PPTX package"),
         capability_field(
           "output", "path", true, "destination path; the extension selects the backend (.pdf or .svg). Created atomically, refused when present unless --overwrite. A multi-page SVG render writes <stem>-<n>.svg per page and publishes each file individually. Destinations are checked before any page is drawn, so an occupied path normally refuses with nothing written -- but that is a check and not a lock, and --overwrite skips it, so a later failure can still leave earlier pages published. Publication across the set does not roll back; when anything has landed the refusal is office.render.partial_publication and lists those paths under details.published",
         ),
@@ -1583,7 +1594,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
         ),
         capability_field("file", "path", true, "the input path, bounded"),
         capability_field(
-          "format", "literal(docx)", true, "the structurally verified package format",
+          "format", "enum(docx|pptx)", true, "the structurally verified package format",
         ),
         capability_field(
           "backend", "enum(pdf|svg)", true, "the emitter selected by the output extension",
@@ -1592,7 +1603,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "outputs", "array(object{path:path,bytes_written:integer})", true, "every published artifact in page order; one entry for PDF, one per rendered page for multi-page SVG",
         ),
         capability_field(
-          "bytes_written", "integer", true, "total bytes published across every artifact, accumulated in 64-bit. One artifact may not exceed 64 MiB and the set may not exceed 256 MiB; either ceiling refuses with office.docx.resource_limit",
+          "bytes_written", "integer", true, "total bytes published across every artifact, accumulated in 64-bit. One artifact may not exceed 64 MiB and the set may not exceed 256 MiB; either ceiling refuses with office.<format>.resource_limit",
         ),
         capability_field(
           "pages_rendered", "integer", true, "pages actually drawn, after --pages selection",
@@ -1607,10 +1618,13 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
           "page_height_pt", "number", true, "first rendered page height in points",
         ),
         capability_field(
-          "fonts_used", "integer", true, "distinct faces the rendered pages actually reference, counted over the selected pages rather than over the document. PDF embeds a subset of each; SVG only names them in font-family and embeds nothing, so this is a usage count and not an embedding count",
+          "fonts_used", "integer", true, "distinct faces the rendered pages actually reference, counted over the selected pages rather than over the document. PDF embeds a subset of each; PPTX SVG embeds registered font programs; DOCX SVG names bundled faces in font-family, so this is a usage count and not an embedding count",
         ),
         capability_field(
           "images_dropped", "integer", true, "image occurrences the PDF backend could not embed, summed across reasons rather than counted as distinct reasons. Always 0 for SVG, which embeds every image as a data URI and therefore drops none -- not because it carries no image data",
+        ),
+        capability_field(
+          "font_substitutions", "array(string)", false, "explicit PPTX font replacements used during measurement and rendering",
         ),
         capability_field(
           "unsupported", "array(string)", true, "bounded notices the layout frontend recorded for content it could not represent, each truncated to 512 characters. This is what the frontend chose to record, not a proof of completeness: some drops are still silent, floating drawings whose relationship does not resolve among them",

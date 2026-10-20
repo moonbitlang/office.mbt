@@ -1,0 +1,22 @@
+import {
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/fonts",
+  "moonbitlang/pagelayout/linebreak",
+  "moonbitlang/pagelayout/pptx/mtx",
+  "moonbit-community/flate/zip",
+  "moonbitlang/pptx/slide",
+  "moonbitlang/pptx/oxml",
+  "moonbitlang/pptx/units",
+  "moonbitlang/pptx/theme",
+  "moonbitlang/pptx/slide_master",
+  "moonbitlang/ooxml/opc",
+  "moonbitlang/ooxml/xml",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/string",
+  "moonbitlang/core/math",
+  "moonbitlang/core/cmp",
+}
+
+import {
+  "moonbitlang/pagelayout/svg",
+} for "wbtest"

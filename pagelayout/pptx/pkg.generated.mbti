@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pagelayout/pptx"
+
+import {
+  "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/fonts",
+}
+
+// Values
+pub fn layout_presentation(Bytes, fonts? : @fonts.FontRegistry, font_fallbacks? : Map[String, Array[String]], allow_bundled_fallbacks? : Bool) -> PresentationLayout raise
+
+// Errors
+pub suberror RenderError {
+  InvalidPresentation(String)
+  Unsupported(String)
+  MissingFont(String)
+}
+pub fn RenderError::output(Self, &Logger) -> Unit
+pub fn RenderError::to_string(Self) -> String
+pub impl Show for RenderError
+
+// Types and methods
+pub struct PresentationLayout {
+  model : @pagelayout.PageModel
+  fonts : @fonts.FontRegistry
+  slide_parts : Array[String]
+  font_substitutions : Array[String]
+}
+
+// Type aliases
+
+// Traits

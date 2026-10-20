@@ -28,14 +28,33 @@ fn is_trail_surrogate(unit : Int32) -> Bool {
 /// Every line keeps at least one character, so pathological widths
 /// terminate with one-character lines rather than looping; surrogate
 /// pairs are never split.
+/// `break_opportunity` can supply the document's own language or punctuation
+/// policy; omitted, the standard Latin/CJK policy is used.
+/// `line_end_adjustment(end)` excludes tracking or pair spacing after the last
+/// visible codepoint (exclusive UTF-16 index `end`) from wrapping and alignment.
+/// The advances still include that spacing between characters inside a line.
 pub fn break_lines(
   text : String,
   advances_pt : Array[Double],
   first_width_pt : Double,
   rest_width_pt : Double,
+  break_opportunity? : (String, Int32) -> Bool,
+  line_end_adjustment? : (Int32) -> Double,
 ) -> Array[LineRange] {
   let lines : Array[LineRange] = []
   let n = text.length()
+  fn adjusted_width(width : Double, start : Int32, end : Int32) -> Double {
+    let mut visible_end = end
+    while visible_end > start && is_space(text[visible_end - 1].to_int()) {
+      visible_end -= 1
+    }
+    if visible_end <= start {
+      return 0.0
+    }
+    width -
+    line_end_adjustment.map(adjust => adjust(visible_end)).unwrap_or(0.0)
+  }
+
   let mut line_start = 0
   // committed content width: interior spaces included, trailing run not
   let mut content_width = 0.0
@@ -46,7 +65,11 @@ pub fn break_lines(
   while i < n {
     let unit = text[i].to_int()
     if unit == '\n'.to_int() {
-      lines.push({ start: line_start, end: i, width_pt: content_width, })
+      lines.push({
+        start: line_start,
+        end: i,
+        width_pt: adjusted_width(content_width, line_start, i),
+      })
       line_start = i + 1
       content_width = 0.0
       pending_spaces = 0.0
@@ -59,11 +82,24 @@ pub fn break_lines(
       i += 1
       continue
     }
-    if can_break_at(text, i) {
+    let allowed = match break_opportunity {
+      Some(opportunity) => opportunity(text, i)
+      None => can_break_at(text, i)
+    }
+    if allowed {
       last_break = i
     }
     let limit = if lines.length() == 0 { first_width_pt } else { rest_width_pt }
-    let overflows = content_width + pending_spaces + advances_pt[i] > limit
+    let codepoint_end = if unit >= 0xD800 &&
+      unit <= 0xDBFF &&
+      i + 1 < n &&
+      is_trail_surrogate(text[i + 1].to_int()) {
+      i + 2
+    } else {
+      i + 1
+    }
+    let candidate = content_width + pending_spaces + advances_pt[i]
+    let overflows = adjusted_width(candidate, line_start, codepoint_end) > limit
     if overflows && content_width > 0.0 && !is_trail_surrogate(unit) {
       let break_at = if last_break > line_start { last_break } else { i }
       // the break point is the first code unit of the next line, so this
@@ -76,7 +112,11 @@ pub fn break_lines(
       for j in line_start..<visible_end {
         width += advances_pt[j]
       }
-      lines.push({ start: line_start, end: break_at, width_pt: width, })
+      lines.push({
+        start: line_start,
+        end: break_at,
+        width_pt: adjusted_width(width, line_start, visible_end),
+      })
       line_start = break_at
       content_width = 0.0
       pending_spaces = 0.0
@@ -89,7 +129,11 @@ pub fn break_lines(
     i += 1
   }
   if line_start < n || lines.length() == 0 {
-    lines.push({ start: line_start, end: n, width_pt: content_width, })
+    lines.push({
+      start: line_start,
+      end: n,
+      width_pt: adjusted_width(content_width, line_start, n),
+    })
   }
   lines
 }

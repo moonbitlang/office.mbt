@@ -1,4 +1,5 @@
-PPTX identification, bounded reading, and atomic creation use the unified CLI.
+PPTX identification, bounded reading, static rendering, and atomic creation
+use the unified CLI.
 
   $ office.exe create pptx deck.pptx --title 'Hello MoonBit' --json | jq -c '{success,format:.data.format,slides:.data.slide_count,committed:.data.transaction.committed}'
   {"success":true,"format":"pptx","slides":1,"committed":true}
@@ -32,11 +33,15 @@ PPTX identification, bounded reading, and atomic creation use the unified CLI.
   $ jq -c '{success,code:.error.code}' refusal.json
   {"success":false,"code":"office.invalid_arguments"}
 
-  $ office.exe preview deck.pptx --output preview.html --json > refusal.json 2>&1
-  [1]
+  $ office.exe preview deck.pptx --output preview.html --json | jq -c '{success,format:.data.format,slides:.data.slides_rendered}'
+  {"success":true,"format":"pptx","slides":1}
 
-  $ jq -c '{success,code:.error.code}' refusal.json
-  {"success":false,"code":"office.unsupported_format"}
+  $ grep -q 'Hello MoonBit' preview.html
+
+  $ office.exe render deck.pptx --output slide.svg --json | jq -c '{success,format:.data.format,pages:.data.pages_rendered,total:.data.pages_total}'
+  {"success":true,"format":"pptx","pages":1,"total":1}
+
+  $ grep -q 'Hello MoonBit' slide.svg
 
   $ office.exe outline deck.pptx --max-output-chars 100 --json > refusal.json 2>&1
   [1]
@@ -53,4 +58,4 @@ PPTX identification, bounded reading, and atomic creation use the unified CLI.
   {"success":false,"code":"office.format_mismatch"}
 
   $ office.exe help pptx --json | jq -c '[.data.records[].name]'
-  ["pptx","identify","outline","text","create"]
+  ["pptx","identify","outline","text","preview","render","create"]

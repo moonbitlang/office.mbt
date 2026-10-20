@@ -117,7 +117,7 @@ fn emit_text(
     x += run.advances_pt[i]
     i += 1
   }
-  sb.write_string("  <text x=\"")
+  sb.write_string("  <text xml:space=\"preserve\" x=\"")
   sb.write_string(xs.to_string())
   sb.write_string("\" y=\"")
   sb.write_string(num(run.baseline_pt))
@@ -206,7 +206,13 @@ fn emit_image(
 /// Render one page as a standalone SVG document. Link regions are
 /// non-visual and are emitted as inert metadata-free anchors only when
 /// they enclose no visible artwork — v1 skips them entirely.
-pub fn render_page(model : @pagelayout.PageModel, page_index : Int32) -> String {
+/// Supplying a catalog embeds the used, registered font programs and selects
+/// geometric text rendering to preserve the model's measured glyph geometry.
+pub fn render_page(
+  model : @pagelayout.PageModel,
+  page_index : Int32,
+  fonts? : @fonts.FontRegistry,
+) -> String {
   let page = model.pages[page_index]
   let sb = StringBuilder()
   sb.write_string(
@@ -218,8 +224,15 @@ pub fn render_page(model : @pagelayout.PageModel, page_index : Int32) -> String 
     fmt_num(page.width_pt) +
     " " +
     fmt_num(page.height_pt) +
-    "\">\n",
+    (if fonts is Some(_) {
+      "\" text-rendering=\"geometricPrecision\">\n"
+    } else {
+      "\">\n"
+    }),
   )
+  if fonts is Some(fonts) {
+    emit_fonts(sb, model, page, fonts)
+  }
   // explicit page background keeps the golden self-describing
   sb.write_string(
     "  <rect x=\"0\" y=\"0\" width=\"" +
@@ -228,7 +241,7 @@ pub fn render_page(model : @pagelayout.PageModel, page_index : Int32) -> String 
     fmt_num(page.height_pt) +
     "\" fill=\"#ffffff\"/>\n",
   )
-  let defs = Defs::new()
+  let defs = Defs::new(id_scope="page\{page_index + 1}-")
   for item in page.items {
     match item {
       Text(run) => emit_text(sb, model, run)
@@ -245,10 +258,13 @@ pub fn render_page(model : @pagelayout.PageModel, page_index : Int32) -> String 
 
 ///|
 /// Render every page, in order.
-pub fn render_pages(model : @pagelayout.PageModel) -> Array[String] {
+pub fn render_pages(
+  model : @pagelayout.PageModel,
+  fonts? : @fonts.FontRegistry,
+) -> Array[String] {
   let out : Array[String] = []
   for i in 0..<model.pages.length() {
-    out.push(render_page(model, i))
+    out.push(render_page(model, i, fonts?))
   }
   out
 }

@@ -93,6 +93,8 @@ pub fn standard_fonts() -> Array[String] {
 /// `register_standard`).
 pub struct RegisteredFace {
   metrics : FaceMetrics
+  /// Original sfnt, including CFF outlines, for OpenType-capable renderers.
+  sfnt : Bytes?
   /// The complete sfnt to embed, or None when the bytes carry no TrueType
   /// outlines (no `glyf`/`loca`, as in a metrics-only sfnt or a CFF-flavoured
   /// OpenType font). A face without a program is declared in a PDF by name
@@ -118,6 +120,13 @@ pub struct FontRegistry {
 /// as the package-level functions do: bundled faces only.
 pub fn FontRegistry::new() -> FontRegistry {
   { faces: Map([]), closed: false, }
+}
+
+///|
+/// An independent, open font catalog carrying the same immutable faces.
+/// Document readers can add embedded faces without changing a caller's catalog.
+pub fn FontRegistry::clone(self : FontRegistry) -> FontRegistry {
+  { faces: self.faces.copy(), closed: false, }
 }
 
 ///|
@@ -161,7 +170,14 @@ pub fn FontRegistry::register(
   } else {
     None
   }
-  self.faces[key] = { metrics, program, standard: None, }
+  let sfnt = if program is Some(_) ||
+    @pdflite.pdf_truetype_table(sfnt, "CFF ") is Some(_) ||
+    @pdflite.pdf_truetype_table(sfnt, "CFF2") is Some(_) {
+    Some(sfnt)
+  } else {
+    None
+  }
+  self.faces[key] = { metrics, sfnt, program, standard: None, }
   metrics
 }
 
@@ -214,7 +230,12 @@ pub fn FontRegistry::register_standard(
   // the face's identity is its registration, as `register` gives it; the
   // tables are immutable and shared
   let metrics = { ..metrics, family, bold, italic, }
-  self.faces[key] = { metrics, program: None, standard: Some(standard), }
+  self.faces[key] = {
+    metrics,
+    sfnt: None,
+    program: None,
+    standard: Some(standard),
+  }
   metrics
 }
 

@@ -6,13 +6,15 @@ readme = "README.mbt.md"
 
 repository = "https://github.com/moonbitlang/office.mbt"
 
-license = "Apache-2.0"
+license = "Apache-2.0 AND MPL-2.0"
 
 keywords = [ "layout", "pagination", "docx", "svg", "pdf", "typesetting" ]
 
 description = "Paginated document layout engine: format-neutral page-model IR with SVG/PDF backends."
 
 import {
+  "moonbitlang/pptx@0.1.0",
+  "moonbitlang/ooxml@0.1.0",
   "moonbitlang/async@0.22.5",
   "moonbitlang/x@0.5.6",
   "moonbitlang/docx2html@0.7.0",

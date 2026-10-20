@@ -30,8 +30,16 @@ pub struct FaceMetrics {
   ascender : Int32
   descender : Int32
   line_gap : Int32
+  /// OpenType OS/2 typographic metrics; hhea metrics when OS/2 is absent.
+  typo_ascender : Int32
+  typo_descender : Int32
+  typo_line_gap : Int32
+  /// Top of an underline relative to the baseline, in font units.
+  underline_position : Int32
+  underline_thickness : Int32
   priv advances : Array[Int32]
   priv cmap : Map[Int32, Int32]
+  priv kerning : Map[(Int32, Int32), Int32]
 }
 
 ///|
@@ -119,8 +127,14 @@ pub fn FaceMetrics::new(
     ascender,
     descender,
     line_gap,
+    typo_ascender: ascender,
+    typo_descender: descender,
+    typo_line_gap: line_gap,
+    underline_position: -units_per_em / 10,
+    underline_thickness: @cmp.maximum(1, units_per_em / 20),
     advances: advances.copy(),
     cmap: cmap.copy(),
+    kerning: Map([]),
   }
 }
 
@@ -165,6 +179,23 @@ pub fn FaceMetrics::advance_pt(
 }
 
 ///|
+/// Horizontal adjustment from a legacy TrueType `kern` pair, in points.
+/// Fonts without that table (and caller-constructed AFM metrics) return zero.
+pub fn FaceMetrics::kerning_pt(
+  self : FaceMetrics,
+  left : Int32,
+  right : Int32,
+  size_pt : Double,
+) -> Double {
+  guard self.glyph_id(left) is Some(left) && self.glyph_id(right) is Some(right) else {
+    return 0
+  }
+  self.kerning.get((left, right)).unwrap_or(0).to_double() *
+  size_pt /
+  self.units_per_em.to_double()
+}
+
+///|
 /// Whether the face maps `codepoint` to a real glyph.
 pub fn FaceMetrics::has_char(self : FaceMetrics, codepoint : Int32) -> Bool {
   self.cmap.get(codepoint) is Some(glyph) && glyph != 0
@@ -191,6 +222,45 @@ pub fn FaceMetrics::line_height_pt(
   (self.ascender - self.descender + self.line_gap).to_double() *
   size_pt /
   self.units_per_em.to_double()
+}
+
+///|
+/// Recommended typographic descent (negative), independent of the hhea ink
+/// extent, for positioning text within exact line boxes.
+pub fn FaceMetrics::typographic_descent_pt(
+  self : FaceMetrics,
+  size_pt : Double,
+) -> Double {
+  self.typo_descender.to_double() * size_pt / self.units_per_em.to_double()
+}
+
+///|
+/// Recommended single line spacing from OS/2, falling back to hhea.
+pub fn FaceMetrics::typographic_line_height_pt(
+  self : FaceMetrics,
+  size_pt : Double,
+) -> Double {
+  (self.typo_ascender - self.typo_descender + self.typo_line_gap).to_double() *
+  size_pt /
+  self.units_per_em.to_double()
+}
+
+///|
+/// Distance from the baseline down to the top of an underline, in points.
+pub fn FaceMetrics::underline_offset_pt(
+  self : FaceMetrics,
+  size_pt : Double,
+) -> Double {
+  -self.underline_position.to_double() * size_pt / self.units_per_em.to_double()
+}
+
+///|
+/// The font's recommended underline thickness, in points.
+pub fn FaceMetrics::underline_width_pt(
+  self : FaceMetrics,
+  size_pt : Double,
+) -> Double {
+  self.underline_thickness.to_double() * size_pt / self.units_per_em.to_double()
 }
 
 ///|
@@ -227,6 +297,23 @@ fn parse_sfnt(
   let ascender = read_i16(data, hhea.offset + 4)
   let descender = read_i16(data, hhea.offset + 6)
   let line_gap = read_i16(data, hhea.offset + 8)
+  let (typo_ascender, typo_descender, typo_line_gap) = match
+    @pdflite.pdf_truetype_table(data, "OS/2") {
+    Some(table) if table.length >= 74 =>
+      (
+        read_i16(data, table.offset + 68),
+        read_i16(data, table.offset + 70),
+        read_i16(data, table.offset + 72),
+      )
+    _ => (ascender, descender, line_gap)
+  }
+  let (underline_position, underline_thickness) = match
+    @pdflite.pdf_truetype_table(data, "post") {
+    Some(table) if table.length >= 12 && read_i16(data, table.offset + 10) > 0 =>
+      (read_i16(data, table.offset + 8), read_i16(data, table.offset + 10))
+    _ =>
+      (-metrics.units_per_em / 10, @cmp.maximum(1, metrics.units_per_em / 20))
+  }
   {
     family,
     bold,
@@ -235,8 +322,14 @@ fn parse_sfnt(
     ascender,
     descender,
     line_gap,
+    typo_ascender,
+    typo_descender,
+    typo_line_gap,
+    underline_position,
+    underline_thickness,
     advances: metrics.advance_widths,
     cmap,
+    kerning: parse_legacy_kerning(data),
   }
 }
 

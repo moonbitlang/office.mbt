@@ -1,7 +1,8 @@
 # PPTX integration
 
 The source-tree Office CLI supports PPTX identification, a slide outline,
-slide/notes text extraction, and fresh one-slide creation. Check the installed
+slide/notes text extraction, static HTML/SVG/PDF rendering, and fresh one-slide
+creation. Check the installed
 version's `office help pptx --json` before relying on these commands; a source
 change does not establish that a Mooncakes release has been published.
 
@@ -10,6 +11,8 @@ moon run --target native office-cli -- create pptx demo.pptx --title "Hello Moon
 moon run --target native office-cli -- identify demo.pptx --json
 moon run --target native office-cli -- outline demo.pptx --json
 moon run --target native office-cli -- text demo.pptx --offset 0 --limit 10 --json
+moon run --target native office-cli -- preview demo.pptx --output demo.html --json
+moon run --target native office-cli -- render demo.pptx --output demo.svg --json
 ```
 
 ## SDK and commands
@@ -64,11 +67,35 @@ It excludes inherited layout/master text, chart labels, SmartArt, and embedded
 documents. It is a content extraction view, not a rendering of the slide.
 
 PPTX selectors (`get`, `query`, and `text --under`), batch authoring, editing an
-existing deck, raw editing, dump/replay, preview, and rendering are not yet
+existing deck, raw editing, and dump/replay are not yet
 advertised as supported. `validate`/`issues` remain DOCX/XLSX commands; the shared
 identification and create checks do not constitute a new PPTX validation command.
 The lower-level [PPTX library](../pptx/README.mbt.md) exposes additional building
 and editing functionality independently of the CLI.
+
+## Static rendering
+
+`moonbitlang/pagelayout/pptx.layout_presentation` returns the slide PageModel,
+its measuring font registry, ordered slide parts and explicit font substitutions.
+Pass that registry to the SVG renderer. The [renderer guide](../pagelayout/pptx/README.md)
+lists supported drawing features and the features that currently refuse.
+
+Preview renders every slide into offline HTML with inline SVG and font programs.
+The report includes `slides_rendered`, `images_embedded` and font warnings;
+its limits are slide limits, rather than worksheet row/column windows. Rendering
+supports the shared `--pages` selection and output publication limits. PDF
+currently refuses a used CFF face; SVG preserves its original font program.
+
+An optional `--font-manifest FONTS.json` supplies local TrueType/OpenType fonts
+and explicit replacement chains. Entries contain `family`, `path`, `bold`,
+`italic`, and optionally `fallback_for`. Caller faces take precedence over
+embedded uncompressed, XOR-obfuscated or MTX-compressed fonts. Without an exact
+face, the CLI uses bundled replacements and reports them. Matching PowerPoint's
+own font substitutions can require fonts installed on the reference machine.
+
+Private decks, reference PDFs and installed font programs belong outside the
+repository. MTX source is MPL-2.0; its license and attribution are shipped in
+`pagelayout/pptx/mtx/`.
 
 ## Follow-up work
 

@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/pagelayout/pptx/mtx"
+
+// Values
+pub fn decompress(Bytes) -> Bytes raise
+
+// Errors
+pub suberror DecodeError {
+  InvalidMtx(String)
+}
+pub fn DecodeError::output(Self, &Logger) -> Unit
+pub fn DecodeError::to_string(Self) -> String
+pub impl Show for DecodeError
+
+// Types and methods
+
+// Type aliases
+
+// Traits

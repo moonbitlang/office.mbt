@@ -1,0 +1,4 @@
+MoonBit implementation adapted from mtx-decompressor 1.8.0 by ChristopherVR:
+https://github.com/ChristopherVR/mtx-decompressor
+The adapted files in this directory are licensed under MPL-2.0; see LICENSE.
+The surrounding pagelayout module retains its own license.

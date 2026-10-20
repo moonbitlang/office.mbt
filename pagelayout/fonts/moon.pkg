@@ -1,4 +1,5 @@
 import {
   "moonbitlang/pdflite",
   "moonbitlang/pdflite/flate",
+  "moonbitlang/core/cmp",
 }

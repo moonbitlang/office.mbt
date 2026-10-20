@@ -1,8 +1,5 @@
 import {
+  "moonbitlang/pdflite",
   "moonbitlang/pdflite/codec",
   "moonbitlang/pdflite/flate",
 }
-
-import {
-  "moonbitlang/pdflite",
-} for "test"

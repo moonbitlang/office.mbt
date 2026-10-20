@@ -426,17 +426,18 @@ fn matrix_attr(m : @pagelayout.Matrix) -> String {
 priv struct Defs {
   mut last : Int32
   gradients : Map[String, String]
+  id_scope : String
 }
 
 ///|
-fn Defs::new() -> Defs {
-  { last: 0, gradients: Map([]), }
+fn Defs::new(id_scope~ : String = "") -> Defs {
+  { last: 0, gradients: Map([]), id_scope, }
 }
 
 ///|
 fn Defs::next(self : Defs, prefix : String) -> String {
   self.last += 1
-  "\{prefix}\{self.last}"
+  "\{self.id_scope}\{prefix}\{self.last}"
 }
 
 ///|

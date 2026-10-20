@@ -7,9 +7,9 @@ import {
 }
 
 // Values
-pub fn break_lines(String, Array[Double], Double, Double) -> Array[LineRange]
+pub fn break_lines(String, Array[Double], Double, Double, break_opportunity? : (String, Int32) -> Bool, line_end_adjustment? : (Int32) -> Double) -> Array[LineRange]
 
-pub fn can_break_at(String, Int32) -> Bool
+pub fn can_break_at(String, Int32, apply_default_kinsoku? : Bool) -> Bool
 
 pub fn is_cjk(Int32) -> Bool
 

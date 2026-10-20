@@ -2,6 +2,8 @@
 package "moonbitlang/pagelayout/fontoutlines"
 
 // Values
+pub fn browser_sfnt(String, bold? : Bool, italic? : Bool, codepoints? : Array[Int32]) -> Bytes? raise
+
 pub fn outline_sfnt(String, bold? : Bool, italic? : Bool) -> Bytes?
 
 pub fn outlined_families() -> Array[String]

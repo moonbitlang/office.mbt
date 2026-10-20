@@ -38,13 +38,13 @@ test "a graphic renders as nested groups, clips, paths and gradients" {
       #|  <rect x="0" y="0" width="100" height="50" fill="#ffffff"/>
       #|  <g transform="translate(10 5)">
       #|  <g transform="matrix(2 0 0 2 0 0)">
-      #|  <clipPath id="c1"><path d="M0 10h20v-10h-20Z" clip-rule="nonzero"/></clipPath>
-      #|  <g clip-path="url(#c1)">
-      #|  <linearGradient id="g2" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)" x1="0" y1="0" x2="10" y2="0">
+      #|  <clipPath id="page1-c1"><path d="M0 10h20v-10h-20Z" clip-rule="nonzero"/></clipPath>
+      #|  <g clip-path="url(#page1-c1)">
+      #|  <linearGradient id="page1-g2" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)" x1="0" y1="0" x2="10" y2="0">
       #|    <stop offset="0" stop-color="#ffffff"/>
       #|    <stop offset="1" stop-color="#000000"/>
       #|  </linearGradient>
-      #|  <path d="M0 0L10 0L10 10Z" fill="url(#g2)" fill-rule="evenodd" fill-opacity="0.5" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10" stroke-dasharray="2 1"/>
+      #|  <path d="M0 0L10 0L10 10Z" fill="url(#page1-g2)" fill-rule="evenodd" fill-opacity="0.5" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10" stroke-dasharray="2 1"/>
       #|  </g>
       #|  </g>
       #|  </g>
@@ -96,9 +96,9 @@ test "painted text takes its fill and stroke opacities separately" {
       #|<svg xmlns="http://www.w3.org/2000/svg" width="100pt" height="50pt" viewBox="0 0 100 50">
       #|  <rect x="0" y="0" width="100" height="50" fill="#ffffff"/>
       #|  <g transform="translate(0 0)">
-      #|  <text x="0" y="10" font-family="Sans" font-size="10" fill="none" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10">A</text>
-      #|  <text x="0" y="10" font-family="Sans" font-size="10" fill="#000000" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10" stroke-opacity="0">A</text>
-      #|  <text x="0" y="10" font-family="Sans" font-size="10" fill="#000000" fill-opacity="0.5">A</text>
+      #|  <text xml:space="preserve" x="0" y="10" font-family="Sans" font-size="10" fill="none" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10">A</text>
+      #|  <text xml:space="preserve" x="0" y="10" font-family="Sans" font-size="10" fill="#000000" stroke="#ff0000" stroke-width="1" stroke-miterlimit="10" stroke-opacity="0">A</text>
+      #|  <text xml:space="preserve" x="0" y="10" font-family="Sans" font-size="10" fill="#000000" fill-opacity="0.5">A</text>
       #|  </g>
       #|</svg>
       #|
@@ -465,7 +465,7 @@ test "gradient stops at the ends: only the one nearer the middle is written" {
   inspect(
     svg[start:end + "</radialGradient>".length()],
     content=(
-      #|<radialGradient id="g1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)" fx="5" fy="5" fr="0" cx="5" cy="5" r="5">
+      #|<radialGradient id="page1-g1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(1 0 0 1 0 0)" fx="5" fy="5" fr="0" cx="5" cy="5" r="5">
       #|    <stop offset="0" stop-color="#ff0000"/>
       #|    <stop offset="0.5" stop-color="#0000ff"/>
       #|    <stop offset="1" stop-color="#00ff00"/>
@@ -499,7 +499,7 @@ test "small transformations and fine coordinates survive in SVG" {
       #|  <g transform="matrix(0.0001 0 0 0.0001 0 0)">
       #|  <path d="M0 600000.25h1000000v-600000.25h-1000000Z" fill="#000000"/>
       #|  <g transform="matrix(1e-7 0 0 1e-7 0.00025 0)">
-      #|  <text x="1234.0005" y="10" font-family="Sans" font-size="100000000" fill="#000000">A</text>
+      #|  <text xml:space="preserve" x="1234.0005" y="10" font-family="Sans" font-size="100000000" fill="#000000">A</text>
       #|  </g>
       #|  </g>
       #|  </g>
@@ -549,9 +549,9 @@ test "a gradient used again on the page is defined once" {
   })
   let svg = @svg.render_page(model, 0)
   assert_eq(svg.split("<linearGradient").count() - 1, 2)
-  assert_eq(svg.split("url(#g1)").count() - 1, 4)
-  assert_true(svg.contains("<clipPath id=\"c2\">"))
-  assert_true(svg.contains("fill=\"url(#g3)\""))
+  assert_eq(svg.split("url(#page1-g1)").count() - 1, 4)
+  assert_true(svg.contains("<clipPath id=\"page1-c2\">"))
+  assert_true(svg.contains("fill=\"url(#page1-g3)\""))
 }
 
 ///|

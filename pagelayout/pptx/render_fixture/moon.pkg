@@ -1,0 +1,15 @@
+import {
+  "moonbitlang/pagelayout/pptx",
+  "moonbitlang/pagelayout/fonts",
+  "moonbitlang/pagelayout/svg",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

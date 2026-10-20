@@ -28,7 +28,7 @@ test "one-paragraph page renders deterministic svg" {
     content=(
       #|<svg xmlns="http://www.w3.org/2000/svg" width="612pt" height="792pt" viewBox="0 0 612 792">
       #|  <rect x="0" y="0" width="612" height="792" fill="#ffffff"/>
-      #|  <text x="72 79.477 85.447 88.201 90.955 97.283 99.996 105.51 112.318" y="83.426" font-family="Carlito" font-size="12" fill="#000000">Hello SVG</text>
+      #|  <text xml:space="preserve" x="72 79.477 85.447 88.201 90.955 97.283 99.996 105.51 112.318" y="83.426" font-family="Carlito" font-size="12" fill="#000000">Hello SVG</text>
       #|</svg>
       #|
     ),
@@ -125,7 +125,7 @@ test "per-code-unit x positions come from the advances" {
   let model = hello_model()
   let svg = @svg.render_page(model, 0)
   // "Hello SVG" = 9 code units -> 9 x positions in the list
-  let marker = "<text x=\""
+  let marker = "<text xml:space=\"preserve\" x=\""
   guard! svg.find(marker) is Some(at)
   let after = svg[at + marker.length():].to_owned()
   guard! after.find("\"") is Some(close)

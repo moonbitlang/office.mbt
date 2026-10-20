@@ -3,12 +3,13 @@ package "moonbitlang/pagelayout/svg"
 
 import {
   "moonbitlang/pagelayout",
+  "moonbitlang/pagelayout/fonts",
 }
 
 // Values
-pub fn render_page(@pagelayout.PageModel, Int32) -> String
+pub fn render_page(@pagelayout.PageModel, Int32, fonts? : @fonts.FontRegistry) -> String
 
-pub fn render_pages(@pagelayout.PageModel) -> Array[String]
+pub fn render_pages(@pagelayout.PageModel, fonts? : @fonts.FontRegistry) -> Array[String]
 
 // Errors
 

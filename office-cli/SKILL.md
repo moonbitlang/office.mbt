@@ -3,7 +3,7 @@ name: office-cli
 description: >-
   Inspect, create, edit, validate, and preview DOCX and XLSX files through the
   unified Office CLI, including comments, tracked changes, transactional edits,
-  DOCX rendering to PDF or SVG, and PPTX identification, slide/notes text reads,
+  DOCX and static PPTX rendering to PDF or SVG, PPTX identification, slide/notes text reads,
   and fresh one-slide creation. Use when working with this CLI or when a
   portable command-line workflow fits the document task. Does not edit existing
   PDFs or PowerPoint files.
@@ -59,8 +59,8 @@ currently deprecated, so do not assume a native launcher is always available.
 | Edit XLSX | `batch BOOK.xlsx SCRIPT.json --out OUT.xlsx` |
 | Fill templates | `template FILE DATA.json --out OUT` |
 | Check package and findings | `validate FILE --json`; `issues FILE --json` |
-| HTML preview | `preview FILE --output OUT.html --json` for DOCX or XLSX |
-| Paginated DOCX rendering | `render FILE.docx --output OUT.pdf --json` or `--output OUT.svg`; optional `--pages RANGE` |
+| HTML preview | `preview FILE --output OUT.html --json` for DOCX, XLSX or PPTX |
+| Page/slide rendering | `render FILE.docx --output OUT.pdf --json` or `render FILE.pptx --output OUT.svg --json`; optional `--pages RANGE` |
 | Semantic export/import | `dump FILE --json`; `replay DUMP.json --output OUT` |
 | OOXML fallback | `raw list`, `raw read`, `raw replace`, `raw edit` |
 
@@ -222,7 +222,7 @@ result. Select checks appropriate to the content and delivery requirements:
   formula masters, not shared/array slaves; no findings does not prove every
   formula correct.
 - **Appearance:** open the generated HTML preview in an available viewer, or
-  render DOCX to PDF/SVG and inspect it. Check `pages_total`, `images_dropped`,
+  render DOCX or static PPTX to PDF/SVG and inspect it. Check `pages_total`, `images_dropped`,
   and `unsupported` notices; notices are not exhaustive. Rendering is not a
   guarantee of Word-identical pagination or viewer-computed field results.
   Report whether the result was actually viewed, rather than equating generated
