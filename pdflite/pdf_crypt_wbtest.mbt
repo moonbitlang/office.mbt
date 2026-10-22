@@ -979,6 +979,27 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
   guard result is Err(@core.PdfError::InvalidCryptoDataLength(1)) else {
     fail("expected invalid AESV3 CBC data length")
   }
+  // Preserve the adapter's empty-input and IV truncation behavior.
+  let iv = Bytes::new(16)
+  @test.assert_eq(pdf_aesv3_cbc_encrypt_no_padding_with_iv(b"", iv, b""), b"")
+  let block = Bytes::new(32)
+  @test.assert_eq(
+    pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(24), block),
+    pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, iv, block),
+  )
+  let short_iv = @test.expect_error(() => {
+    ignore(pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, b"", b""))
+  })
+  guard short_iv is EncryptionDictionaryEntryTooShort(name) &&
+    name == pdf_crypt_iv_name else {
+    fail("expected the IV check before the empty-input return")
+  }
+  let invalid_key = @test.expect_error(() => {
+    ignore(pdf_aesv3_cbc_encrypt_no_padding_with_iv(b"", iv, block))
+  })
+  guard invalid_key is CryptoKeyExpected else {
+    fail("expected an invalid key to be rejected for nonempty input")
+  }
 }
 
 ///|

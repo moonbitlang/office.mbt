@@ -114,7 +114,7 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
     Entries => "entry_count"
     EntryUncompressedBytes => "entry_uncompressed_bytes"
     TotalUncompressedBytes => "total_uncompressed_bytes"
-    PreservedSourceBytes => "total_preserved_source_bytes"
+    DirectoryBytes => "directory_bytes"
     OutputBytes => "output_bytes"
   }
 }
@@ -127,7 +127,7 @@ fn office_zip_read_failure(
 ) -> CliFailure {
   match error {
     ZipError(LimitExceeded(OutputBytes, limit, _actual), _) =>
-      format_resource_failure(expected.name(), "ZIP output", limit)
+      format_resource_failure(expected.name(), "ZIP output", limit.to_int())
     ZipError(LimitExceeded(kind, limit, actual), _) =>
       CliFailure(
         @lib.protocol_error(
@@ -201,7 +201,6 @@ async fn read_office_package(
       max_entries=office_read_max_zip_entries,
       max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
       max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-      max_preserved_source_bytes=office_read_max_preserved_source_bytes,
     ),
     cancelled~,
   ) catch {

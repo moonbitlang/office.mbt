@@ -16,12 +16,7 @@ fn corrupt_sheet1(bytes : Bytes, old : String, new : String) -> Bytes raise {
   let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != part {
-      rebuilt.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      rebuilt.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   rebuilt.add(part, @encoding/utf8.encode(updated))
@@ -199,12 +194,7 @@ test "malformed defined name is rejected" {
   let rebuilt = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != part {
-      rebuilt.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      rebuilt.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   rebuilt.add(part, @encoding/utf8.encode(updated))

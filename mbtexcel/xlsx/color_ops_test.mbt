@@ -54,7 +54,6 @@ test "get base color from theme and indexed colors" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

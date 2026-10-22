@@ -62,12 +62,7 @@ fn raw_test_add_hash_clustered_parts(
     } else {
       entry.data().to_owned()
     }
-    output.add(
-      entry.name(),
-      payload,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    output.add(entry.name(), payload, compression=entry.compression())
   }
   if !content_types_updated {
     fail("test archive did not contain [Content_Types].xml")
@@ -90,20 +85,10 @@ fn raw_test_replace_entry(
   let mut found = false
   for entry in source.entries() {
     if entry.name() == name {
-      output.add(
-        entry.name(),
-        payload,
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      output.add(entry.name(), payload, compression=entry.compression())
       found = true
     } else {
-      output.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      output.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   if !found {
@@ -135,12 +120,7 @@ fn raw_test_add_entry(
   let source = @zip.read(data)
   let output = @zip.Archive()
   for entry in source.entries() {
-    output.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    output.add(entry.name(), entry.data(), compression=entry.compression())
   }
   output.add(name, payload)
   @zip.write(output, preserve=true)
@@ -665,12 +645,7 @@ fn raw_reencode_package_xml_as_utf16(data : BytesView) -> Bytes raise {
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      payload,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), payload, compression=entry.compression())
   }
   @zip.write(result, preserve=true)
 }
@@ -908,15 +883,10 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
   // Keep both directory records first so a later Part edit cannot change their
   // local offsets. That lets this test pin their local and central records
   // byte-for-byte, including the otherwise-valid case distinction.
-  archive.add("word/", b"", compression=Store, data_descriptor=false)
-  archive.add("WORD/", b"", compression=Store, data_descriptor=false)
+  archive.add("word/", b"", compression=Store)
+  archive.add("WORD/", b"", compression=Store)
   for entry in source.entries() {
-    archive.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    archive.add(entry.name(), entry.data(), compression=entry.compression())
   }
   let with_directory = @zip.write(archive, preserve=true)
   let baseline = @raw.raw_inventory("baseline.docx", original)
@@ -954,15 +924,10 @@ test "raw inventory excludes ZIP directory markers and mutations preserve them" 
   )
 
   let duplicate = @zip.Archive()
-  duplicate.add("word/", b"", compression=Store, data_descriptor=false)
-  duplicate.add("word/", b"", compression=Store, data_descriptor=false)
+  duplicate.add("word/", b"", compression=Store)
+  duplicate.add("word/", b"", compression=Store)
   for entry in source.entries() {
-    duplicate.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    duplicate.add(entry.name(), entry.data(), compression=entry.compression())
   }
   let (code, message) = raw_inventory_message_for(
     "duplicate-directory.docx",

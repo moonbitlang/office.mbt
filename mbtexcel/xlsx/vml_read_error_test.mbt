@@ -15,12 +15,7 @@ test "read: missing legacyDrawing vml relationship errors" {
   let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/_rels/sheet1.xml.rels" {
-      updated.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      updated.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   updated.add(
@@ -69,12 +64,7 @@ test "read: missing legacyDrawingHF vml relationship errors" {
   let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != "xl/worksheets/_rels/sheet1.xml.rels" {
-      updated.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      updated.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   updated.add(

@@ -101,7 +101,6 @@ fn xlsx_bounded_test_source(
       max_entries=office_read_max_zip_entries,
       max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
       max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-      max_preserved_source_bytes=office_read_max_preserved_source_bytes,
     ),
   )
   { file, format: Xlsx, bytes: Bytes::new(0), archive, }
@@ -342,12 +341,7 @@ fn xlsx_default_declared_relocated_test_bytes() -> Bytes raise {
     } else {
       entry.data().to_owned()
     }
-    archive.add(
-      entry.name(),
-      data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    archive.add(entry.name(), data, compression=entry.compression())
   }
   @zip.write(archive, preserve=true)
 }
@@ -1258,7 +1252,6 @@ test "XLSX structured reads reject non-finite package numbers" {
       max_entries=office_read_max_zip_entries,
       max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
       max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-      max_preserved_source_bytes=office_read_max_preserved_source_bytes,
     ),
   )
   let source : OfficeReadPackage = {

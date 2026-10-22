@@ -101,6 +101,22 @@ pub fn pdf_aes_cbc_decrypt(
 }
 
 ///|
+/// Encrypt complete AES-CBC blocks with an explicit 16-byte IV.
+/// No padding or IV prefix is added. The key schedule is reused for all blocks.
+pub fn pdf_aes_cbc_encrypt_no_padding_with_iv(
+  key : BytesView,
+  iv : BytesView,
+  data : BytesView,
+) -> @core.PdfBytes raise @core.PdfError {
+  pdf_aes_check_key(key)
+  pdf_aes_block_length(iv)
+  guard data.length() % 16 == 0 else {
+    raise InvalidCryptoDataLength(data.length())
+  }
+  aes_cbc_encrypt_blocks(key, iv, data)
+}
+
+///|
 /// Encrypt bytes with AES-CBC and an explicit IV.
 ///
 /// PKCS-style padding is added and the returned bytes include the IV as the

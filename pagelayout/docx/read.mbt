@@ -467,7 +467,6 @@ pub fn read_docx(docx : Bytes) -> DocxDocument raise {
       max_entries=8192,
       max_entry_uncompressed_bytes=64 * 1024 * 1024,
       max_total_uncompressed_bytes=512 * 1024 * 1024,
-      max_preserved_source_bytes=512 * 1024 * 1024,
     ),
   )
   guard archive.get("word/document.xml") is Some(document_part) else {

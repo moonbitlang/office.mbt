@@ -478,7 +478,6 @@ test "header footer image read: missing vml relationship errors" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

@@ -233,7 +233,6 @@ test "styles extLst roundtrip" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }
@@ -287,7 +286,6 @@ test "styles tableStyles defaults roundtrip" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

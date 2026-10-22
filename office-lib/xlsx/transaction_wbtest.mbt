@@ -10,7 +10,6 @@ fn bounded_invalid_xlsx_archive() -> @zip.Archive raise {
       max_entries=limits.max_archive_entries(),
       max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes(),
       max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes(),
-      max_preserved_source_bytes=limits.max_total_preserved_source_bytes(),
     ),
   )
 }

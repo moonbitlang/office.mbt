@@ -8,6 +8,12 @@ fn bounded_actual_above_limit(limit : Int32) -> Int32 {
 }
 
 ///|
+fn uint64_to_int32_saturating(value : UInt64) -> Int32 {
+  guard value <= 0x7fff_ffffUL else { return 0x7fff_ffff }
+  value.to_int()
+}
+
+///|
 fn bounded_int64_actual(value : Int64, limit : Int32) -> Int32 {
   if value < 0L {
     bounded_actual_above_limit(limit)
@@ -25,6 +31,12 @@ test "bounded file-size telemetry saturates instead of truncating" {
     content="2147483647",
   )
   inspect(bounded_actual_above_limit(0x7fff_ffff), content="2147483647")
+  @test.assert_eq(uint64_to_int32_saturating(42UL), 42)
+  @test.assert_eq(uint64_to_int32_saturating(0x8000_0000UL), 0x7fff_ffff)
+  @test.assert_eq(
+    uint64_to_int32_saturating(0xffff_ffff_ffff_ffffUL),
+    0x7fff_ffff,
+  )
 }
 
 ///|

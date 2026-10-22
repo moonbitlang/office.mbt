@@ -14,12 +14,7 @@ fn replace_archive_part(
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      entry_data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry_data, compression=entry.compression())
   }
   if !replaced {
     fail("test archive did not contain \{name}")
@@ -39,12 +34,7 @@ fn append_archive_part(
     if entry.name() == name {
       fail("test archive already contained \{name}")
     }
-    result.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry.data(), compression=entry.compression())
   }
   result.add(name, content)
   @zip.write(result, preserve=true)
@@ -150,12 +140,7 @@ fn add_relationship_stress_parts(
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      content,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), content, compression=entry.compression())
   }
   if !content_types_updated {
     fail("test archive did not contain [Content_Types].xml")
@@ -190,12 +175,7 @@ fn rename_archive_part(
     } else {
       entry.name()
     }
-    result.add(
-      name,
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(name, entry.data(), compression=entry.compression())
   }
   if !renamed {
     fail("test archive did not contain \{old_name}")
@@ -298,12 +278,7 @@ fn relocate_xlsx_main_part(data : BytesView) -> Bytes raise {
       }
       _ => (entry.name(), entry.data())
     }
-    result.add(
-      name,
-      entry_data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(name, entry_data, compression=entry.compression())
   }
   @zip.write(result, preserve=true)
 }
@@ -313,12 +288,7 @@ fn add_root_level_relationships(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
   let result = @zip.Archive()
   for entry in source.entries() {
-    result.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry.data(), compression=entry.compression())
   }
   result.add("custom.xml", @utf8.encode("<custom/>"))
   result.add(
@@ -352,12 +322,7 @@ fn reencode_identification_parts_as_utf16(data : BytesView) -> Bytes raise {
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      entry_data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry_data, compression=entry.compression())
   }
   @zip.write(result, preserve=true)
 }
@@ -438,12 +403,7 @@ fn prefix_xlsx_package_xml(
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      entry_data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry_data, compression=entry.compression())
   }
   @zip.write(result, preserve=true)
 }
@@ -463,18 +423,12 @@ fn misalign_docx_main_part(data : BytesView) -> Bytes raise {
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      entry_data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry_data, compression=entry.compression())
     if entry.name() == "word/document.xml" {
       result.add(
         "custom/main.xml",
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }
@@ -759,12 +713,7 @@ test "detect_format treats ZIP directory names as exact physical records" {
   let source = @zip.read(@excel.write(@excel.new_file()))
   let distinct = @zip.Archive()
   for entry in source.entries() {
-    distinct.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    distinct.add(entry.name(), entry.data(), compression=entry.compression())
   }
   distinct.add("word/", b"")
   distinct.add("WORD/", b"")
@@ -775,12 +724,7 @@ test "detect_format treats ZIP directory names as exact physical records" {
 
   let duplicate = @zip.Archive()
   for entry in source.entries() {
-    duplicate.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    duplicate.add(entry.name(), entry.data(), compression=entry.compression())
   }
   duplicate.add("word/", b"")
   duplicate.add("word/", b"")
@@ -1951,12 +1895,7 @@ test "detect_archive_format cancels within CRC verification" {
   let archive = @zip.Archive()
   archive.add("bulk.bin", Bytes::make(1024 * 1024, b'x'))
   for entry in source.entries() {
-    archive.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    archive.add(entry.name(), entry.data(), compression=entry.compression())
   }
   let checks = [0]
   let cancel_at = archive.entries().length() + 4

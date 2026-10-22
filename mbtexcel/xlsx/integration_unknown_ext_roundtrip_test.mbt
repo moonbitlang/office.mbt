@@ -79,7 +79,6 @@ test "integration unknown worksheet ext roundtrip with mixed known ext" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

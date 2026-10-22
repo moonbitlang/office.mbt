@@ -231,12 +231,7 @@ test "legacy mixed plain and rich comment rewrites without loss" {
       legacy.add(comment_part, @encoding/utf8.encode(mixed))
       patched = true
     } else {
-      legacy.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      legacy.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   inspect(patched, content="true")

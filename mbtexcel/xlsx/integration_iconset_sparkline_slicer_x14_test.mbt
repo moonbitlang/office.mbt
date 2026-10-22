@@ -56,7 +56,6 @@ test "integration x14 icon-set with sparkline and slicer coexistence" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

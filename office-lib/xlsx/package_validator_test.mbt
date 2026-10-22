@@ -7,7 +7,6 @@ fn read_validator_archive(bytes : Bytes) -> @zip.Archive raise {
       max_entries=4096,
       max_entry_uncompressed_bytes=32 * 1024 * 1024,
       max_total_uncompressed_bytes=128 * 1024 * 1024,
-      max_preserved_source_bytes=64 * 1024 * 1024 + 65_535,
     ),
   )
 }

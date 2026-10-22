@@ -165,6 +165,10 @@ test "pdf_aes_cbc helpers match IV-prefixed CamlPDF data" {
   )
   @test.assert_eq(try! pdf_aes_cbc_decrypt(nist_key, nist_data), nist_plain)
   @test.assert_eq(try! pdf_aes_cbc_decrypt(nist_key, nist_iv), Bytes::new(0))
+  @test.assert_eq(
+    pdf_aes_cbc_encrypt_no_padding_with_iv(nist_key, nist_iv, nist_plain),
+    nist_data[16:].to_owned(),
+  )
 
   let aesv3_r5_user_key = crypt_bytes_for_test([
     0xee, 0x20, 0xd5, 0x1a, 0x41, 0x32, 0x0f, 0x90, 0xd4, 0x3b, 0xb7, 0x5f, 0x62,
@@ -184,6 +188,14 @@ test "pdf_aes_cbc helpers match IV-prefixed CamlPDF data" {
       remove_padding=false,
     ),
     crypt_bytes_for_test([ for value in 0..<32 => value ]),
+  )
+  @test.assert_eq(
+    pdf_aes_cbc_encrypt_no_padding_with_iv(
+      aesv3_r5_user_key,
+      aesv3_r5_user_data[:16],
+      Bytes::makei(32, value => value.to_byte()),
+    ),
+    aesv3_r5_user_data[16:].to_owned(),
   )
 
   let iv = crypt_bytes_for_test([

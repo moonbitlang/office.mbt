@@ -22,7 +22,6 @@ test "x14 conditional formatting invalid extLst rejects read" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

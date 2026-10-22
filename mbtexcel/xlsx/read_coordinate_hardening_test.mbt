@@ -20,16 +20,10 @@ fn coordinate_hardening_replace_part(
         entry.name(),
         @encoding/utf8.encode(xml.replace_all(old~, new=replacement)),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
       replaced = true
     } else {
-      updated.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      updated.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   if !replaced {
@@ -102,7 +96,6 @@ fn coordinate_hardening_bounded_archive(
       max_entries=8192,
       max_entry_uncompressed_bytes=64 * 1024 * 1024,
       max_total_uncompressed_bytes=256 * 1024 * 1024,
-      max_preserved_source_bytes=128 * 1024 * 1024 + 65_535,
     ),
   )
 }

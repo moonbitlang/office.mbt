@@ -3163,7 +3163,7 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
     Entries => "entry_count"
     EntryUncompressedBytes => "entry_uncompressed_bytes"
     TotalUncompressedBytes => "total_uncompressed_bytes"
-    PreservedSourceBytes => "total_preserved_source_bytes"
+    DirectoryBytes => "directory_bytes"
     OutputBytes => "output_bytes"
   }
 }
@@ -3192,23 +3192,28 @@ fn read_limited_archive(
   cancelled~ : () -> Bool = () => false,
 ) -> @zip.Archive raise XlsxError {
   check_read_cancelled(cancelled)
+  check_source_package_size(bytes, limits)
+  // flate bounds its retained source with max_package_bytes. Keep the
+  // workbook's separately configurable source ceiling at this boundary.
+  guard bytes.length() <= limits.max_total_preserved_source_bytes else {
+    raise ResourceLimitExceeded(
+      kind="total_preserved_source_bytes",
+      limit=limits.max_total_preserved_source_bytes,
+      actual=bytes.length(),
+    )
+  }
   let read_limits = @zip.ReadLimits(
     max_package_bytes=limits.max_package_bytes,
     max_entries=limits.max_archive_entries,
     max_entry_uncompressed_bytes=limits.max_entry_uncompressed_bytes,
     max_total_uncompressed_bytes=limits.max_total_uncompressed_bytes,
-    // The ZIP reader keeps a copy of the package for lossless rewrites. Bound
-    // that second compressed representation independently from inflation:
-    // flate 0.9.0 compares the length of the package with this limit (0.8.5
-    // counted the records it copied, which left out bytes between them).
-    max_preserved_source_bytes=limits.max_total_preserved_source_bytes,
   )
   @zip.read(bytes, limits=read_limits, cancelled~) catch {
     ZipError(LimitExceeded(kind, limit, actual), _) =>
       raise ResourceLimitExceeded(
         kind=zip_limit_kind_name(kind),
-        limit~,
-        actual~,
+        limit=uint64_to_int32_saturating(limit),
+        actual=uint64_to_int32_saturating(actual),
       )
     ZipError(Cancelled, _) => raise ReadCancelled
     // flate 0.9.0 checks the CRC-32 of every entry while it reads; 0.8.5 left

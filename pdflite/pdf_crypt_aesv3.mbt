@@ -12,23 +12,9 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
-  let output = Array::make(data.length(), b'\x00')
-  let mut previous = pdf_crypt_chop_view(pdf_crypt_iv_name, iv, 16)
-  let mut position = 0
-  let mut output_position = 0
-  while position < data.length() {
-    let block = Array::make(16, b'\x00')
-    for index in 0..<16 {
-      block[index] = (data[position + index].to_int() ^ previous[index].to_int()).to_byte()
-    }
-    previous = @crypt_core.pdf_aes_encrypt_block(key, Bytes::from_array(block))
-    for byte in previous {
-      output[output_position] = byte
-      output_position += 1
-    }
-    position += 16
-  }
-  Bytes::from_array(output)
+  let iv = pdf_crypt_chop_view(pdf_crypt_iv_name, iv, 16)
+  guard data.length() > 0 else { return Bytes::new(0) }
+  @crypt_core.pdf_aes_cbc_encrypt_no_padding_with_iv(key, iv, data)
 }
 
 ///|

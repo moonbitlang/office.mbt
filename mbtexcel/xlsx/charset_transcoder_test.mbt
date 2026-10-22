@@ -21,12 +21,7 @@ fn build_non_utf8_workbook_bytes() -> Bytes raise {
     } else {
       entry.data().to_owned()
     }
-    updated.add(
-      entry.name(),
-      data,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    updated.add(entry.name(), data, compression=entry.compression())
   }
   @zip.write(updated, preserve=true) catch {
     ZipError(_, message) => fail("zip write failed: \{message}")

@@ -1843,7 +1843,7 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
     Entries => "entry_count"
     EntryUncompressedBytes => "entry_uncompressed_bytes"
     TotalUncompressedBytes => "total_uncompressed_bytes"
-    PreservedSourceBytes => "total_preserved_source_bytes"
+    DirectoryBytes => "directory_bytes"
     OutputBytes => "output_bytes"
   }
 }
@@ -2014,13 +2014,6 @@ pub fn detect_format(
   if cancelled() {
     raise Cancelled
   }
-  let preserved_limit = if max_package_bytes > 2147483647 - 65_535 {
-    2147483647
-  } else if max_package_bytes < 0 {
-    0
-  } else {
-    max_package_bytes + 65_535
-  }
   let archive = @zip.read(
     data,
     limits=ReadLimits(
@@ -2028,12 +2021,20 @@ pub fn detect_format(
       max_entries=max_archive_entries,
       max_entry_uncompressed_bytes~,
       max_total_uncompressed_bytes~,
-      max_preserved_source_bytes=preserved_limit,
     ),
     cancelled~,
   ) catch {
     ZipError(LimitExceeded(kind, limit, actual), _) =>
-      raise ResourceLimit(kind=zip_limit_kind_name(kind), limit~, actual~)
+      raise ResourceLimit(
+        kind=zip_limit_kind_name(kind),
+        // Whole-buffer read ceilings are Int32; aggregate actuals can be wider.
+        limit=limit.to_int(),
+        actual=if actual > 0x7fff_ffffUL {
+          0x7fff_ffff
+        } else {
+          actual.to_int()
+        },
+      )
     _ if cancelled() => raise Cancelled
     // flate 0.9.0 checks the CRC-32 of every entry while it reads and does
     // not say which entry failed; 0.8.5 left the check to
