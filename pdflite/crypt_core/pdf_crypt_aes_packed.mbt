@@ -128,33 +128,33 @@ fn AesEncryptKey::encrypt(
     state[column] = state[column] ^ schedule.words[column]
   }
   for round = 1; round <= schedule.rounds; round = round + 1 {
-    let first = aes_packed_sub_bytes(
+    let first_pair = aes_packed_sub_bytes(
       (UInt64::extend_uint(state[0]) << 32) | UInt64::extend_uint(state[1]),
     )
-    let second = aes_packed_sub_bytes(
+    let second_pair = aes_packed_sub_bytes(
       (UInt64::extend_uint(state[2]) << 32) | UInt64::extend_uint(state[3]),
     )
-    let a = (first >> 32).to_uint()
-    let b = first.to_uint()
-    let c = (second >> 32).to_uint()
-    let d = second.to_uint()
+    let column_0 = (first_pair >> 32).to_uint()
+    let column_1 = first_pair.to_uint()
+    let column_2 = (second_pair >> 32).to_uint()
+    let column_3 = second_pair.to_uint()
     // ShiftRows in the column-major state layout specified by FIPS 197.
-    state[0] = (a & 0xff000000U) |
-      (b & 0x00ff0000U) |
-      (c & 0x0000ff00U) |
-      (d & 0x000000ffU)
-    state[1] = (b & 0xff000000U) |
-      (c & 0x00ff0000U) |
-      (d & 0x0000ff00U) |
-      (a & 0x000000ffU)
-    state[2] = (c & 0xff000000U) |
-      (d & 0x00ff0000U) |
-      (a & 0x0000ff00U) |
-      (b & 0x000000ffU)
-    state[3] = (d & 0xff000000U) |
-      (a & 0x00ff0000U) |
-      (b & 0x0000ff00U) |
-      (c & 0x000000ffU)
+    state[0] = (column_0 & 0xff000000U) |
+      (column_1 & 0x00ff0000U) |
+      (column_2 & 0x0000ff00U) |
+      (column_3 & 0x000000ffU)
+    state[1] = (column_1 & 0xff000000U) |
+      (column_2 & 0x00ff0000U) |
+      (column_3 & 0x0000ff00U) |
+      (column_0 & 0x000000ffU)
+    state[2] = (column_2 & 0xff000000U) |
+      (column_3 & 0x00ff0000U) |
+      (column_0 & 0x0000ff00U) |
+      (column_1 & 0x000000ffU)
+    state[3] = (column_3 & 0xff000000U) |
+      (column_0 & 0x00ff0000U) |
+      (column_1 & 0x0000ff00U) |
+      (column_2 & 0x000000ffU)
     for column in 0..<4 {
       let word = if round < schedule.rounds {
         aes_mix_word(state[column])

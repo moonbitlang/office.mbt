@@ -46,16 +46,13 @@ fn assert_archive_metadata_preserved(
   let right = @zip.read(after)
   let left_descriptors = raw_test_data_descriptors(before)
   let right_descriptors = raw_test_data_descriptors(after)
-  assert_eq(left.entries().length(), right.entries().length())
+  @test.assert_eq(left.entries().length(), right.entries().length())
   for index in 0..<left.entries().length() {
     let original = left.entries()[index]
     let candidate = right.entries()[index]
-    assert_eq(original.name(), candidate.name())
-    match (original.compression(), candidate.compression()) {
-      (Store, Store) | (Deflate, Deflate) => ()
-      _ => fail("archive compression method changed for {original.name()}")
-    }
-    assert_eq(left_descriptors[index], right_descriptors[index])
+    @test.assert_eq(original.name(), candidate.name())
+    @test.assert_eq(original.compression(), candidate.compression())
+    @test.assert_eq(left_descriptors[index], right_descriptors[index])
     if original.name() == changed_part {
       assert_false(original.data() == candidate.data())
     } else {
@@ -68,11 +65,7 @@ fn assert_archive_metadata_preserved(
 fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
   let parsed = @zip.read(source)
   let output : Array[Byte] = []
-  let writer = @zip.Writer(chunk => {
-    for byte in chunk {
-      output.push(byte)
-    }
-  })
+  let writer = @zip.Writer(chunk => chunk.iter().each(byte => output.push(byte)))
   for index in 0..<parsed.entries().length() {
     let entry = parsed.entries()[index]
     let compression : @zip.Compression = if index % 2 == 0 {
@@ -96,7 +89,7 @@ fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
   let bytes = Bytes::from_array(output)
   let descriptors = raw_test_data_descriptors(bytes)
   for index in 0..<descriptors.length() {
-    assert_eq(descriptors[index], index % 3 != 0)
+    @test.assert_eq(descriptors[index], index % 3 != 0)
   }
   bytes
 }
@@ -109,7 +102,7 @@ fn raw_test_data_descriptors(data : BytesView) -> Array[Bool] raise {
   let result : Array[Bool] = []
   let mut offset = @zip_fixture.classic_central_directory_offset(data)
   for _ in 0..<count {
-    assert_eq(data.unsafe_read_uint32_le(offset), 0x02014b50U)
+    @test.assert_eq(data.unsafe_read_uint32_le(offset), 0x02014b50U)
     result.push((data.unsafe_read_uint16_le(offset + 8).to_int() & 8) != 0)
     offset += 46 +
       data.unsafe_read_uint16_le(offset + 28).to_int() +

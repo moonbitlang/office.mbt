@@ -408,9 +408,9 @@ test "XLSX reads stop a deflate stream whose declarations lie" {
   match result {
     Err(@xlsx.ResourceLimitExceeded(kind~, limit~, actual~)) => {
       inspect(kind, content="entry_uncompressed_bytes")
-      assert_eq(limit, 32)
+      @test.assert_eq(limit, 32)
       // flate 0.10 reports the output observed in its bounded scratch buffer.
-      assert_eq(actual, 4096)
+      @test.assert_eq(actual, 4096)
     }
     _ => fail("expected streaming deflate limit")
   }

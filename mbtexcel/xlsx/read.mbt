@@ -3195,7 +3195,7 @@ fn read_limited_archive(
   check_source_package_size(bytes, limits)
   // flate bounds its retained source with max_package_bytes. Keep the
   // workbook's separately configurable source ceiling at this boundary.
-  if bytes.length() > limits.max_total_preserved_source_bytes {
+  guard bytes.length() <= limits.max_total_preserved_source_bytes else {
     raise ResourceLimitExceeded(
       kind="total_preserved_source_bytes",
       limit=limits.max_total_preserved_source_bytes,

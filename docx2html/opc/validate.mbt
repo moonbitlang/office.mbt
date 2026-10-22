@@ -647,9 +647,11 @@ pub fn validate_docx_package_report_limited(
   )
   // flate retains at most the package size. Preserve this validator's
   // independent public ceiling before the ZIP source is retained.
-  if data.length() > max_zip_package_bytes.max(0) ||
-    data.length() > max_zip_total_preserved_source_bytes.max(0) {
-    let kind = if data.length() > max_zip_package_bytes.max(0) {
+  let exceeds_package_limit = data.length() > max_zip_package_bytes.max(0)
+  let exceeds_source_limit = data.length() >
+    max_zip_total_preserved_source_bytes.max(0)
+  guard !exceeds_package_limit && !exceeds_source_limit else {
+    let kind = if exceeds_package_limit {
       "package_bytes"
     } else {
       "total_preserved_source_bytes"

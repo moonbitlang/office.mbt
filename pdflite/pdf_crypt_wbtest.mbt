@@ -981,14 +981,11 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
   }
   // Preserve the adapter's empty-input and IV truncation behavior.
   let iv = Bytes::new(16)
-  @test.assert_eq(
-    try! pdf_aesv3_cbc_encrypt_no_padding_with_iv(b"", iv, b""),
-    b"",
-  )
+  @test.assert_eq(pdf_aesv3_cbc_encrypt_no_padding_with_iv(b"", iv, b""), b"")
   let block = Bytes::new(32)
   @test.assert_eq(
-    try! pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(24), block),
-    try! pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, iv, block),
+    pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(24), block),
+    pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, iv, block),
   )
   let short_iv = @test.expect_error(() => {
     ignore(pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, b"", b""))

@@ -97,11 +97,7 @@ fn transaction_zip_eocd(bytes : Array[Byte]) -> Int32 raise {
 fn transaction_zip_with_descriptors(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
   let result : Array[Byte] = []
-  let writer = @zip.Writer(chunk => {
-    for byte in chunk {
-      result.push(byte)
-    }
-  })
+  let writer = @zip.Writer(chunk => chunk.iter().each(byte => result.push(byte)))
   for entry in source.entries() {
     writer.begin_entry(
       entry.name(),

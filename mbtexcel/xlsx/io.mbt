@@ -34,9 +34,9 @@ test "bounded file-size telemetry saturates instead of truncating" {
     content="2147483647",
   )
   inspect(bounded_actual_above_limit(0x7fff_ffff), content="2147483647")
-  assert_eq(bounded_uint64_actual(42UL), 42)
-  assert_eq(bounded_uint64_actual(0x8000_0000UL), 0x7fff_ffff)
-  assert_eq(bounded_uint64_actual(0xffff_ffff_ffff_ffffUL), 0x7fff_ffff)
+  @test.assert_eq(bounded_uint64_actual(42UL), 42)
+  @test.assert_eq(bounded_uint64_actual(0x8000_0000UL), 0x7fff_ffff)
+  @test.assert_eq(bounded_uint64_actual(0xffff_ffff_ffff_ffffUL), 0x7fff_ffff)
 }
 
 ///|
