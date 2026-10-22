@@ -30,11 +30,12 @@ fn pdflite_cmd_labels_command() -> @argparse.Command {
   )
 }
 
+
 ///|
 async fn pdflite_cmd_labels_execute(
   options : @argparse.Matches,
   passwords~ : PdflitePasswords = { user: None, owner: None, },
-) -> Unit {
+) -> PdfResult {
   let (action, args) = pdflite_cmd_action(options)
   let document = pdflite_cmd_load(
     pdflite_cmd_single_value(args, "input"),
@@ -58,10 +59,7 @@ async fn pdflite_cmd_labels_execute(
           }),
         )
       }
-      pdflite_cmd_emit(
-        @utf8.encode(Json::array(rows).stringify() + "\n"),
-        pdflite_cmd_optional_value(args, "output"),
-      )
+      pdf_json_export(Json::array(rows), pdflite_cmd_optional_value(args, "output"))
     }
     "import" => {
       let bytes = @fs.read_file(pdflite_cmd_single_value(args, "labels")).binary()
@@ -82,10 +80,10 @@ async fn pdflite_cmd_labels_execute(
           raise Usage("label start pages must be unique and increasing")
         }
       }
-      pdflite_cmd_save(updated, pdflite_cmd_single_value(args, "output"))
+      pdf_candidate(updated, pdflite_cmd_single_value(args, "output"))
     }
     "remove" =>
-      pdflite_cmd_save(
+      pdf_candidate(
         document.remove_page_labels(),
         pdflite_cmd_single_value(args, "output"),
       )
@@ -93,13 +91,3 @@ async fn pdflite_cmd_labels_execute(
   }
 }
 
-///|
-async fn pdflite_cmd_labels_run(
-  options : @argparse.Matches,
-  passwords~ : PdflitePasswords = { user: None, owner: None, },
-) -> Int32 {
-  pdflite_cmd_labels_execute(options, passwords~) catch {
-    err => return pdflite_cmd_operation_error(err)
-  }
-  pdflite_cmd_exit_ok
-}

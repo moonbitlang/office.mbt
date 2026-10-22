@@ -1505,3 +1505,33 @@ and `office.pptx.create/1` inside the existing `office.output/1` envelope.
 See [PPTX integration](office-pptx.md) for result fields and extraction limits.
 `office help pptx --json` exposes the implemented command variants; PPTX does
 not yet consume a batch input schema or resolve Office selectors.
+
+### `office.pdf/1` (`office pdf <operation> [--json|--jsonl]`)
+
+Existing-PDF commands return `office.output/1` with these `data` fields:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `schema` | string | `office.pdf/1` |
+| `operation` | string | Operation including any nested action, e.g. `metadata set` |
+| `result` | JSON | Report object/array, XML/cpdf text string, or PDF edit `{pages}` |
+| `dry_run` | boolean | No file publication was requested |
+| `committed` | boolean | True only after a file was published |
+| `output` | string? | Destination for file-producing operations |
+| `result_size` | integer? | Candidate file size in bytes |
+
+`--jsonl` emits one envelope per invocation. `--output` writes raw report/export
+content so the matching import can read it, rather than writing an Office
+envelope. Existing destinations require `--overwrite`, including during a dry
+run. PDF candidates are parsed again and page counts checked before Office's
+staged create-new publication. Explicit overwrite removes the old destination
+before staging, so a later failure may leave it absent.
+
+Invalid argument errors use `office.invalid_arguments`, PDF processing/read
+errors use `office.pdf.failed`, and file publication keeps the shared
+`office.transaction.*` codes. See [the PDF command guide](office-pdf.md) for
+operation-specific payloads, passwords, and limits.
+
+Non-UTF-8 raw exports (for example UTF-16 XMP) keep their exact bytes in human
+stdout and exported files. JSON responses represent such bytes as
+`{"encoding":"base64","content":"..."}` inside `result`.

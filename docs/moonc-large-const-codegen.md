@@ -62,7 +62,9 @@ The data lives in ordinary `.mbt` sources:
 
 `pdf2md` (the PDF→Markdown CLI) transitively imports the full
 text stack, so its generated translation unit contains the expanded tables;
-`pdflite/cmd/pdflite` does not, hence 8.8 MB.
+The former standalone PDF executable did not, hence its recorded 8.8 MB.
+That executable has since been removed; existing-PDF commands now use `office pdf`.
+These measurements predate that migration.
 
 ## Measurements
 

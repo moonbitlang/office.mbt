@@ -14,3 +14,7 @@ The source tree also supports PPTX identification, outline, slide/notes text,
 and fresh one-slide creation. See [PPTX integration](../docs/office-pptx.md).
 Check your installed version with `office help pptx --json`; source support
 does not imply the feature is already published.
+
+Existing-PDF inspection and manipulation live under `office pdf`; pdflite is
+now library-only. See [PDF commands](../docs/office-pdf.md) for every migrated
+operation, JSON/JSONL results, passwords, dry runs, and overwrite behavior.

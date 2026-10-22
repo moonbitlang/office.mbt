@@ -63,13 +63,14 @@ fn pdflite_cmd_merge_command() -> @argparse.Command {
   )
 }
 
+
 ///|
 async fn pdflite_cmd_merge_selected(
   output : String,
   inputs : Array[String],
   options : @argparse.Matches,
   passwords~ : PdflitePasswords = { user: None, owner: None, },
-) -> Unit {
+) -> PdfResult {
   let specs = options.values.get("pages").unwrap_or([])
   guard specs.is_empty() || specs.length() == inputs.length() else {
     raise Usage(
@@ -122,25 +123,6 @@ async fn pdflite_cmd_merge_selected(
   )
   let expected = ranges.fold(init=0, (count, pages) => count + pages.length())
   let bytes = @pdf.pdf_write_document(merged)
-  match pdflite_cmd_verify_merged_bytes(bytes, expected) {
-    Ok(_) => ()
-    Err(message) => raise Runtime(message)
-  }
-  match pdflite_cmd_write_output_file(output, bytes) {
-    Ok(_) => ()
-    Err(message) => raise Runtime(message)
-  }
-}
-
-///|
-async fn pdflite_cmd_merge_run(
-  output : String,
-  inputs : Array[String],
-  options : @argparse.Matches,
-  passwords~ : PdflitePasswords = { user: None, owner: None, },
-) -> Int32 {
-  pdflite_cmd_merge_selected(output, inputs, options, passwords~) catch {
-    err => return pdflite_cmd_operation_error(err)
-  }
-  pdflite_cmd_exit_ok
+  pdf_verify(bytes, expected)
+  pdf_artifact(output, bytes, Json::object({ "pages": Json::number(expected.to_double()) }))
 }
