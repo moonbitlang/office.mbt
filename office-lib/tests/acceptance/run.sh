@@ -108,7 +108,7 @@ jq -e '
   ([.data.records[].name] == [
     "docx", "xlsx", "pptx", "help", "identify", "outline", "get", "text",
     "query", "find", "replace", "format", "insert-paragraph", "delete-paragraph", "validate", "dump", "replay", "issues", "preview",
-    "render", "create", "template", "edit", "annotate", "batch", "raw"
+    "render", "create", "template", "edit", "annotate", "batch", "raw", "pdf"
   ])
 ' >/dev/null <<<"$capabilities" || fail "capability registry"
 
