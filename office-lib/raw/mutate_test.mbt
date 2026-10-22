@@ -66,16 +66,18 @@ fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
   let parsed = @zip.read(source)
   let output : Array[Byte] = []
   let writer = @zip.Writer(chunk => chunk.iter().each(byte => output.push(byte)))
-  for index in 0..<parsed.entries().length() {
-    let entry = parsed.entries()[index]
-    let compression : @zip.Compression = if index % 2 == 0 {
-      Deflate
-    } else {
-      Store
+  let expected_descriptors : Array[Bool] = []
+  for entry in parsed.entries() {
+    // Exercise all four combinations without depending on ZIP entry order.
+    let (compression, use_descriptor) : (@zip.Compression, Bool) = match
+      entry.name() {
+      "word/document.xml" => (Deflate, true)
+      "word/styles.xml" => (Store, false)
+      "_rels/.rels" => (Store, true)
+      _ => (Deflate, false)
     }
-    if index % 3 == 0 {
-      writer.add(entry.name(), entry.data(), compression~)
-    } else {
+    expected_descriptors.push(use_descriptor)
+    if use_descriptor {
       writer.begin_entry(
         entry.name(),
         compression~,
@@ -83,14 +85,13 @@ fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
       )
       writer.write(entry.data())
       writer.end_entry()
+    } else {
+      writer.add(entry.name(), entry.data(), compression~)
     }
   }
   writer.finish()
   let bytes = Bytes::from_array(output)
-  let descriptors = raw_test_data_descriptors(bytes)
-  for index in 0..<descriptors.length() {
-    @test.assert_eq(descriptors[index], index % 3 != 0)
-  }
+  @test.assert_eq(raw_test_data_descriptors(bytes), expected_descriptors)
   bytes
 }
 

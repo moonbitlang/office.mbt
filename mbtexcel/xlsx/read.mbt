@@ -3212,8 +3212,8 @@ fn read_limited_archive(
     ZipError(LimitExceeded(kind, limit, actual), _) =>
       raise ResourceLimitExceeded(
         kind=zip_limit_kind_name(kind),
-        limit=bounded_uint64_actual(limit),
-        actual=bounded_uint64_actual(actual),
+        limit=uint64_to_int32_saturating(limit),
+        actual=uint64_to_int32_saturating(actual),
       )
     ZipError(Cancelled, _) => raise ReadCancelled
     // flate 0.9.0 checks the CRC-32 of every entry while it reads; 0.8.5 left
