@@ -74,7 +74,6 @@ fn pdflite_cmd_metadata_command() -> @argparse.Command {
   )
 }
 
-
 ///|
 async fn pdflite_cmd_metadata_execute(
   options : @argparse.Matches,
@@ -89,7 +88,10 @@ async fn pdflite_cmd_metadata_execute(
       for field in pdflite_cmd_metadata_fields {
         fields.set(field.0, Json::string(document.info_utf8_string(field.1)))
       }
-      pdf_json_export(Json::object(fields), pdflite_cmd_optional_value(args, "output"))
+      pdf_json_export(
+        Json::object(fields),
+        pdflite_cmd_optional_value(args, "output"),
+      )
     }
     "export" => {
       guard document.metadata() is Some(bytes) else {
@@ -150,4 +152,3 @@ async fn pdflite_cmd_metadata_execute(
     _ => raise Usage("unknown metadata action: \{action}")
   }
 }
-

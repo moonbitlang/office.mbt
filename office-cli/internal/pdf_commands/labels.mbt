@@ -30,7 +30,6 @@ fn pdflite_cmd_labels_command() -> @argparse.Command {
   )
 }
 
-
 ///|
 async fn pdflite_cmd_labels_execute(
   options : @argparse.Matches,
@@ -59,7 +58,10 @@ async fn pdflite_cmd_labels_execute(
           }),
         )
       }
-      pdf_json_export(Json::array(rows), pdflite_cmd_optional_value(args, "output"))
+      pdf_json_export(
+        Json::array(rows),
+        pdflite_cmd_optional_value(args, "output"),
+      )
     }
     "import" => {
       let bytes = @fs.read_file(pdflite_cmd_single_value(args, "labels")).binary()
@@ -90,4 +92,3 @@ async fn pdflite_cmd_labels_execute(
     _ => raise Usage("unknown labels action: \{action}")
   }
 }
-

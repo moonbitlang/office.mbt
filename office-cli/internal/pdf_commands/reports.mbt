@@ -19,4 +19,3 @@ fn pdflite_cmd_pages_command() -> @argparse.Command {
     ],
   )
 }
-

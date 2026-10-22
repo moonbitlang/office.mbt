@@ -22,4 +22,3 @@ fn pdflite_cmd_fonts_command() -> @argparse.Command {
     ],
   )
 }
-

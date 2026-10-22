@@ -41,7 +41,6 @@ fn pdflite_cmd_bookmarks_command() -> @argparse.Command {
   )
 }
 
-
 ///|
 async fn pdflite_cmd_bookmarks_execute(
   options : @argparse.Matches,
@@ -59,7 +58,11 @@ async fn pdflite_cmd_bookmarks_execute(
       } else {
         document.bookmarks_json_blob(json_preserve_actions=true)
       }
-      pdf_export(bytes, pdflite_cmd_optional_value(args, "output"), !pdflite_cmd_flag_value(args, "text"))
+      pdf_export(
+        bytes,
+        pdflite_cmd_optional_value(args, "output"),
+        !pdflite_cmd_flag_value(args, "text"),
+      )
     }
     "import" => {
       let bytes = @fs.read_file(pdflite_cmd_single_value(args, "bookmarks")).binary()
@@ -81,4 +84,3 @@ async fn pdflite_cmd_bookmarks_execute(
     _ => raise Usage("unknown bookmarks action: \{action}")
   }
 }
-

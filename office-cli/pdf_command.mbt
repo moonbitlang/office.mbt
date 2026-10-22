@@ -10,7 +10,11 @@ fn pdf_flag(matches : @argparse.Matches, name : String) -> Bool {
 fn pdf_operation(matches : @argparse.Matches) -> String {
   guard matches.subcommand is Some((name, child)) else { return "" }
   let action = pdf_operation(child)
-  if action == "" { name } else { name + " " + action }
+  if action == "" {
+    name
+  } else {
+    name + " " + action
+  }
 }
 
 ///|
@@ -27,10 +31,18 @@ async fn run_pdf(matches : @argparse.Matches) -> Unit {
   let result = @pdf_cli.execute(matches) catch {
     error if @async.is_being_cancelled() => raise error
     @pdf_cli.PdfCliError::Usage(message) =>
-      raise CliFailure(@lib.protocol_error("office.invalid_arguments", bounded_text(message, 240)))
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.invalid_arguments",
+          bounded_text(message, 240),
+        ),
+      )
     @pdf_cli.PdfCliError::Runtime(message) =>
-      raise CliFailure(@lib.protocol_error("office.pdf.failed", bounded_text(message, 240)))
-    error => raise unexpected_cli_failure("office.pdf.failed", "PDF operation", error)
+      raise CliFailure(
+        @lib.protocol_error("office.pdf.failed", bounded_text(message, 240)),
+      )
+    error =>
+      raise unexpected_cli_failure("office.pdf.failed", "PDF operation", error)
   }
   let fields : Map[String, Json] = {
     "schema": Json::string("office.pdf/1"),
@@ -46,17 +58,23 @@ async fn run_pdf(matches : @argparse.Matches) -> Unit {
     // Explicit replacement removes the old destination before staging; it is
     // not an atomic swap and a subsequent failure can leave the path absent.
     if !overwrite && @afs.exists(artifact.path) {
-      raise CliFailure(@lib.protocol_error(
-        "office.transaction.output_exists", "destination already exists; use --overwrite to replace it",
-        details=Json::object({ "output": Json::string(artifact.path) }),
-      ))
+      raise CliFailure(
+        @lib.protocol_error(
+          "office.transaction.output_exists",
+          "destination already exists; use --overwrite to replace it",
+          details=Json::object({ "output": Json::string(artifact.path) }),
+        ),
+      )
     }
     if !dry_run {
       if overwrite {
-        @afs.remove(artifact.path) catch { _ => () }
+        @afs.remove(artifact.path) catch {
+          _ => ()
+        }
       }
       @transaction.atomic_write_new(artifact.path, artifact.bytes) catch {
-        @transaction.TransactionError(..) as error => raise transaction_failure(error)
+        @transaction.TransactionError(..) as error =>
+          raise transaction_failure(error)
         error => raise error
       }
       fields["committed"] = Json::boolean(true)

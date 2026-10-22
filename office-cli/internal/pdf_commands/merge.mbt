@@ -63,7 +63,6 @@ fn pdflite_cmd_merge_command() -> @argparse.Command {
   )
 }
 
-
 ///|
 async fn pdflite_cmd_merge_selected(
   output : String,
@@ -124,5 +123,9 @@ async fn pdflite_cmd_merge_selected(
   let expected = ranges.fold(init=0, (count, pages) => count + pages.length())
   let bytes = @pdf.pdf_write_document(merged)
   pdf_verify(bytes, expected)
-  pdf_artifact(output, bytes, Json::object({ "pages": Json::number(expected.to_double()) }))
+  pdf_artifact(
+    output,
+    bytes,
+    Json::object({ "pages": Json::number(expected.to_double()) }),
+  )
 }

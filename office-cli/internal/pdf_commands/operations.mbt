@@ -27,7 +27,6 @@ fn pdflite_cmd_select_pages(
   pages
 }
 
-
 ///|
 fn pdflite_cmd_optional_value(
   matches : @argparse.Matches,
@@ -36,12 +35,10 @@ fn pdflite_cmd_optional_value(
   matches.values.get(name).bind(values => values.get(0))
 }
 
-
 ///|
 fn pdflite_cmd_path(name : String) -> @argparse.PositionArg {
   PositionArg(name, about=name, num_args=@argparse.ValueRange::single())
 }
-
 
 ///|
 fn pdflite_cmd_action(
@@ -52,5 +49,3 @@ fn pdflite_cmd_action(
   }
   action
 }
-
-

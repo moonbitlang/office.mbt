@@ -35,8 +35,16 @@ pub fn command() -> @argparse.Command {
     flags=[
       FlagArg("json", global=true, about="Print office.output/1 JSON."),
       FlagArg("jsonl", global=true, about="Print one office.output/1 line."),
-      FlagArg("dry-run", global=true, about="Validate without writing any file."),
-      FlagArg("overwrite", global=true, about="Replace an existing destination."),
+      FlagArg(
+        "dry-run",
+        global=true,
+        about="Validate without writing any file.",
+      ),
+      FlagArg(
+        "overwrite",
+        global=true,
+        about="Replace an existing destination.",
+      ),
     ],
     subcommand_required=true,
     disable_help_subcommand=true,
@@ -85,9 +93,7 @@ pub fn command() -> @argparse.Command {
             num_args=@argparse.ValueRange::single(),
           ),
         ],
-        flags=[
-          FlagArg("detailed", about="Print full document information."),
-        ],
+        flags=[FlagArg("detailed", about="Print full document information.")],
       ),
       Command("decrypt", about="Write an unencrypted PDF.", positionals=[
         pdflite_cmd_path("input"),
@@ -126,7 +132,6 @@ pub fn command() -> @argparse.Command {
   )
 }
 
-
 ///|
 fn pdflite_cmd_single_value(
   matches : @argparse.Matches,
@@ -137,7 +142,6 @@ fn pdflite_cmd_single_value(
     _ => fail("argparse did not return one value for " + name)
   }
 }
-
 
 ///|
 fn pdflite_cmd_multiple_values(
@@ -153,9 +157,7 @@ fn pdflite_cmd_multiple_values(
   values
 }
 
-
 ///|
 fn pdflite_cmd_flag_value(matches : @argparse.Matches, name : String) -> Bool {
   matches.flags.get(name).unwrap_or(false)
 }
-
