@@ -2532,7 +2532,6 @@ async test "L2 round 2: Strict dot-dot comments parts resolve end to end" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

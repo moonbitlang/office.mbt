@@ -4195,8 +4195,8 @@ fn write_with_io(
         ZipError(LimitExceeded(OutputBytes, limit, _), _) =>
           raise ResourceLimitExceeded(
             kind="output_bytes",
-            limit~,
-            actual=bounded_actual_above_limit(limit),
+            limit=bounded_uint64_actual(limit),
+            actual=bounded_actual_above_limit(bounded_uint64_actual(limit)),
           )
         ZipError(_, msg) => raise UnsupportedFeature(msg~)
       }

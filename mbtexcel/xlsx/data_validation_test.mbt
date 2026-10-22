@@ -119,15 +119,9 @@ test "data validation extension read follows namespace identity" {
         entry.name(),
         @encoding/utf8.encode(modified),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     } else {
-      out.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      out.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   let new_bytes = @zip.write(out, preserve=true)

@@ -17,7 +17,6 @@ fn wb_rewrite_content_types(
       entry.name(),
       payload,
       compression=if force_store { Store } else { entry.compression() },
-      data_descriptor=entry.data_descriptor(),
     )
   }
   @zip.write(result, preserve=true)
@@ -51,7 +50,6 @@ fn wb_archive_retained_cost(bytes : BytesView) -> Int64 raise {
       max_entries=transaction_max_archive_entries,
       max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
       max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
-      max_preserved_source_bytes=transaction_archive_source_limit(bytes),
     ),
   )
   transaction_archive_retained_cost(bytes, archive) +
@@ -117,7 +115,6 @@ test "archive name projections are bounded and charged before indexing" {
       max_entries=transaction_max_archive_entries,
       max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
       max_total_uncompressed_bytes=transaction_max_total_uncompressed_bytes,
-      max_preserved_source_bytes=transaction_archive_source_limit(many_bytes),
     ),
   )
   let base_cost = transaction_archive_retained_cost(many_bytes, parsed)
@@ -272,15 +269,14 @@ fn wb_read_transaction_archive_with_limits(
       max_entries~,
       max_entry_uncompressed_bytes~,
       max_total_uncompressed_bytes~,
-      max_preserved_source_bytes=transaction_archive_source_limit(bytes),
     ),
   ) catch {
     ZipError(LimitExceeded(kind, limit, actual), _) =>
       raise resource_limit_error(
         phase,
         zip_limit_kind_name(kind),
-        limit,
-        actual,
+        bounded_zip_limit_value(limit),
+        bounded_zip_limit_value(actual),
       )
     _ =>
       raise transaction_error(
@@ -1216,7 +1212,6 @@ fn wb_near_splice_limit_docx(token_units : Int32) -> (Bytes, Int32) raise {
         entry.data().to_owned()
       },
       compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
     )
   }
   (@zip.write(result, preserve=true), prefix.length() + 1)

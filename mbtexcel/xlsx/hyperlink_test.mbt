@@ -490,7 +490,6 @@ test "hyperlink remove clears range reference" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }
@@ -554,7 +553,6 @@ test "hyperlink invalid ref rejected on read" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

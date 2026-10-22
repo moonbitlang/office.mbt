@@ -15,12 +15,7 @@ fn sdk_rewrite_content_types(data : BytesView, marker : String) -> Bytes raise {
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      payload,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), payload, compression=entry.compression())
   }
   if !replaced {
     fail("fixture did not contain [Content_Types].xml")

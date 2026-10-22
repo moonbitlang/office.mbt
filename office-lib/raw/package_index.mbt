@@ -1587,7 +1587,7 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
     Entries => "entry_count"
     EntryUncompressedBytes => "entry_uncompressed_bytes"
     TotalUncompressedBytes => "total_uncompressed_bytes"
-    PreservedSourceBytes => "total_preserved_source_bytes"
+    DirectoryBytes => "directory_bytes"
     OutputBytes => "output_bytes"
   }
 }
@@ -1612,7 +1612,6 @@ fn read_bounded_archive(data : BytesView) -> @zip.Archive raise RawError {
       max_entries=raw_max_archive_entries,
       max_entry_uncompressed_bytes=raw_max_entry_bytes,
       max_total_uncompressed_bytes=raw_max_total_uncompressed_bytes,
-      max_preserved_source_bytes=raw_max_total_preserved_source_bytes,
     ),
   ) catch {
     ZipError(LimitExceeded(kind, limit, actual), _) =>

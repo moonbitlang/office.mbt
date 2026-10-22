@@ -19,12 +19,7 @@ fn rewrite_content_types_fragment(
     } else {
       entry.data().to_owned()
     }
-    result.add(
-      entry.name(),
-      payload,
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), payload, compression=entry.compression())
   }
   if !replaced {
     fail("fixture did not contain [Content_Types].xml")
@@ -101,16 +96,23 @@ fn transaction_zip_eocd(bytes : Array[Byte]) -> Int32 raise {
 ///|
 fn transaction_zip_with_descriptors(data : BytesView) -> Bytes raise {
   let source = @zip.read(data)
-  let result = @zip.Archive()
+  let result : Array[Byte] = []
+  let writer = @zip.Writer(chunk => {
+    for byte in chunk {
+      result.push(byte)
+    }
+  })
   for entry in source.entries() {
-    result.add(
+    writer.begin_entry(
       entry.name(),
-      entry.data(),
       compression=entry.compression(),
-      data_descriptor=true,
+      size=entry.data().length().to_uint64(),
     )
+    writer.write(entry.data())
+    writer.end_entry()
   }
-  @zip.write(result, preserve=true)
+  writer.finish()
+  Bytes::from_array(result)
 }
 
 ///|
@@ -124,12 +126,7 @@ fn transaction_zip_with_directories(
     result.add(name, b"")
   }
   for entry in source.entries() {
-    result.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    result.add(entry.name(), entry.data(), compression=entry.compression())
   }
   @zip.write(result, preserve=true)
 }

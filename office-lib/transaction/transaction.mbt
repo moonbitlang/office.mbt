@@ -59,7 +59,7 @@ fn zip_limit_kind_name(kind : @zip.LimitKind) -> String {
     Entries => "entry_count"
     EntryUncompressedBytes => "entry_uncompressed_bytes"
     TotalUncompressedBytes => "total_uncompressed_bytes"
-    PreservedSourceBytes => "total_preserved_source_bytes"
+    DirectoryBytes => "directory_bytes"
     OutputBytes => "output_bytes"
   }
 }
@@ -529,6 +529,15 @@ fn resource_limit_error(
 }
 
 ///|
+fn bounded_zip_limit_value(value : UInt64) -> Int32 {
+  if value > 0x7fff_ffffUL {
+    0x7fff_ffff
+  } else {
+    value.to_int()
+  }
+}
+
+///|
 fn live_materialization_error(
   phase : String,
   limit : Int64,
@@ -624,11 +633,8 @@ fn check_package_size(
 }
 
 ///|
-/// Bound the source that the ZIP reader keeps by the input size. This is an
-/// enforced reader limit. (flate 0.9.0 keeps one copy of the package and
-/// compares its length with the limit; 0.8.5 copied every record and
-/// counted the copies, which overlapping records could make more than the
-/// input.)
+/// Account for the source retained by flate. Its max_package_bytes ceiling
+/// bounds that storage together with the input package.
 fn transaction_archive_source_limit(bytes : BytesView) -> Int32 {
   bytes.length().min(transaction_max_total_preserved_source_bytes)
 }
@@ -731,7 +737,6 @@ fn read_transaction_archive(
       max_entries=transaction_max_archive_entries,
       max_entry_uncompressed_bytes=transaction_max_entry_uncompressed_bytes,
       max_total_uncompressed_bytes=aggregate_limit,
-      max_preserved_source_bytes=transaction_archive_source_limit(bytes),
     ),
   ) catch {
     ZipError(LimitExceeded(TotalUncompressedBytes, _limit, actual), _) if aggregate_limit <
@@ -739,14 +744,14 @@ fn read_transaction_archive(
       raise live_materialization_error(
         phase,
         live_limit,
-        retained + preflight_overhead + actual.to_int64(),
+        retained + preflight_overhead + actual.reinterpret_as_int64(),
       )
     ZipError(LimitExceeded(kind, limit, actual), _) =>
       raise resource_limit_error(
         phase,
         zip_limit_kind_name(kind),
-        limit,
-        actual,
+        bounded_zip_limit_value(limit),
+        bounded_zip_limit_value(actual),
       )
     _ =>
       raise transaction_error(

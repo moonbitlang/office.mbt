@@ -536,14 +536,9 @@ test "L0: duplicate zip entries and foreign encodings fail closed" {
   // Directory records have physical ZIP identity, not case-insensitive OPC
   // Part identity. Distinct spellings must survive edits exactly.
   let directories = @mbtzip.Archive()
-  directories.add("word/", b"", compression=Store, data_descriptor=false)
-  directories.add("WORD/", b"", compression=Store, data_descriptor=false)
-  directories.add(
-    "a.xml",
-    @utf8.encode("<r/>"),
-    compression=Store,
-    data_descriptor=false,
-  )
+  directories.add("word/", b"", compression=Store)
+  directories.add("WORD/", b"", compression=Store)
+  directories.add("a.xml", @utf8.encode("<r/>"), compression=Store)
   let directory_bytes = @mbtzip.write(directories, preserve=true)
   let directory_plan = @splice.SplicePlan::new()
   directory_plan.edit_part(

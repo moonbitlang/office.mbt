@@ -122,7 +122,7 @@ fn zip_limit_kind_name(kind : @mbtzip.LimitKind) -> String {
     Entries => "entry_count"
     EntryUncompressedBytes => "entry_uncompressed_bytes"
     TotalUncompressedBytes => "total_uncompressed_bytes"
-    PreservedSourceBytes => "total_preserved_source_bytes"
+    DirectoryBytes => "directory_bytes"
     OutputBytes => "output_bytes"
   }
 }
@@ -645,6 +645,19 @@ pub fn validate_docx_package_report_limited(
     max_xml_token_chars,
     () => false,
   )
+  // flate retains at most the package size. Preserve this validator's
+  // independent public ceiling before the ZIP source is retained.
+  if data.length() > max_zip_package_bytes.max(0) ||
+    data.length() > max_zip_total_preserved_source_bytes.max(0) {
+    let kind = if data.length() > max_zip_package_bytes.max(0) {
+      "package_bytes"
+    } else {
+      "total_preserved_source_bytes"
+    }
+    findings.mark_zip_resource_limit(kind)
+    findings.add("invalid ZIP archive: resource limit exceeded")
+    return findings.report()
+  }
   let archive = @mbtzip.read(
     data,
     limits=ReadLimits(
@@ -661,11 +674,6 @@ pub fn validate_docx_package_report_limited(
       },
       max_total_uncompressed_bytes=if max_zip_total_uncompressed_bytes > 0 {
         max_zip_total_uncompressed_bytes
-      } else {
-        0
-      },
-      max_preserved_source_bytes=if max_zip_total_preserved_source_bytes > 0 {
-        max_zip_total_preserved_source_bytes
       } else {
         0
       },

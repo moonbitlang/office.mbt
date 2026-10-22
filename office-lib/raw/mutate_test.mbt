@@ -44,6 +44,8 @@ fn assert_archive_metadata_preserved(
 ) -> Unit raise {
   let left = @zip.read(before)
   let right = @zip.read(after)
+  let left_descriptors = raw_test_data_descriptors(before)
+  let right_descriptors = raw_test_data_descriptors(after)
   assert_eq(left.entries().length(), right.entries().length())
   for index in 0..<left.entries().length() {
     let original = left.entries()[index]
@@ -53,7 +55,7 @@ fn assert_archive_metadata_preserved(
       (Store, Store) | (Deflate, Deflate) => ()
       _ => fail("archive compression method changed for {original.name()}")
     }
-    assert_eq(original.data_descriptor(), candidate.data_descriptor())
+    assert_eq(left_descriptors[index], right_descriptors[index])
     if original.name() == changed_part {
       assert_false(original.data() == candidate.data())
     } else {
@@ -65,17 +67,56 @@ fn assert_archive_metadata_preserved(
 ///|
 fn raw_test_mixed_zip_policies(source : BytesView) -> Bytes raise {
   let parsed = @zip.read(source)
-  let output = @zip.Archive()
+  let output : Array[Byte] = []
+  let writer = @zip.Writer(chunk => {
+    for byte in chunk {
+      output.push(byte)
+    }
+  })
   for index in 0..<parsed.entries().length() {
     let entry = parsed.entries()[index]
-    output.add(
-      entry.name(),
-      entry.data(),
-      compression=if index % 2 == 0 { Deflate } else { Store },
-      data_descriptor=index % 3 != 0,
-    )
+    let compression : @zip.Compression = if index % 2 == 0 {
+      Deflate
+    } else {
+      Store
+    }
+    if index % 3 == 0 {
+      writer.add(entry.name(), entry.data(), compression~)
+    } else {
+      writer.begin_entry(
+        entry.name(),
+        compression~,
+        size=entry.data().length().to_uint64(),
+      )
+      writer.write(entry.data())
+      writer.end_entry()
+    }
   }
-  @zip.write(output, preserve=true)
+  writer.finish()
+  let bytes = Bytes::from_array(output)
+  let descriptors = raw_test_data_descriptors(bytes)
+  for index in 0..<descriptors.length() {
+    assert_eq(descriptors[index], index % 3 != 0)
+  }
+  bytes
+}
+
+///|
+// Inspect the serialized flag because descriptor layout is no longer part of
+// flate's in-memory entry API. Fixtures here use classic central records.
+fn raw_test_data_descriptors(data : BytesView) -> Array[Bool] raise {
+  let count = @zip.read(data).entries().length()
+  let result : Array[Bool] = []
+  let mut offset = @zip_fixture.classic_central_directory_offset(data)
+  for _ in 0..<count {
+    assert_eq(data.unsafe_read_uint32_le(offset), 0x02014b50U)
+    result.push((data.unsafe_read_uint16_le(offset + 8).to_int() & 8) != 0)
+    offset += 46 +
+      data.unsafe_read_uint16_le(offset + 28).to_int() +
+      data.unsafe_read_uint16_le(offset + 30).to_int() +
+      data.unsafe_read_uint16_le(offset + 32).to_int()
+  }
+  result
 }
 
 ///|
@@ -210,7 +251,6 @@ test "archive-backed raw APIs match byte-backed mutation without reinflation" {
       max_entries=8192,
       max_entry_uncompressed_bytes=64 * 1024 * 1024,
       max_total_uncompressed_bytes=256 * 1024 * 1024,
-      max_preserved_source_bytes=original.length(),
     ),
   )
   assert_eq(@raw.raw_identify_archive("input.docx", archive.clone()), Docx)
@@ -240,7 +280,6 @@ test "archive-backed raw serialization applies caller budget before output" {
       max_entries=8192,
       max_entry_uncompressed_bytes=64 * 1024 * 1024,
       max_total_uncompressed_bytes=256 * 1024 * 1024,
-      max_preserved_source_bytes=original.length(),
     ),
   )
   let request = @raw.raw_edit_request(
@@ -273,7 +312,6 @@ test "archive-backed identical replacement reuses source before ZIP planning" {
       max_entries=8192,
       max_entry_uncompressed_bytes=64 * 1024 * 1024,
       max_total_uncompressed_bytes=256 * 1024 * 1024,
-      max_preserved_source_bytes=original.length(),
     ),
   )
   let document = @raw.raw_read("input.docx", original, "/document").xml_text()

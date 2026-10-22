@@ -47,7 +47,6 @@ test "archive-backed raw boundary rechecks limits regardless of provenance" {
       max_entries=8192,
       max_entry_uncompressed_bytes=64 * 1024 * 1024,
       max_total_uncompressed_bytes=256 * 1024 * 1024,
-      max_preserved_source_bytes=original.length(),
     ),
   )
   assert_eq(@raw.raw_identify_archive("bounded.docx", bounded.clone()), Docx)

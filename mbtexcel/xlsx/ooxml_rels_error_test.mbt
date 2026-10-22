@@ -7,12 +7,7 @@ fn rewrite_zip_entry(
   let updated = @zip.Archive()
   for entry in archive.entries() {
     if entry.name() != path {
-      updated.add(
-        entry.name(),
-        entry.data(),
-        compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
-      )
+      updated.add(entry.name(), entry.data(), compression=entry.compression())
     }
   }
   updated.add(path, bytes)
@@ -265,12 +260,7 @@ test "ooxml rels: relocated workbook path requires root relationship and content
       entry.name() == "[Content_Types].xml" {
       continue
     }
-    updated.add(
-      entry.name(),
-      entry.data(),
-      compression=entry.compression(),
-      data_descriptor=entry.data_descriptor(),
-    )
+    updated.add(entry.name(), entry.data(), compression=entry.compression())
   }
   updated.add("xl/workbook2.xml", workbook_xml)
   updated.add("xl/_rels/workbook2.xml.rels", workbook_rels)
@@ -493,7 +483,6 @@ test "ooxml rels: chartsheet requires its selected drawing part" {
         entry.name(),
         entry.data(),
         compression=entry.compression(),
-        data_descriptor=entry.data_descriptor(),
       )
     }
   }

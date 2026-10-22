@@ -488,8 +488,8 @@ fn PackageBuilder::build_internal(
           // truthful strict lower bound "at least one byte over the limit".
           raise PackageLimitExceeded(
             kind="output_bytes",
-            limit=limit.to_int64(),
-            actual=limit.to_int64() + 1L,
+            limit=limit.reinterpret_as_int64(),
+            actual=limit.reinterpret_as_int64() + 1L,
           )
         ZipError(_, msg) =>
           raise PackageBuildError("could not assemble the archive: \{msg}")

@@ -64,7 +64,6 @@ async fn open_docx_projection(
       max_entries=office_read_max_zip_entries,
       max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
       max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-      max_preserved_source_bytes=office_read_max_preserved_source_bytes,
     ),
   ) catch {
     error => raise office_zip_read_failure(error, file, Docx)
@@ -744,7 +743,6 @@ async test "DOCX validation forwards parser cancellation callbacks" {
       max_entries=office_read_max_zip_entries,
       max_entry_uncompressed_bytes=office_read_max_zip_entry_bytes,
       max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
-      max_preserved_source_bytes=office_read_max_preserved_source_bytes,
     ),
   )
   let mut checks = 0
