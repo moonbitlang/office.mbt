@@ -9,6 +9,8 @@ import {
 // Values
 pub fn pdf_aes_cbc_decrypt(BytesView, BytesView, remove_padding? : Bool) -> Bytes raise @core.PdfError
 
+pub fn pdf_aes_cbc_encrypt_no_padding_with_iv(BytesView, BytesView, BytesView) -> Bytes raise @core.PdfError
+
 pub fn pdf_aes_cbc_encrypt_with_iv(BytesView, BytesView, BytesView) -> Bytes raise @core.PdfError
 
 pub fn pdf_aes_decrypt_block(BytesView, BytesView) -> Bytes raise @core.PdfError

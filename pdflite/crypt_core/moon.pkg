@@ -8,3 +8,11 @@ import {
   "moonbitlang/pdflite/core",
   "moonbitlang/core/test",
 } for "wbtest"
+
+options(
+  targets: {
+    // UInt64 becomes BigInt on JS. Keep that representation out of AES there.
+    "pdf_crypt_aes_packed.mbt": [ "wasm", "wasm-gc", "native", "llvm" ],
+    "pdf_crypt_aes_js.mbt": [ "js" ],
+  },
+)
