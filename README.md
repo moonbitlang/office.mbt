@@ -28,10 +28,11 @@ text extraction, and fresh one-slide creation. See the
 ```sh
 moonx moonbitlang/office help all --json
 moonx moonbitlang/office identify report.docx --json
+moonx moonbitlang/office pdf info report.pdf --json
 ```
 
-See the [Office library documentation](office-lib/README.mbt.md) for SDK usage
-and the [input/output schemas](docs/agent-json-schemas.md) for automation.
+See the [Office library documentation](office-lib/README.mbt.md) for SDK usage,
+the [PDF command guide](docs/office-pdf.md), and the [input/output schemas](docs/agent-json-schemas.md) for automation.
 
 ## Develop
 

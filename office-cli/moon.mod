@@ -8,13 +8,14 @@ repository = "https://github.com/moonbitlang/office.mbt"
 
 license = "Apache-2.0"
 
-keywords = [ "office", "xlsx", "docx", "ooxml", "cli" ]
+keywords = [ "office", "xlsx", "docx", "ooxml", "pdf", "cli" ]
 
-description = "Agent-oriented XLSX and DOCX command-line tooling"
+description = "Agent-oriented Office and PDF command-line tooling"
 
 import {
+  "moonbitlang/pdflite@0.4.1",
   "moonbitlang/ooxml@0.1.0",
-  "moonbitlang/office-lib@0.7.0",
+  "moonbitlang/office-lib@0.7.1",
   "moonbitlang/async@0.22.5",
   "moonbitlang/docx2html@0.7.0",
   "moonbitlang/mbtexcel@0.3.0",

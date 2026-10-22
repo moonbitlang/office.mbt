@@ -78,7 +78,7 @@ fn pdflite_cmd_metadata_command() -> @argparse.Command {
 async fn pdflite_cmd_metadata_execute(
   options : @argparse.Matches,
   passwords~ : PdflitePasswords = { user: None, owner: None, },
-) -> Unit {
+) -> PdfResult {
   let (action, args) = pdflite_cmd_action(options)
   let input = pdflite_cmd_single_value(args, "input")
   let document = pdflite_cmd_load(input, passwords~)
@@ -88,8 +88,8 @@ async fn pdflite_cmd_metadata_execute(
       for field in pdflite_cmd_metadata_fields {
         fields.set(field.0, Json::string(document.info_utf8_string(field.1)))
       }
-      pdflite_cmd_emit(
-        @utf8.encode(Json::object(fields).stringify() + "\n"),
+      pdf_json_export(
+        Json::object(fields),
         pdflite_cmd_optional_value(args, "output"),
       )
     }
@@ -97,7 +97,7 @@ async fn pdflite_cmd_metadata_execute(
       guard document.metadata() is Some(bytes) else {
         raise Runtime("input PDF has no catalog XMP metadata")
       }
-      pdflite_cmd_emit(bytes, pdflite_cmd_optional_value(args, "output"))
+      pdf_export(bytes, pdflite_cmd_optional_value(args, "output"), false)
     }
     "set" => {
       let fields = pdflite_cmd_metadata_fields.filter(field => {
@@ -120,12 +120,12 @@ async fn pdflite_cmd_metadata_execute(
           xmp_also~,
         )
       }
-      pdflite_cmd_save(updated, pdflite_cmd_single_value(args, "output"))
+      pdf_candidate(updated, pdflite_cmd_single_value(args, "output"))
     }
     "import" => {
       let bytes = @fs.read_file(pdflite_cmd_single_value(args, "xml")).binary()
       ignore(@pdf.pdf_xmltree_of_bytes(bytes))
-      pdflite_cmd_save(
+      pdf_candidate(
         document.set_metadata_from_bytes(bytes),
         pdflite_cmd_single_value(args, "output"),
       )
@@ -147,19 +147,8 @@ async fn pdflite_cmd_metadata_execute(
           .remove_dict_entry(@core.pdf_name_of_bytes(@utf8.encode("/Info"))),
         )
       }
-      pdflite_cmd_save(updated, pdflite_cmd_single_value(args, "output"))
+      pdf_candidate(updated, pdflite_cmd_single_value(args, "output"))
     }
     _ => raise Usage("unknown metadata action: \{action}")
   }
-}
-
-///|
-async fn pdflite_cmd_metadata_run(
-  options : @argparse.Matches,
-  passwords~ : PdflitePasswords = { user: None, owner: None, },
-) -> Int32 {
-  pdflite_cmd_metadata_execute(options, passwords~) catch {
-    err => return pdflite_cmd_operation_error(err)
-  }
-  pdflite_cmd_exit_ok
 }

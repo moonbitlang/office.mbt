@@ -134,6 +134,7 @@ fn build_command() -> @argparse.Command {
     subcommand_required=true,
     subcommands=[
       help_command(),
+      @pdf_cli.command(),
       identify_command(),
       outline_command(),
       get_command(),
@@ -163,7 +164,8 @@ fn build_command() -> @argparse.Command {
 ///|
 fn is_implemented_command(name : StringView) -> Bool {
   match name {
-    "help"
+    "pdf"
+    | "help"
     | "identify"
     | "outline"
     | "get"
@@ -197,6 +199,7 @@ async fn run_cli(args : Array[String]) -> Unit {
   match matches.subcommand {
     Some((name, values)) if is_implemented_command(name) =>
       match name {
+        "pdf" => run_pdf(values)
         "help" => run_help(values)
         "identify" => run_identify(values)
         "outline" => run_docx_outline(values)

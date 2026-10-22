@@ -2,16 +2,11 @@ import {
   "moonbitlang/pdflite" @pdf,
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/page/spec" @pagespec,
-  "moonbitlang/async",
   "moonbitlang/async/fs",
-  "moonbitlang/async/stdio",
   "moonbitlang/core/argparse",
-  "moonbitlang/core/env",
   "moonbitlang/core/json",
+  "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/x/sys",
 }
 
 supported_targets = "native+wasm"
-
-pkgtype(kind: "executable")

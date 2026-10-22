@@ -4,15 +4,16 @@ description: >-
   Inspect, create, edit, validate, and preview DOCX and XLSX files through the
   unified Office CLI, including comments, tracked changes, transactional edits,
   DOCX and static PPTX rendering to PDF or SVG, PPTX identification, slide/notes text reads,
-  and fresh one-slide creation. Use when working with this CLI or when a
-  portable command-line workflow fits the document task. Does not edit existing
-  PDFs or PowerPoint files.
+  fresh one-slide creation, and existing-PDF operations under office pdf. Use
+  when working with this CLI or when a portable command-line workflow fits the
+  document task. Does not edit existing PowerPoint files.
 ---
 
 # Office documents through the CLI
 
 Prefer the unified `office` command for its supported DOCX/XLSX operations
-and the PPTX capabilities listed by `office help pptx --json`.
+the PPTX capabilities listed by `office help pptx --json`, and the PDF
+operations listed by `office help pdf --json`.
 Honor an explicit user choice of another tool. Use the format-specific fallbacks
 below when the task needs a capability absent from `office`.
 
@@ -62,6 +63,7 @@ currently deprecated, so do not assume a native launcher is always available.
 | HTML preview | `preview FILE --output OUT.html --json` for DOCX, XLSX or PPTX |
 | Page/slide rendering | `render FILE.docx --output OUT.pdf --json` or `render FILE.pptx --output OUT.svg --json`; optional `--pages RANGE` |
 | Semantic export/import | `dump FILE --json`; `replay DUMP.json --output OUT` |
+| Existing PDFs | `pdf info`, `pdf extract`, `pdf merge`, `pdf metadata`, `pdf bookmarks`, `pdf labels`, `pdf fonts`, `pdf rewrite`, `pdf validate`, `pdf decrypt` |
 | OOXML fallback | `raw list`, `raw read`, `raw replace`, `raw edit` |
 
 For XLSX batch capability discovery, use `office help schema xlsx.batch/2 --json`.
@@ -250,3 +252,19 @@ These writers do not share the unified transaction contract. CSV import and
 XLSX HTML output replace existing files; DOCX conversion truncates output and
 writes extracted images non-transactionally. Use fresh outputs unless replacement
 is intended, and verify completion before delivering them.
+
+## Existing PDFs
+
+Use `office pdf` for PDF inspection, page merge/extraction, metadata, bookmarks,
+page labels, font diagnostics, rewrite, validate, and decrypt. Discover with
+`office help pdf --json` and `office pdf <operation> --help`. The old pdflite
+executable has been removed; the pdflite module remains a library.
+
+Every PDF command accepts `--json`/`--jsonl` and returns Office envelopes in
+those modes. Reports/exports written through `--output` keep their raw importable
+format. File outputs refuse existing paths unless `--overwrite` is explicit;
+`--dry-run` validates without writing. Replacement removes the old file before
+staging, so a subsequent failure can leave the path absent. Read back the output
+and verify the requested change. See [PDF command details](../docs/office-pdf.md)
+for page selection, retention flags, exact-byte passwords, export formats, and
+validation limits. PDF support here does not extend the top-level OOXML selectors.

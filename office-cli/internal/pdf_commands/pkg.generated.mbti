@@ -1,0 +1,33 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "moonbitlang/office/internal/pdf_commands"
+
+import {
+  "moonbitlang/core/argparse",
+}
+
+// Values
+pub fn command() -> @argparse.Command
+
+pub async fn execute(@argparse.Matches) -> PdfResult
+
+// Errors
+pub(all) suberror PdfCliError {
+  Usage(String)
+  Runtime(String)
+}
+
+// Types and methods
+pub struct PdfArtifact {
+  path : String
+  bytes : Bytes
+}
+
+pub struct PdfResult {
+  data : Json
+  text : Bytes
+  artifact : PdfArtifact?
+}
+
+// Type aliases
+
+// Traits

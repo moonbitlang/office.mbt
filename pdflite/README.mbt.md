@@ -21,35 +21,21 @@ Use this package when callers need a complete in-memory PDF document. Use the
 subpackages for narrower concerns such as byte primitives, transforms, Flate,
 dates, low-level cryptography, async file IO, or Markdown extraction.
 
-## Native CLI
+## Command-line operations
 
-The native and Wasm CLI wrapper lives in `cmd/pdflite` and uses
-`moonbitlang/core/argparse` for help, version text, subcommands, and parse
-errors. Run it from this module with `moon run`:
+This module is a library. The existing-PDF CLI is provided by `office pdf`:
 
 ```sh
-moon run --target native cmd/pdflite -- info fixtures/camlpdf/logo.pdf
-moon run --target native cmd/pdflite -- info --json fixtures/camlpdf/logo.pdf
-moon run --target native cmd/pdflite -- validate fixtures/camlpdf/logo.pdf
-moon run --target native cmd/pdflite -- rewrite fixtures/camlpdf/logo.pdf _build/logo-roundtrip.pdf
-moon run --target native cmd/pdflite -- merge _build/combined.pdf cover.pdf chapter-1.pdf appendix.pdf
+moonx moonbitlang/office pdf info input.pdf --json
+moonx moonbitlang/office pdf extract input.pdf selected.pdf --pages '1-3,5'
 ```
 
-Black-box CLI documentation tests live in `tests/cram`. The cram file invokes
-the binary directly, so build it once and point `PDFLITE_CLI` at the
-executable. Moon Cram is currently available in MoonBit nightly, so run them
-with a nightly toolchain:
-
-```sh
-moon run --target native --release --build-only cmd/pdflite
-PDFLITE_CLI="$PWD/_build/native/release/build/moonbitlang/pdflite/cmd/pdflite/pdflite.exe" \
-PDFLITE_LOGO_PDF="$PWD/fixtures/camlpdf/logo.pdf" \
-moon cram test --shell /bin/bash --timeout-seconds 120 tests/cram
-```
+The former standalone CLI has been removed. See [Office PDF commands](../docs/office-pdf.md)
+for native/Wasm source commands, unified output, publication rules, and acceptance checks.
 
 ## Release checks
 
-Normal CI runs the package tests and native/Wasm CLI checks. From the workspace
+Normal CI runs the library tests and Office native/Wasm PDF CLI checks. From the workspace
 root, run focused checks when changing the PDF engine:
 
 ```sh

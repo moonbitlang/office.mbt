@@ -2312,6 +2312,7 @@ pub fn capability_commands() -> Array[CapabilityCommand] {
       ],
     },
   ]
+  commands.push(pdf_capability_command())
   commands.map(hydrate_capability_command_variants)
 }
 
