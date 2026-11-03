@@ -84,17 +84,7 @@ fn run_surgery_needs_space_preserve(text : String) -> Bool {
     unit == 0x20 || unit == 0x09 || unit == 0x0A || unit == 0x0D
   }
 
-  let first = text.view(start_offset=0, end_offset=1).to_owned()
-  let last = text.view(start_offset=text.length() - 1).to_owned()
-  fn leading(one : String) -> Int32 {
-    let mut code = 0
-    for char in one {
-      code = char.to_int()
-    }
-    code
-  }
-
-  is_space(leading(first)) || is_space(leading(last))
+  is_space(text[0].to_int()) || is_space(text[text.length() - 1].to_int())
 }
 
 ///|
@@ -1016,7 +1006,7 @@ fn run_surgery_synthesise_text(
   let binding = if prefix == "" {
     " xmlns=\"\{wml}\""
   } else {
-    let name = prefix.view(end_offset=prefix.length() - 1).to_owned()
+    let name = prefix.exact_view(end=prefix.length() - 1).to_owned()
     " xmlns:\{name}=\"\{wml}\""
   }
   let synthesised = "<\{prefix}t\{binding}\{attribute}>\{escaped}</\{prefix}t>"

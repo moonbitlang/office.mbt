@@ -1597,7 +1597,7 @@ fn format_surgery_split_run(
       }
       let whole = projection_by_wt.get(piece.wt_identity).unwrap_or("")
       let fragment_text = whole
-        .view(start_offset=piece.local_from, end_offset=piece.local_to)
+        .exact_view(start=piece.local_from, end=piece.local_to)
         .to_owned()
       body.write_string(
         format_surgery_clone_wt(source, wt, byte_from, byte_to, fragment_text),

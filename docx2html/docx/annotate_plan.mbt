@@ -893,8 +893,8 @@ fn split_part_path(part : String) -> (String, String) {
   match part.rev_find("/") {
     Some(slash) =>
       (
-        part.view(end_offset=slash).to_owned(),
-        part.view(start_offset=slash + 1).to_owned(),
+        part.exact_view(end=slash).to_owned(),
+        part.exact_view(start=slash + 1).to_owned(),
       )
     None => ("", part)
   }
@@ -990,7 +990,7 @@ fn describe_paragraph_siblings(
   relative_path : String,
 ) -> String {
   let prefix = match relative_path.rev_find("/") {
-    Some(slash) => relative_path.view(end_offset=slash + 1).to_owned()
+    Some(slash) => relative_path.exact_view(end=slash + 1).to_owned()
     None => ""
   }
   // A MISSING ancestor must be named as such — "holds 0 paragraphs"
@@ -1005,7 +1005,7 @@ fn describe_paragraph_siblings(
       }
       let candidate = if checked == "" { piece } else { "\{checked}/\{piece}" }
       let kind = match piece.find("[") {
-        Some(bracket) => piece.view(end_offset=bracket).to_owned()
+        Some(bracket) => piece.exact_view(end=bracket).to_owned()
         None => piece
       }
       if body_node_span_of_kind(annotated, candidate, kind) is None {

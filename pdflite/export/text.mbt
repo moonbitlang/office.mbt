@@ -42,7 +42,7 @@ fn glyph_text_view(text : String, g : Glyph) -> StringView {
   if start >= end {
     ""
   } else {
-    text.view(start_offset=start, end_offset=end)
+    text.unsafe_view(start~, end~)
   }
 }
 

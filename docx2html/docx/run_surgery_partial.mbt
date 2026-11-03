@@ -960,8 +960,9 @@ fn plan_paragraph_text_edits(
     // but its endpoints must still resolve, so they join phase 4. This
     // covers atom-only ranges too: replacing a tab with a tab is as much
     // a no-op as replacing text with itself.
+    // Phase 1 checked bounds; phase 4 owns scalar-boundary refusals.
     let replaced = before_projection
-      .view(start_offset=edit.start, end_offset=edit.end)
+      .unsafe_view(start=edit.start, end=edit.end)
       .to_owned()
     if replaced == edit.replacement {
       let head = intersecting[0]
@@ -1119,14 +1120,14 @@ fn plan_paragraph_text_edits(
       let (local_start, local_end, replacement, _) = local_edit
       after.write_string(
         host.contribution_value
-        .view(start_offset=cursor, end_offset=local_start)
+        .exact_view(start=cursor, end=local_start)
         .to_owned(),
       )
       after.write_string(replacement)
       cursor = local_end
     }
     after.write_string(
-      host.contribution_value.view(start_offset=cursor).to_owned(),
+      host.contribution_value.exact_view(start=cursor).to_owned(),
     )
     let final_content = after.to_string()
     let wants_space = run_surgery_needs_space_preserve(final_content)
@@ -1333,14 +1334,12 @@ fn plan_paragraph_text_edits(
   let mut cursor = 0
   for edit in requested {
     expected.write_string(
-      before_projection
-      .view(start_offset=cursor, end_offset=edit.start)
-      .to_owned(),
+      before_projection.exact_view(start=cursor, end=edit.start).to_owned(),
     )
     expected.write_string(edit.replacement)
     cursor = edit.end
   }
-  expected.write_string(before_projection.view(start_offset=cursor).to_owned())
+  expected.write_string(before_projection.exact_view(start=cursor).to_owned())
   let receipt = PartialSurgeryReceipt::{
     paragraph_index,
     expected_projection: expected.to_string(),

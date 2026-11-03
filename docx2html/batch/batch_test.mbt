@@ -454,9 +454,7 @@ test "review round 3: XML-unrepresentable characters are rejected" {
   // MoonBit literals cannot spell one, and core rejects unpaired \uXXXX
   // escapes at parse time (moonbitlang/core@298b811f) -- which is also why
   // this case builds its script with constructors rather than JSON text.
-  let lone_surrogate = "a" +
-    "\u{10000}".view(start_offset=0, end_offset=1).to_owned() +
-    "b"
+  let lone_surrogate = "a" + "\u{10000}".unsafe_substring(start=0, end=1) + "b"
   let surrogate_script : Json = Json::object({
     "schema": Json::string("docx.batch/1"),
     "ops": Json::array([

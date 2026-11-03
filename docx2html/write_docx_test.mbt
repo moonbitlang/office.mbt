@@ -789,9 +789,7 @@ test "review round 3 (batch): XML-unrepresentable characters fail closed" {
   // (moonbitlang/core@298b811f) closed the @json.parse route. Slicing an
   // astral character splits its pair; the owned lead half is a genuine lone
   // surrogate. U+FFFF is a valid scalar but outside XML 1.0's character set.
-  let lone_surrogate = "a" +
-    "\u{10000}".view(start_offset=0, end_offset=1).to_owned() +
-    "b"
+  let lone_surrogate = "a" + "\u{10000}".unsafe_substring(start=0, end=1) + "b"
   expect_unsupported(
     [@docx2html.paragraph([@docx2html.run([@docx2html.text(lone_surrogate)])])],
     "text contains a character XML cannot represent (code 55296",
@@ -1780,11 +1778,11 @@ test "L0: body paragraph spans resolve through the public query" {
   }
   let text = @utf8.decode(part, ignore_bom=true)
   let interior = text
-    .view(start_offset=content_start, end_offset=close_start)
+    .exact_view(start=content_start, end=close_start)
     .to_owned()
   inspect(interior, content="<w:r><w:t>Styled head</w:t></w:r>")
   inspect(
-    text.view(start_offset=span.byte_start()).to_owned().has_prefix("<w:p>"),
+    text.exact_view(start=span.byte_start()).to_owned().has_prefix("<w:p>"),
     content="true",
   )
   // Table-cell paragraphs resolve by their relative ordinal path.

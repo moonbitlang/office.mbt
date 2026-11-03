@@ -452,8 +452,7 @@ test "whole-run replacement does not duplicate xml:space" {
   let mut declarations = 0
   let mut at = 0
   while at + 9 <= spliced.length() {
-    if spliced.view(start_offset=at, end_offset=at + 9).to_owned() ==
-      "xml:space" {
+    if spliced.unsafe_view(start=at, end=at + 9).to_owned() == "xml:space" {
       declarations = declarations + 1
     }
     at = at + 1
