@@ -17,7 +17,7 @@ operations listed by `office help pdf --json`.
 Honor an explicit user choice of another tool. Use the format-specific fallbacks
 below when the task needs a capability absent from `office`.
 
-For PPTX command scope and read limits, consult [PPTX integration](../docs/office-pptx.md).
+For PPTX command scope and read limits, consult [PPTX integration](references/office-pptx.md).
 
 ## Launch and discover
 
@@ -265,6 +265,6 @@ those modes. Reports/exports written through `--output` keep their raw importabl
 format. File outputs refuse existing paths unless `--overwrite` is explicit;
 `--dry-run` validates without writing. Replacement removes the old file before
 staging, so a subsequent failure can leave the path absent. Read back the output
-and verify the requested change. See [PDF command details](../docs/office-pdf.md)
+and verify the requested change. See [PDF command details](references/office-pdf.md)
 for page selection, retention flags, exact-byte passwords, export formats, and
 validation limits. PDF support here does not extend the top-level OOXML selectors.
