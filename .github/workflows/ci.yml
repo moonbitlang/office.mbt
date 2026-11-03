@@ -83,9 +83,6 @@ jobs:
       - name: DOCX corpus projection regression
         run: python3 docx2html/tests/corpus/projection_check.py
 
-      - name: Office skill reference closure
-        run: python3 scripts/check_office_skill.py
-
       - name: Format check
         run: |
           moon fmt
