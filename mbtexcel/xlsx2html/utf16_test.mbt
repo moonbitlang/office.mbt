@@ -4,12 +4,12 @@
 /// of `@json.parse` either. Slicing an astral character splits its pair:
 /// each half, owned, is a genuine lone surrogate.
 fn lone_lead() -> String {
-  "\u{10000}".view(start_offset=0, end_offset=1).to_owned()
+  "\u{10000}".unsafe_substring(start=0, end=1)
 }
 
 ///|
 fn lone_trail() -> String {
-  "\u{10000}".view(start_offset=1, end_offset=2).to_owned()
+  "\u{10000}".unsafe_substring(start=1, end=2)
 }
 
 ///|

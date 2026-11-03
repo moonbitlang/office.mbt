@@ -761,7 +761,7 @@ fn ensure_w14_on_root(
   for attribute in attributes.entries {
     let (name, value, _, _) = attribute
     if name.has_prefix("xmlns:") {
-      let prefix = name.view(start_offset=6).to_owned()
+      let prefix = name.exact_view(start=6).to_owned()
       let uri = decode_entities(value)
       root_bindings[prefix] = uri
       if uri == W14_NAMESPACE &&
@@ -893,7 +893,7 @@ fn collect_namespace_bindings(
     for attribute in tag.entries {
       let (name, value, _, _) = attribute
       if name.has_prefix("xmlns:") {
-        let prefix = name.view(start_offset=6).to_owned()
+        let prefix = name.exact_view(start=6).to_owned()
         let uris = match bindings.get(prefix) {
           Some(existing) => existing
           None => {
@@ -1142,7 +1142,7 @@ fn scan_comment_ex_part(
     if name == "xmlns" {
       root_declarations[""] = decode_entities(value)
     } else if name.has_prefix("xmlns:") {
-      root_declarations[name.view(start_offset=6).to_owned()] = decode_entities(
+      root_declarations[name.exact_view(start=6).to_owned()] = decode_entities(
         value,
       )
     }
@@ -1232,7 +1232,7 @@ fn scan_comment_ex_part(
         if name == "xmlns" {
           own_declarations[""] = decode_entities(value)
         } else if name.has_prefix("xmlns:") {
-          own_declarations[name.view(start_offset=6).to_owned()] = decode_entities(
+          own_declarations[name.exact_view(start=6).to_owned()] = decode_entities(
             value,
           )
         }
@@ -1331,8 +1331,8 @@ fn split_qualified(name : String) -> (String, String) {
   match name.find(":") {
     Some(colon) =>
       (
-        name.view(end_offset=colon).to_owned(),
-        name.view(start_offset=colon + 1).to_owned(),
+        name.exact_view(end=colon).to_owned(),
+        name.exact_view(start=colon + 1).to_owned(),
       )
     None => ("", name)
   }

@@ -181,13 +181,14 @@ fn partial_exhaustive_batches_for(
         build([(i, j, "")])
         // The IDENTITY replacement: a no-op over whatever this range
         // currently projects, the only way the census enters the no-op
-        // branches -- for text and for atoms alike.
+        // branches -- for text and for atoms alike. Raw UTF-16 slices
+        // include surrogate halves to exercise non-scalar refusals.
         build([
           (
             i,
             j,
             partial_paragraph_projection(paragraph)
-            .view(start_offset=i, end_offset=j)
+            .unsafe_view(start=i, end=j)
             .to_owned(),
           ),
         ])
@@ -432,7 +433,7 @@ fn partial_run_prefix(
   }
   let name = @utf8.decode(source[element.byte_start + 1:end].to_owned())
   match name.find(":") {
-    Some(index) => name.view(end_offset=index + 1).to_owned()
+    Some(index) => name.exact_view(end=index + 1).to_owned()
     None => ""
   }
 }
@@ -450,7 +451,7 @@ fn partial_synthesised_element(
   let binding = if prefix == "" {
     " xmlns=\"" + run_element.uri + "\""
   } else {
-    let name = prefix.view(end_offset=prefix.length() - 1).to_owned()
+    let name = prefix.exact_view(end=prefix.length() - 1).to_owned()
     " xmlns:" + name + "=\"" + run_element.uri + "\""
   }
   let attribute = if partial_needs_space(text) {
@@ -578,16 +579,11 @@ fn partial_needs_space(text : String) -> Bool {
   if text.length() == 0 {
     return false
   }
-  fn edge(one : String) -> Bool {
-    let mut code = 0
-    for char in one {
-      code = char.to_int()
-    }
-    code == 0x20 || code == 0x09 || code == 0x0A || code == 0x0D
+  fn edge(unit : Int32) -> Bool {
+    unit == 0x20 || unit == 0x09 || unit == 0x0A || unit == 0x0D
   }
 
-  edge(text.view(start_offset=0, end_offset=1).to_owned()) ||
-  edge(text.view(start_offset=text.length() - 1).to_owned())
+  edge(text[0].to_int()) || edge(text[text.length() - 1].to_int())
 }
 
 ///|
@@ -702,7 +698,7 @@ fn partial_expected_licenses(
           }
           if edit.start != edit.end &&
             partial_paragraph_projection(paragraph)
-            .view(start_offset=edit.start, end_offset=edit.end)
+            .unsafe_view(start=edit.start, end=edit.end)
             .to_owned() ==
             edit.replacement {
             continue
@@ -734,7 +730,7 @@ fn partial_expected_licenses(
           }
           after.write_string(
             contribution.value
-            .view(start_offset=cursor, end_offset=range_start)
+            .unsafe_view(start=cursor, end=range_start)
             .to_owned(),
           )
           after.write_string(written)
@@ -744,7 +740,9 @@ fn partial_expected_licenses(
           continue
         }
         after.write_string(
-          contribution.value.view(start_offset=cursor).to_owned(),
+          contribution.value
+          .unsafe_view(start=cursor, end=contribution.value.length())
+          .to_owned(),
         )
         if partial_needs_space(after.to_string()) {
           match partial_space_declaration_span(source, element) {
@@ -773,7 +771,7 @@ fn partial_expected_licenses(
           // nothing, exactly as over text.
           if edit.start != edit.end &&
             partial_paragraph_projection(paragraph)
-            .view(start_offset=edit.start, end_offset=edit.end)
+            .unsafe_view(start=edit.start, end=edit.end)
             .to_owned() ==
             edit.replacement {
             continue
@@ -916,15 +914,15 @@ fn assert_partial_batch(
   let mut cursor = 0
   for edit in batch.edits {
     independent.write_string(
-      before_projection
-      .view(start_offset=cursor, end_offset=edit.start)
-      .to_owned(),
+      before_projection.unsafe_view(start=cursor, end=edit.start).to_owned(),
     )
     independent.write_string(edit.replacement)
     cursor = edit.end
   }
   independent.write_string(
-    before_projection.view(start_offset=cursor).to_owned(),
+    before_projection
+    .unsafe_view(start=cursor, end=before_projection.length())
+    .to_owned(),
   )
   let expected = independent.to_string()
   let licenses = partial_expected_licenses(
@@ -1256,7 +1254,7 @@ test "the lexical matrix the grammar does not reach is proved the same way" {
           } else if edit.replacement == "" {
             "del"
           } else if current
-            .view(start_offset=edit.start, end_offset=edit.end)
+            .unsafe_view(start=edit.start, end=edit.end)
             .to_owned() ==
             edit.replacement {
             "same"

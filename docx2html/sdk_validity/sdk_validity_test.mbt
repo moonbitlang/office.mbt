@@ -2286,7 +2286,7 @@ async test "L2 round 1: entry-level splicing preserves foreign thread content" {
     fail("expected commentEx")
   }
   inspect(
-    case_text.view(start_offset=first_ex + 9).to_owned().find("<w15:commentEx")
+    case_text.exact_view(start=first_ex + 9).to_owned().find("<w15:commentEx")
     is Some(_),
     content="false",
   )
@@ -2439,7 +2439,7 @@ async test "L2 round 1: OPC targets and root retrofit adversaries" {
   }
   inspect(
     comments_text
-    .view(start_offset=first_ignorable + 1)
+    .exact_view(start=first_ignorable + 1)
     .to_owned()
     .find("mc:Ignorable")
     is Some(_),
