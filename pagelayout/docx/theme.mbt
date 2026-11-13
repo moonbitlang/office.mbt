@@ -10,10 +10,11 @@
 ///|
 /// The `a:latin` typefaces of a theme's major (heading) and minor (body)
 /// font schemes.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ThemeFonts {
   major : String?
   minor : String?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A theme that names no fonts — used when the package has no theme

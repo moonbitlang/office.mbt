@@ -1,9 +1,10 @@
 ///|
 /// Errors raised while replaying a dump into a workbook.
+#derive(@debug.Debug)
 pub suberror ReplayError {
   ReplayInvalidFormat(String)
   ReplayFailed(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend ReplayError with @moonbitlang/core/debug.Debug::{to_repr}

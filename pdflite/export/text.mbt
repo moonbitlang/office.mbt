@@ -389,11 +389,12 @@ fn get_glyphs_bbox(
 
 ///|
 /// Text rendering modes.
+#derive(Eq)
 priv enum RenderMode {
   FillMode
   StrokeMode
   FillStrokeMode
-} derive(Eq)
+}
 
 ///|
 /// The bounding box that is given for a solid fill or stroke of text if the

@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub struct Slicer {
   name : String
   cache : String
@@ -18,7 +19,7 @@ pub struct Slicer {
   priv drawing_width_emu : Int32?
   priv drawing_height_emu : Int32?
   priv drawing_order : Int32?
-} derive(Debug)
+}
 
 ///|
 pub fn Slicer::new(name : String) -> Slicer raise XlsxError {

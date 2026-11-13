@@ -23,12 +23,13 @@
 /// One destination rectangle for a stretched blip fill or a fill-list
 /// gradient. All four sides are 1/1000-of-percent of the destination
 /// extent; negative values are valid per spec.
+#derive(Eq, Debug)
 pub(all) struct FillRect {
   left : @units.Percentage
   top : @units.Percentage
   right : @units.Percentage
   bottom : @units.Percentage
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FillRect with @debug.Debug::{to_repr}
@@ -40,12 +41,13 @@ pub extend FillRect with Eq::{not_equal, equal}
 /// Source rectangle (`<a:srcRect>`) — the crop inside the source image
 /// for a blip fill. Same `Percentage` scale as `FillRect`. Distinct
 /// type so the parser can keep src-vs-dst rectangles unambiguous.
+#derive(Eq, Debug)
 pub(all) struct SrcRect {
   left : @units.Percentage
   top : @units.Percentage
   right : @units.Percentage
   bottom : @units.Percentage
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SrcRect with @debug.Debug::{to_repr}
@@ -55,12 +57,13 @@ pub extend SrcRect with Eq::{not_equal, equal}
 
 ///|
 /// Tile flip mode (`ST_TileFlipMode`). `FlipNone` is the spec default.
+#derive(Eq, Debug)
 pub(all) enum TileFlip {
   FlipNone // "none"
   FlipX // "x"
   FlipY // "y"
   FlipXy // "xy"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TileFlip with @debug.Debug::{to_repr}
@@ -84,6 +87,7 @@ pub fn TileFlip::from_xml(s : String) -> TileFlip? {
 ///|
 /// Tile alignment (`ST_RectAlignment`). Nine values per spec — the
 /// anchor inside the destination box where the first tile is placed.
+#derive(Eq, Debug)
 pub(all) enum TileAlignment {
   AlignTopLeft // "tl"
   AlignTop // "t"
@@ -94,7 +98,7 @@ pub(all) enum TileAlignment {
   AlignBottomLeft // "bl"
   AlignBottom // "b"
   AlignBottomRight // "br"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TileAlignment with @debug.Debug::{to_repr}
@@ -123,6 +127,7 @@ pub fn TileAlignment::from_xml(s : String) -> TileAlignment? {
 ///|
 /// `<a:tile>` attributes. All optional per spec; missing attributes
 /// stay `None` so callers can distinguish "absent" from "explicitly 0".
+#derive(Eq, Debug)
 pub(all) struct TileSpec {
   tx : @units.Emu?
   ty : @units.Emu?
@@ -130,7 +135,7 @@ pub(all) struct TileSpec {
   sy : @units.Percentage?
   flip : TileFlip?
   alignment : TileAlignment?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TileSpec with @debug.Debug::{to_repr}
@@ -144,10 +149,11 @@ pub extend TileSpec with Eq::{not_equal, equal}
 ///
 /// - `Stretch` — `<a:stretch>` with an optional `<a:fillRect/>` inside.
 /// Direct attribute mappings: `Tile`.
+#derive(Eq, Debug)
 pub(all) enum BlipFillMode {
   Stretch(FillRect?)
   Tile(TileSpec)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BlipFillMode with @debug.Debug::{to_repr}
@@ -170,13 +176,14 @@ pub extend BlipFillMode with Eq::{not_equal, equal}
 ///   `duotone`, `fillOverlay`, `lum`, `tint`, `grayscl`, `extLst`). The two
 ///   structural sources collapse into one array; writers re-emit each element
 ///   under its right parent based on its OOXML position.
+#derive(Eq, Debug)
 pub(all) struct BlipFill {
   embed_id : String
   link_id : String
   src_rect : SrcRect?
   fill_mode : BlipFillMode
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BlipFill with @debug.Debug::{to_repr}
@@ -237,10 +244,11 @@ pub fn BlipFill::svg(png_embed_id : String, svg_embed_id : String) -> BlipFill {
 ///
 /// - `position` — Stop position in `Percentage` (0% – 100%, lifted from the
 ///   1/1000-percent `pos` attribute).
+#derive(Eq, Debug)
 pub(all) struct GradientStop {
   position : @units.Percentage
   color : Color
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GradientStop with @debug.Debug::{to_repr}
@@ -254,12 +262,13 @@ pub extend GradientStop with Eq::{not_equal, equal}
 ///
 /// - `Linear` (`<a:lin ang="…" scaled="0"/>`) — linear gradient at `angle`.
 ///   `scaled` is `True` when the linear extent scales with the shape.
+#derive(Eq, Debug)
 pub(all) enum GradientDirection {
   Linear(@units.Angle, Bool)
   PathRect
   PathCircle
   PathShape
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GradientDirection with @debug.Debug::{to_repr}
@@ -275,13 +284,14 @@ pub extend GradientDirection with Eq::{not_equal, equal}
 /// `Linear(Angle(0.0), False)` when the spec's directional choice is
 /// absent — i.e. an unusual but legal "static" gradient.
 ///
+#derive(Eq, Debug)
 pub(all) struct Gradient {
   stops : Array[GradientStop]
   direction : GradientDirection
   rotate_with_shape : Bool?
   flip : TileFlip?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Gradient with @debug.Debug::{to_repr}
@@ -294,12 +304,13 @@ pub extend Gradient with Eq::{not_equal, equal}
 ///
 /// - `preset` (`prst`) — one of ~48 preset names per `ST_PresetPatternVal`.
 ///   Kept as a `String` so unknown presets round-trip.
+#derive(Eq, Debug)
 pub(all) struct Pattern {
   preset : String
   fg : Color
   bg : Color
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Pattern with @debug.Debug::{to_repr}
@@ -310,13 +321,14 @@ pub extend Pattern with Eq::{not_equal, equal}
 ///|
 /// Top-level fill choice. Every OOXML fill site decomposes to one of
 /// these five variants.
+#derive(Eq, Debug)
 pub(all) enum Fill {
   NoFill
   SolidFill(Color)
   GradientFill(Gradient)
   PatternFill(Pattern)
   BlipFillVariant(BlipFill)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Fill with @debug.Debug::{to_repr}
@@ -392,6 +404,7 @@ pub fn Fill::pattern(
 
 ///|
 /// Errors raised by `parse_fill`.
+#derive(Eq, Debug)
 pub(all) suberror FillError {
   /// The element is not one of `noFill` / `solidFill` / `gradFill` /
   /// `pattFill` / `blipFill`.
@@ -401,7 +414,7 @@ pub(all) suberror FillError {
   /// A nested colour child raised `ColorError`. Payload is the wrapped
   /// description.
   ColorFailure(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FillError with @debug.Debug::{to_repr}

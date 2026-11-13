@@ -1,4 +1,5 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum IgnoredErrorType {
   EvalError
   TwoDigitTextYear
@@ -9,9 +10,10 @@ pub(all) enum IgnoredErrorType {
   EmptyCellReference
   ListDataValidation
   CalculatedColumn
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct IgnoredError {
   sqref : String
   eval_error : Bool
@@ -23,7 +25,7 @@ pub struct IgnoredError {
   empty_cell_reference : Bool
   list_data_validation : Bool
   calculated_column : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 fn ignored_error_from_type(

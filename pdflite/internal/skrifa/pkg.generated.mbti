@@ -41,11 +41,12 @@ pub(all) suberror ToPathError {
 pub impl Show for ToPathError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct AdjustedMetrics {
   has_overlaps : Bool
   lsb : Float?
   advance_width : Float?
-} derive(Eq, @debug.Debug)
+}
 
 pub struct CffOutlines {
   font : @read_fonts.FontRef
@@ -125,14 +126,16 @@ pub fn OutlineGlyphCollection::format(Self) -> OutlineGlyphFormat?
 pub fn OutlineGlyphCollection::get(Self, @font_types.GlyphId) -> OutlineGlyph?
 pub fn OutlineGlyphCollection::new(@read_fonts.FontRef) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum OutlineGlyphFormat {
   Glyf
   Cff
   Cff2
   Varc
-} derive(Eq, @debug.Debug)
+}
 
-pub(all) struct Size(Float?) derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+pub(all) struct Size(Float?)
 pub fn Size::linear_scale(Self, Int32) -> Float
 pub fn Size::new(Float) -> Self
 pub fn Size::ppem(Self) -> Float?

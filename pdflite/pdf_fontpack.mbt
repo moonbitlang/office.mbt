@@ -1,10 +1,11 @@
 ///|
 /// One codepoint-to-font mapping in a cpdf-style font pack.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfFontPackEntry {
   codepoint : Int32
   font_index : Int32
   charcode : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// A cpdf-style font pack.
@@ -13,10 +14,11 @@ pub(all) struct PdfFontPackEntry {
 /// Unicode codepoint lookup table returning the font index and one-byte
 /// character code. This ports the source-level `cpdfembed.ml` abstraction
 /// without committing the public API to a hash-table representation.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfFontPack {
   fonts : Array[PdfFont]
   entries : Array[PdfFontPackEntry]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_fontpack_empty() -> PdfFontPack {

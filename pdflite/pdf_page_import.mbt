@@ -30,6 +30,7 @@ let pdf_import_max_nesting : Int32 = 256
 /// draws it into a box `w` by `h` at `(x, y)` with
 /// `q w/width 0 0 h/height x y cm /Name Do Q`, after adding `object` to the
 /// page's `/XObject` resources under `/Name`.
+#derive(Eq, Debug)
 pub struct PdfImportedPage {
   /// the Form XObject's object number in the importing document
   object : Int32
@@ -37,7 +38,7 @@ pub struct PdfImportedPage {
   width : Double
   /// the page's height as a viewer shows it, in points
   height : Double
-} derive(Eq, Debug)
+}
 
 ///|
 /// A leaf of a source's page tree, with the attributes it inherits

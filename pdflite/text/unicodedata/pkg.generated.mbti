@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/text/unicodedata"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -14,6 +15,7 @@ pub fn pdf_unicodedata_source() -> Bytes raise @core.PdfError
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfUnicodeDataEntry {
   code_value : String
   character_name : String
@@ -30,13 +32,13 @@ pub(all) struct PdfUnicodeDataEntry {
   uppercase_mapping : String
   lowercase_mapping : String
   titlecase_mapping : String
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfUnicodeDataEntry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfUnicodeDataEntry::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfUnicodeDataEntry::to_json(Self) -> Json
+pub fn PdfUnicodeDataEntry::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfUnicodeDataEntry::to_repr(Self) -> @debug.Repr
 

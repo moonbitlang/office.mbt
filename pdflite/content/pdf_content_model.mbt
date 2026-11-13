@@ -4,6 +4,7 @@
 /// Text strings and unknown operators are stored as raw PDF bytes. Inline images
 /// carry their image dictionary, optional decode parameters, and image data; the
 /// parser decodes supported inline-image filters when it can do so safely.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfContentOp {
   Op_w(Double)
   Op_J(Int32)
@@ -79,7 +80,7 @@ pub(all) enum PdfContentOp {
   Op_BX
   Op_EX
   Op_Unknown(PdfBytes)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_content_ascii(text : String) -> PdfBytes {

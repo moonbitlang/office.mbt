@@ -1,12 +1,13 @@
 ///|
 /// One reader event. Attributes on `StartElement` are reported in source
 /// order; values are already entity-decoded.
+#derive(Debug)
 pub(all) enum XmlEvent {
   StartElement(QName, Array[(QName, String)])
   EndElement(QName)
   Text(String)
   CData(String)
-} derive(Debug)
+}
 
 ///|
 pub extend XmlEvent with @debug.Debug::{to_repr}

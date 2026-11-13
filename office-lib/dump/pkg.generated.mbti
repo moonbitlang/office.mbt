@@ -3,6 +3,7 @@ package "moonbitlang/office-lib/dump"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/docx2html/docx",
   "moonbitlang/mbtexcel/xlsx",
 }
@@ -12,13 +13,13 @@ pub const SCHEMA_DUMP : String = "office.dump/1"
 
 pub const XLSX_BATCH_SCHEMA : String = "xlsx.batch/2"
 
-pub fn docx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
+pub fn docx_dump_op_chunks(Array[@json.Json]) -> Array[Array[@json.Json]]
 
 pub fn dump_docx_document(@docx.DocxAnnotatedResult, source_file~ : String, source_bytes~ : Int32, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise DumpError
 
 pub fn dump_xlsx_workbook(@xlsx.Workbook, source_file~ : String, source_bytes~ : Int32, source_sha256? : String?, cancelled? : () -> Bool) -> DumpEnvelope raise
 
-pub fn parse_dump_envelope(Json) -> DumpEnvelope raise DumpParseError
+pub fn parse_dump_envelope(@json.Json) -> DumpEnvelope raise DumpParseError
 
 pub fn replay_docx_dump(DumpEnvelope) -> Bytes raise ReplayError
 
@@ -28,36 +29,40 @@ pub fn sha256_hex_bytes(BytesView) -> String
 
 pub fn sha256_hex_string(String) -> String
 
-pub fn xlsx_dump_op_chunks(Array[Json]) -> Array[Array[Json]]
+pub fn xlsx_dump_op_chunks(Array[@json.Json]) -> Array[Array[@json.Json]]
 
 // Errors
+#derive(@debug.Debug)
 pub suberror DumpError {
   DumpCancelled
   DumpUnsupported(String)
   DumpSelfCheckFailed(String)
-} derive(@debug.Debug)
+}
 pub fn DumpError::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub suberror DumpParseError {
   DumpParseError(String)
-} derive(@debug.Debug)
+}
 pub fn DumpParseError::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub suberror ReplayError {
   ReplayInvalidFormat(String)
   ReplayFailed(String)
-} derive(@debug.Debug)
+}
 pub fn ReplayError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+#derive(Eq, @json.ToJson)
 pub(all) struct DumpAsset {
   content_type : String
   size : Int32
   data : String
-} derive(Eq, ToJson)
+}
 pub fn DumpAsset::equal(Self, Self) -> Bool
 pub fn DumpAsset::not_equal(Self, Self) -> Bool
-pub fn DumpAsset::to_json(Self) -> Json
+pub fn DumpAsset::to_json(Self) -> @json.Json
 
 pub(all) struct DumpEnvelope {
   format : String
@@ -66,33 +71,35 @@ pub(all) struct DumpEnvelope {
   source_sha256 : String?
   batch_schema : String
   create_sheet : String?
-  ops : Array[Json]
+  ops : Array[@json.Json]
   assets : Map[String, DumpAsset]
   residual : Array[DumpResidual]
   warnings : Array[DumpWarning]
 }
-pub fn DumpEnvelope::to_json_document(Self) -> Json
+pub fn DumpEnvelope::to_json_document(Self) -> @json.Json
 pub fn DumpEnvelope::to_jsonl_lines(Self) -> Array[String]
 
+#derive(Eq, @json.ToJson)
 pub(all) struct DumpResidual {
   code : String
   severity : String
   scope : String
-  location : Json
+  location : @json.Json
   asset : String?
   detail : String
-} derive(Eq, ToJson)
+}
 pub fn DumpResidual::equal(Self, Self) -> Bool
 pub fn DumpResidual::not_equal(Self, Self) -> Bool
-pub fn DumpResidual::to_json(Self) -> Json
+pub fn DumpResidual::to_json(Self) -> @json.Json
 
+#derive(Eq, @json.ToJson)
 pub(all) struct DumpWarning {
   code : String
   message : String
-} derive(Eq, ToJson)
+}
 pub fn DumpWarning::equal(Self, Self) -> Bool
 pub fn DumpWarning::not_equal(Self, Self) -> Bool
-pub fn DumpWarning::to_json(Self) -> Json
+pub fn DumpWarning::to_json(Self) -> @json.Json
 
 // Type aliases
 

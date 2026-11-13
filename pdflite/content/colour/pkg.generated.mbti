@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/content/colour"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -26,33 +27,35 @@ pub fn pdf_parse_draw_colour(String) -> PdfDrawColour raise @core.PdfError
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfContentColour {
   PdfContentGrey(Double)
   PdfContentRGB(Double, Double, Double)
   PdfContentCMYK(Double, Double, Double, Double)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfContentColour::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentColour::not_equal(Self, Self) -> Bool
 pub fn PdfContentColour::to_draw_colour(Self) -> PdfDrawColour
 #deprecated
-pub fn PdfContentColour::to_json(Self) -> Json
+pub fn PdfContentColour::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfContentColour::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfDrawColour {
   PdfDrawNoCol
   PdfDrawRGB(Double, Double, Double)
   PdfDrawGrey(Double)
   PdfDrawCYMK(Double, Double, Double, Double)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfDrawColour::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDrawColour::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfDrawColour::to_json(Self) -> Json
+pub fn PdfDrawColour::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfDrawColour::to_repr(Self) -> @debug.Repr
 

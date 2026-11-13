@@ -27,7 +27,8 @@ pub let emu_per_cm : Int64 = 360_000L
 
 ///|
 /// English Metric Unit, OOXML's canonical length unit. Always exact.
-pub(all) struct Emu(Int64) derive(Eq, Compare, Debug)
+#derive(Eq, Compare, Debug)
+pub(all) struct Emu(Int64)
 
 ///|
 pub extend Emu with @debug.Debug::{to_repr}
@@ -43,7 +44,8 @@ pub extend Emu with Show::{to_string, output}
 
 ///|
 /// Length expressed in points (1/72 inch). Constructor accepts fractional values.
-pub(all) struct Pt(Double) derive(Eq, Debug)
+#derive(Eq, Debug)
+pub(all) struct Pt(Double)
 
 ///|
 pub extend Pt with @debug.Debug::{to_repr}
@@ -56,7 +58,8 @@ pub extend Pt with Show::{to_string, output}
 
 ///|
 /// Length expressed in inches. Constructor accepts fractional values.
-pub(all) struct Inch(Double) derive(Eq, Debug)
+#derive(Eq, Debug)
+pub(all) struct Inch(Double)
 
 ///|
 pub extend Inch with @debug.Debug::{to_repr}
@@ -69,7 +72,8 @@ pub extend Inch with Show::{to_string, output}
 
 ///|
 /// Length expressed in centimetres. Constructor accepts fractional values.
-pub(all) struct Cm(Double) derive(Eq, Debug)
+#derive(Eq, Debug)
+pub(all) struct Cm(Double)
 
 ///|
 pub extend Cm with @debug.Debug::{to_repr}

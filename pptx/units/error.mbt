@@ -3,6 +3,7 @@
 ///|
 /// Errors raised by the `units` package — primarily by parsers (hex colors,
 /// OOXML scheme color names) where input may be malformed.
+#derive(Eq, Debug)
 pub(all) suberror UnitsError {
   /// The hex color string was not exactly six hex digits (after stripping an
   /// optional leading `#`). The payload is the offending input.
@@ -10,7 +11,7 @@ pub(all) suberror UnitsError {
   /// The OOXML scheme color value (e.g. `accent1`, `bg1`) was not recognised.
   /// The payload is the offending input.
   UnknownSchemeColor(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend UnitsError with @debug.Debug::{to_repr}

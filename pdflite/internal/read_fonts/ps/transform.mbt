@@ -64,6 +64,7 @@ fn is_degenerate(matrix : FontMatrix) -> Bool {
 
 ///|
 /// Combination of a matrix and optional scale.
+#derive(Eq, Debug)
 pub(all) struct Transform {
   /// Affine font matrix.
   matrix : FontMatrix
@@ -71,7 +72,7 @@ pub(all) struct Transform {
   ///
   /// This is assumed to convert from font units to 26.6 values.
   scale : Fixed?
-} derive(Eq, Debug)
+}
 
 ///|
 /// The transform that doesn't modify coordinates or metrics.
@@ -108,12 +109,13 @@ pub fn Transform::transform_h_metric(self : Transform, metric : Fixed) -> Fixed 
 
 ///|
 /// An affine matrix with a scaling factor.
+#derive(Eq, Debug)
 pub(all) struct ScaledFontMatrix {
   /// The matrix.
   matrix : FontMatrix
   /// The dynamic scale factor used when parsing this matrix.
   scale : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 /// Parses a font matrix using dynamic scaling factors.

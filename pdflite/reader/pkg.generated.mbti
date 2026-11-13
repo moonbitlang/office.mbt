@@ -4,6 +4,7 @@ package "moonbitlang/pdflite/reader"
 import {
   "moonbitlang/core/debug",
   "moonbitlang/core/hashmap",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/syntax",
   "moonbitlang/pdflite/xref_model",
@@ -129,13 +130,14 @@ pub fn pdf_xref_token_in_use(BytesView) -> Bool raise @core.PdfError
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfClassicXRefEntry {
   object_number : Int32
   offset : Int32
   generation : Int32
   in_use : Bool
   object_stream : @xref_model.ObjectStreamReference?
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn PdfClassicXRefEntry::equal(Self, Self) -> Bool
 #deprecated
@@ -176,16 +178,17 @@ pub(all) struct PdfReconstructedXRefCoverage {
 }
 pub fn PdfReconstructedXRefCoverage::contains(Self, Int32, Int32) -> Bool
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfVersion {
   major : Int32
   minor : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfVersion::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfVersion::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfVersion::to_json(Self) -> Json
+pub fn PdfVersion::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfVersion::to_repr(Self) -> @debug.Repr
 

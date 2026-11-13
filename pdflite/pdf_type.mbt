@@ -3,6 +3,7 @@
 ///
 /// `PdfTypeText` stores raw one-byte PDF charcodes, matching the OCaml
 /// `char list` representation rather than Unicode text.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfTypeElement {
   PdfTypeText(@core.PdfBytes)
   PdfTypeHGlue(Double)
@@ -15,14 +16,15 @@ pub(all) enum PdfTypeElement {
   PdfTypeBeginDocument
   PdfTypeTag(String, Int32)
   PdfTypeEndTag
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Pages and per-page structure tags produced by the cpdftype typesetter.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfTypeTypesetResult {
   pages : Array[@page.PdfPage]
   tags : Array[Array[(String, Int32)]]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 priv struct PdfTypeTypesetState {

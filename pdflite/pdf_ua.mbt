@@ -1,9 +1,10 @@
 ///|
 /// PDF/UA subformat selector used by CamlPDF-facing creation helpers.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfUASubformat {
   PdfUA1
   PdfUA2
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Parse CamlPDF's PDF/UA subformat spelling.

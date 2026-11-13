@@ -5,6 +5,7 @@
 /// `PdfNoPrint` means printing is denied. They are converted to and from the
 /// PDF `/P` permission bit mask by `pdf_p_of_permissions` and
 /// `pdf_permissions_of_p`.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfPermission {
   PdfNoEdit
   PdfNoPrint
@@ -14,7 +15,7 @@ pub(all) enum PdfPermission {
   PdfNoExtract
   PdfNoAssemble
   PdfNoHqPrint
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_permission_denied(

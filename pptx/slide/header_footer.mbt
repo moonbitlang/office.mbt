@@ -10,10 +10,11 @@
 ///|
 /// How a date placeholder is filled. `Auto` emits an updating
 /// `<a:fld type="datetime1">`; `Fixed` emits literal text.
+#derive(Eq, Debug)
 pub(all) enum DateMode {
   Auto
   Fixed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DateMode with @debug.Debug::{to_repr}

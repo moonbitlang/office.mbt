@@ -151,12 +151,13 @@ pub fn AnnotationAnchor::start(Self) -> String?
 pub fn AnnotationAnchor::start_boundary(Self) -> AnnotationBoundary?
 pub fn AnnotationAnchor::story(Self) -> String
 
+#derive(Eq)
 pub enum AnnotationBoundary {
   Before
   InsideStart
   InsideEnd
   After
-} derive(Eq)
+}
 pub fn AnnotationBoundary::equal(Self, Self) -> Bool
 pub fn AnnotationBoundary::not_equal(Self, Self) -> Bool
 pub fn AnnotationBoundary::output(Self, &Logger) -> Unit
@@ -239,9 +240,10 @@ pub fn DocxDeleteReceipt::successor_para_id(Self) -> String?
 pub fn DocxDeleteReceipt::successor_text(Self) -> String?
 pub fn DocxDeleteReceipt::text(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub struct DocxDirectFormat {
   // private fields
-} derive(Eq, @debug.Debug)
+}
 pub fn DocxDirectFormat::bold(Self) -> Bool?
 pub fn DocxDirectFormat::color(Self) -> String?
 #deprecated
@@ -315,10 +317,11 @@ pub fn DocxFormatSpan::source_runs(Self) -> Array[String]
 pub fn DocxFormatSpan::start(Self) -> Int32
 pub fn DocxFormatSpan::text(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxInsertContent {
   style : String?
   runs : Array[DocxInsertRun]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocxInsertContent::equal(Self, Self) -> Bool
 #deprecated
@@ -332,12 +335,13 @@ pub struct DocxInsertReceipt {
 pub fn DocxInsertReceipt::para_id(Self) -> String
 pub fn DocxInsertReceipt::planned_path(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxInsertRun {
   text : String
   bold : Bool
   italic : Bool
   underline : Bool
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocxInsertRun::equal(Self, Self) -> Bool
 #deprecated
@@ -387,13 +391,14 @@ pub fn DocxMatchList::matches(Self) -> Array[DocxMatch]
 pub fn DocxMatchList::total(Self) -> Int32
 pub fn DocxMatchList::truncated(Self) -> Bool
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxPackageResult {
   document : @document.DocumentElement
   headers : Array[@document.HeaderFooterPart]
   footers : Array[@document.HeaderFooterPart]
   sections : Array[@document.DocumentSection]
   messages : Array[@core.Message]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocxPackageResult::equal(Self, Self) -> Bool
 #deprecated
@@ -448,10 +453,11 @@ pub enum DocxParagraphJoin {
   Unjoined(String)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxReadResult {
   document : @document.DocumentElement
   messages : Array[@core.Message]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocxReadResult::equal(Self, Self) -> Bool
 #deprecated

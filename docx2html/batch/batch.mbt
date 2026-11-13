@@ -9,9 +9,10 @@
 ///|
 /// A script that cannot be parsed or applied. Messages are agent-facing
 /// and name the op index and key.
+#derive(Eq)
 pub(all) suberror BatchError {
   BatchError(String)
-} derive(Eq)
+}
 
 ///|
 pub impl Show for BatchError with fn output(self, logger) {

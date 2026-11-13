@@ -19,20 +19,22 @@ const MAX_ROW : Int32 = 1_048_576
 ///|
 /// A normalized, inclusive rectangular cell range (1-based coordinates,
 /// `lo <= hi` on both axes).
+#derive(Eq, @debug.Debug)
 pub struct CellRange {
   col_lo : Int32
   row_lo : Int32
   col_hi : Int32
   row_hi : Int32
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Raised for a range that exceeds `MAX_RANGE_CELLS` or a reference that is
 /// not a well-formed in-grid A1-style cell name.
+#derive(@debug.Debug)
 pub suberror RangeError {
   RangeTooLarge(range~ : String, count~ : Int64)
   MalformedRef(ref_~ : String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub impl Show for RangeError with fn output(self, logger) {

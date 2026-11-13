@@ -12,9 +12,10 @@ const MAX_RENDER_CELLS : Int32 = 262_144
 
 ///|
 /// Raised when `--sheet` names a sheet the workbook does not have.
+#derive(@debug.Debug)
 pub suberror RenderError {
   SheetNotFound(name~ : String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub impl Show for RenderError with fn output(self, logger) {

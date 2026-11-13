@@ -8,10 +8,11 @@
 /// UTF-16 code unit `i`; `fallback[i]` records that the CJK fallback face
 /// (not the requested face) supplied that character's metrics, so run
 /// splitting can reference the face that will actually render it.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Measured {
   advances_pt : Array[Double]
   fallback : Array[Bool]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Measure `text` in `face` at `size_pt`. Characters the face lacks are

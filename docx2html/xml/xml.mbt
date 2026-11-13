@@ -1,17 +1,19 @@
 ///|
 /// Node in the lightweight XML tree.
+#derive(Debug, Eq)
 pub(all) enum XmlNode {
   XmlElement(XmlElement)
   XmlText(String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// XML element with a name, attributes, and child nodes.
+#derive(Debug, Eq)
 pub(all) struct XmlElement {
   name : String
   attributes : @sorted_map.SortedMap[String, String]
   children : Array[XmlNode]
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds an XML element.

@@ -6,6 +6,7 @@
 /// `ZipFailure` carries the ZIP error kind and message.
 /// `MalformedPackage` covers OPC-spec violations detected on top of a
 /// successfully unzipped container.
+#derive(Eq, Debug)
 pub(all) suberror OpcError {
   /// Raised when the underlying ZIP layer cannot pack or unpack the bytes.
   /// Payload is `(code-name, message)`.
@@ -15,7 +16,7 @@ pub(all) suberror OpcError {
   MalformedPackage(String)
   /// Raised when a requested part name is not present in the package.
   PartNotFound(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OpcError with @debug.Debug::{to_repr}

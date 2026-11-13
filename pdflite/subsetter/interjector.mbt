@@ -224,10 +224,11 @@ impl @read_fonts.OutlinePen for OutlinePath with fn close(self) {
 // --- kurbo ---
 
 ///|
+#derive(Eq)
 priv struct Point {
   x : Double
   y : Double
-} derive(Eq)
+}
 
 ///|
 fn pt(x : Float, y : Float) -> Point {
@@ -418,10 +419,11 @@ fn CubicBez::to_quads(self : CubicBez, accuracy : Double) -> Array[QuadBez] {
 
 ///|
 /// A point of a contour (before rounding).
+#derive(Eq)
 priv struct ContourPoint {
   point : Point
   on_curve : Bool
-} derive(Eq)
+}
 
 ///|
 /// A simple glyph: the bounding box `(x_min, y_min, x_max, y_max)` and the

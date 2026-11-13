@@ -45,12 +45,13 @@ fn rd_tag(data : Bytes, at : Int32) -> String {
 
 ///|
 /// The outline format of a font.
+#derive(Eq, Debug)
 pub(all) enum OutlineKind {
   Glyf
   Cff
   Cff2
   NoOutlines
-} derive(Eq, Debug)
+}
 
 ///|
 /// An OpenType font face to embed.

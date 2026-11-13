@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/addtext"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/syntax",
@@ -30,20 +31,22 @@ pub fn pdf_addtext_rotation_radians(PdfAddTextRotation) -> Double
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfAddTextJustification {
   PdfAddTextLeftJustify
   PdfAddTextCentreJustify
   PdfAddTextRightJustify
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextJustification::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextJustification::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextJustification::to_json(Self) -> Json
+pub fn PdfAddTextJustification::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextJustification::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextLinePlacement {
   origin : @geometry.Point2
   base_rotation : Double
@@ -52,30 +55,32 @@ pub(all) struct PdfAddTextLinePlacement {
   horizontal_offset : Double
   vertical_offset : Double
   justification_offset : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextLinePlacement::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextLinePlacement::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextLinePlacement::to_json(Self) -> Json
+pub fn PdfAddTextLinePlacement::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextLinePlacement::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextLineWidths {
   text_width : Double
   widths : Array[Double]
   longest_width : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextLineWidths::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextLineWidths::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextLineWidths::to_json(Self) -> Json
+pub fn PdfAddTextLineWidths::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextLineWidths::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextPreparedLine {
   text : String
   text_bytes : Bytes
@@ -84,16 +89,17 @@ pub(all) struct PdfAddTextPreparedLine {
   expanded_line_bytes : Array[Bytes]
   widths : PdfAddTextLineWidths
   placement : PdfAddTextLinePlacement
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextPreparedLine::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextPreparedLine::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextPreparedLine::to_json(Self) -> Json
+pub fn PdfAddTextPreparedLine::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextPreparedLine::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextReplacementValues {
   page_number : Int32
   end_page : Int32
@@ -103,87 +109,92 @@ pub(all) struct PdfAddTextReplacementValues {
   bates : Int32
   bates_pad : Int32?
   bookmarks : Array[String]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextReplacementValues::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextReplacementValues::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextReplacementValues::to_json(Self) -> Json
+pub fn PdfAddTextReplacementValues::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextReplacementValues::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextResourceSetup {
   resources : @syntax.PdfObject
   font_dictionary : @syntax.PdfObject
   unique_fontname : @core.PdfName
   unique_fontnames : Array[@core.PdfName]
   extgstate_name : @core.PdfName?
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextResourceSetup::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextResourceSetup::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextResourceSetup::to_json(Self) -> Json
+pub fn PdfAddTextResourceSetup::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextResourceSetup::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfAddTextRotation {
   PdfAddTextRot0
   PdfAddTextRot90
   PdfAddTextRot180
   PdfAddTextRot270
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextRotation::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextRotation::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextRotation::to_json(Self) -> Json
+pub fn PdfAddTextRotation::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextRotation::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextUrl {
   url : String
   start : Int32
   end : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextUrl::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextUrl::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextUrl::to_json(Self) -> Json
+pub fn PdfAddTextUrl::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextUrl::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextUrlAnnotationGeometry {
   p0 : @geometry.Point2
   p1 : @geometry.Point2
   p2 : @geometry.Point2
   p3 : @geometry.Point2
   rectangle : @geometry.PdfRectangle
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextUrlAnnotationGeometry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextUrlAnnotationGeometry::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextUrlAnnotationGeometry::to_json(Self) -> Json
+pub fn PdfAddTextUrlAnnotationGeometry::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextUrlAnnotationGeometry::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAddTextUrlLine {
   text : String
   urls : Array[PdfAddTextUrl]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAddTextUrlLine::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAddTextUrlLine::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAddTextUrlLine::to_json(Self) -> Json
+pub fn PdfAddTextUrlLine::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAddTextUrlLine::to_repr(Self) -> @debug.Repr
 

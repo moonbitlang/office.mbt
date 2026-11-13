@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/page/label"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -32,21 +33,23 @@ pub fn pdf_string_of_page_label(PdfPageLabel) -> Bytes
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfPageLabel {
   label_style : PdfPageLabelStyle
   label_prefix : Bytes?
   start_page : Int32
   start_value : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfPageLabel::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPageLabel::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPageLabel::to_json(Self) -> Json
+pub fn PdfPageLabel::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPageLabel::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfPageLabelStyle {
   PageLabelDecimalArabic
   PageLabelUppercaseRoman
@@ -54,14 +57,14 @@ pub(all) enum PdfPageLabelStyle {
   PageLabelUppercaseLetters
   PageLabelLowercaseLetters
   PageLabelNoLabelPrefixOnly
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfPageLabelStyle::debug_name(Self) -> String
 #deprecated
 pub fn PdfPageLabelStyle::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPageLabelStyle::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPageLabelStyle::to_json(Self) -> Json
+pub fn PdfPageLabelStyle::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPageLabelStyle::to_repr(Self) -> @debug.Repr
 

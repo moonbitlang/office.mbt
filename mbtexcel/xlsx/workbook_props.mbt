@@ -1,4 +1,5 @@
 ///|
+#derive(Eq, Debug)
 pub struct CalcPropsOptions {
   mut calc_id : UInt32?
   mut calc_mode : String?
@@ -13,7 +14,7 @@ pub struct CalcPropsOptions {
   mut concurrent_calc : Bool?
   mut concurrent_manual_count : UInt32?
   mut force_full_calc : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn CalcPropsOptions::new() -> CalcPropsOptions {
@@ -68,11 +69,12 @@ pub fn CalcPropsOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct WorkbookPropsOptions {
   mut date_1904 : Bool?
   mut filter_privacy : Bool?
   mut code_name : String?
-} derive(Debug)
+}
 
 ///|
 fn WorkbookPropsOptions::new() -> WorkbookPropsOptions {
@@ -89,19 +91,21 @@ pub fn WorkbookPropsOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub(all) enum CustomPropertyValue {
   Integer(Int32)
   Float(Double)
   Boolean(Bool)
   Text(String)
   DateTime(String)
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct CustomProperty {
   name : String
   value : CustomPropertyValue?
-} derive(Debug)
+}
 
 ///|
 pub fn CustomProperty::new(
@@ -112,12 +116,13 @@ pub fn CustomProperty::new(
 }
 
 ///|
+#derive(Debug)
 pub struct WorkbookProtectionOptions {
   algorithm_name : String
   password : String
   lock_structure : Bool
   lock_windows : Bool
-} derive(Debug)
+}
 
 ///|
 fn WorkbookProtectionOptions::new() -> WorkbookProtectionOptions {
@@ -140,6 +145,7 @@ pub fn WorkbookProtectionOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 struct WorkbookProtection {
   mut lock_structure : Bool
   mut lock_windows : Bool
@@ -147,7 +153,7 @@ struct WorkbookProtection {
   mut hash_value : String
   mut salt_value : String
   mut spin_count : Int32
-} derive(Debug)
+}
 
 ///|
 let workbook_protection_spin_count = 100000

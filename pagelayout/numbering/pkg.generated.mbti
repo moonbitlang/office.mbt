@@ -3,6 +3,7 @@ package "moonbitlang/pagelayout/numbering"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pagelayout",
 }
 
@@ -14,15 +15,16 @@ pub fn number_format(String) -> NumberFormat
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct AbstractNum {
   levels : Map[Int32, Level]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn AbstractNum::equal(Self, Self) -> Bool
 #deprecated
 pub fn AbstractNum::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn AbstractNum::to_json(Self) -> Json
+pub fn AbstractNum::to_json(Self) -> @json.Json
 #deprecated
 pub fn AbstractNum::to_repr(Self) -> @debug.Repr
 
@@ -33,6 +35,7 @@ pub struct Counters {
 pub fn Counters::advance(Self, Numbering, Int32, Int32) -> String?
 pub fn Counters::new() -> Self
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct Level {
   format : NumberFormat
   text : String
@@ -45,31 +48,33 @@ pub(all) struct Level {
   indent_first : @pagelayout.Twips?
   font_family : String?
   size : @pagelayout.HalfPoints?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn Level::default(Int32) -> Self
 #deprecated
 pub fn Level::equal(Self, Self) -> Bool
 #deprecated
 pub fn Level::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn Level::to_json(Self) -> Json
+pub fn Level::to_json(Self) -> @json.Json
 #deprecated
 pub fn Level::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct NumInstance {
   abstract_id : Int32
   overrides : Map[Int32, Level]
   start_overrides : Map[Int32, Int32]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn NumInstance::equal(Self, Self) -> Bool
 #deprecated
 pub fn NumInstance::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn NumInstance::to_json(Self) -> Json
+pub fn NumInstance::to_json(Self) -> @json.Json
 #deprecated
 pub fn NumInstance::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum NumberFormat {
   Decimal
   LowerLetter
@@ -78,13 +83,13 @@ pub(all) enum NumberFormat {
   UpperRoman
   Bullet
   NoNumber
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn NumberFormat::equal(Self, Self) -> Bool
 #deprecated
 pub fn NumberFormat::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn NumberFormat::to_json(Self) -> Json
+pub fn NumberFormat::to_json(Self) -> @json.Json
 #deprecated
 pub fn NumberFormat::to_repr(Self) -> @debug.Repr
 
@@ -97,17 +102,18 @@ pub fn Numbering::level(Self, Int32, Int32) -> Level
 pub fn Numbering::new(Map[Int32, AbstractNum], Map[Int32, NumInstance]) -> Self
 pub fn Numbering::start_override(Self, Int32, Int32) -> Int32?
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum Suffix {
   SuffTab
   SuffSpace
   SuffNothing
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn Suffix::equal(Self, Self) -> Bool
 #deprecated
 pub fn Suffix::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn Suffix::to_json(Self) -> Json
+pub fn Suffix::to_json(Self) -> @json.Json
 #deprecated
 pub fn Suffix::to_repr(Self) -> @debug.Repr
 

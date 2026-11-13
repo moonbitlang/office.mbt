@@ -1,5 +1,6 @@
 ///|
 /// Node in the intermediate HTML tree.
+#derive(Debug, Eq)
 pub(all) enum HtmlNode {
   Element(
     tag~ : String,
@@ -10,7 +11,7 @@ pub(all) enum HtmlNode {
   )
   TextNode(String)
   ForceWrite
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds an HTML text node.

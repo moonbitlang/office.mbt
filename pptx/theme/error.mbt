@@ -6,6 +6,7 @@
 /// The wrapped XML reader/writer error is flattened to a string description
 /// at the boundary, the same convention `OpcError::ZipFailure` uses, so
 /// callers don't have to mix two error types.
+#derive(Eq, Debug)
 pub(all) suberror ThemeError {
   /// The underlying `xml::XmlError` from a reader/writer call. Payload is
   /// `(variant-name, descriptive message)`.
@@ -14,7 +15,7 @@ pub(all) suberror ThemeError {
   /// missing required attribute, wrong namespace, …). Payload is a
   /// description.
   MalformedTheme(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ThemeError with @debug.Debug::{to_repr}

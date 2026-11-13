@@ -7,11 +7,12 @@
 
 ///|
 /// One resolved image: its display size and the bytes to embed.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ImageRef {
   width : @pagelayout.Emu
   height : @pagelayout.Emu
   relationship : String
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Read a `w:drawing`, if it holds an inline picture this engine can

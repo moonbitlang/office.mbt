@@ -23,10 +23,11 @@
 /// - 20: h:mm
 /// - 21: h:mm:ss
 /// - 22: m/d/yy h:mm
+#derive(Eq, Debug)
 pub enum NumberFormat {
   Builtin(Int32)
   Custom(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Font styling for cell text.
@@ -42,6 +43,7 @@ pub enum NumberFormat {
 ///   underline="single",
 /// )
 /// ```
+#derive(Eq, Debug)
 pub struct Font {
   mut bold : Bool?
   mut italic : Bool?
@@ -61,7 +63,7 @@ pub struct Font {
   mut scheme : String?
   mut vert_align : String?
   mut family : String?
-} derive(Eq, Debug)
+}
 
 ///|
 /// Creates a new Font with all fields set to None (default styling).
@@ -212,6 +214,7 @@ pub fn Font::with_values(
 ///
 /// let gradient = Fill::gradient("FF0000", "0000FF", shading=1)
 /// ```
+#derive(Eq, Debug)
 pub struct Fill {
   mut typ : String?
   mut pattern : Int32?
@@ -224,7 +227,7 @@ pub struct Fill {
   mut bg_theme : Int32?
   mut bg_indexed : Int32?
   mut bg_tint : Double?
-} derive(Eq, Debug)
+}
 
 ///|
 fn Fill::new() -> Fill {
@@ -555,11 +558,12 @@ pub fn Fill::solid_bg_indexed(indexed : Int32, tint? : Double) -> Fill {
 /// - 11: DashDotDot
 /// - 12: MediumDashDotDot
 /// - 13: SlantDashDot
+#derive(Eq, Debug)
 pub struct Border {
   typ : String
   mut color : String?
   mut style : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 priv struct BorderXmlEntry {
@@ -605,10 +609,11 @@ pub fn Border::with_values(
 }
 
 ///|
+#derive(Eq, Debug)
 pub struct Protection {
   mut hidden : Bool?
   mut locked : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 fn Protection::new() -> Protection {
@@ -637,6 +642,7 @@ pub fn Protection::with_values(hidden? : Bool, locked? : Bool) -> Protection {
 ///
 /// # Vertical Values
 /// - "top", "center", "bottom", "justify", "distributed"
+#derive(Eq, Debug)
 pub struct Alignment {
   mut horizontal : String?
   mut vertical : String?
@@ -647,7 +653,7 @@ pub struct Alignment {
   mut justify_last_line : Bool?
   mut reading_order : Int32?
   mut relative_indent : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 fn Alignment::new() -> Alignment {
@@ -743,6 +749,7 @@ pub fn Alignment::with_values(
 /// let style_id = workbook.add_style(style)
 /// sheet.set_cell_style("A1", style_id)
 /// ```
+#derive(Eq, Debug)
 pub struct Style {
   number_format : NumberFormat?
   num_fmt : Int32?
@@ -754,7 +761,7 @@ pub struct Style {
   border : Array[Border]?
   protection : Protection?
   alignment : Alignment?
-} derive(Eq, Debug)
+}
 
 ///|
 /// Creates a new empty Style with all fields set to None.

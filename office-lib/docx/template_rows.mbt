@@ -686,6 +686,7 @@ fn part_bindings_at(part : BytesView, offset : Int32) -> Map[String, String]? {
 
 ///|
 /// The published outcome of one repeated row after a successful merge.
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxRegionOutcome {
   name : String
   /// The region as addressed ("/docx/body/tbl[1]/tr[2]").
@@ -693,7 +694,7 @@ pub(all) struct DocxRegionOutcome {
   records : Int32
   replaced : Int32
   escapes_applied : Int32
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Result of one strict document-level DOCX template transaction.

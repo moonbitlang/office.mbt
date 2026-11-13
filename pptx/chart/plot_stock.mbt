@@ -22,6 +22,7 @@
 ///
 /// - `series` (`<c:ser>`) — three for HLC charts, four for OHLC. Captured
 ///   XmlElement payloads.
+#derive(Eq, Debug)
 pub(all) struct StockChartBody {
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
@@ -30,7 +31,7 @@ pub(all) struct StockChartBody {
   up_down_bars : @xml.XmlElement?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StockChartBody with @debug.Debug::{to_repr}

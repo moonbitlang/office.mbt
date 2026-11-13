@@ -3,6 +3,7 @@
 ///
 /// `tm_year` is years since 1900 and `tm_mon` is zero-based, matching C/Unix
 /// `struct tm` and OCaml's `Unix.tm`.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfStrftimeTime {
   tm_sec : Int32
   tm_min : Int32
@@ -13,7 +14,7 @@ pub(all) struct PdfStrftimeTime {
   tm_wday : Int32
   tm_yday : Int32
   tm_isdst : Bool
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Source-spelled cpdf dummy strftime time value.

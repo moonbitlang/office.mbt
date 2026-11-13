@@ -12,6 +12,7 @@
 ///|
 /// An affine transformation `[a b c d e f]`, mapping `(x, y)` to
 /// `(a*x + c*y + e, b*x + d*y + f)` (PDF's and SVG's convention).
+#derive(Eq, Debug, ToJson)
 pub(all) struct Matrix {
   a : Double
   b : Double
@@ -19,7 +20,7 @@ pub(all) struct Matrix {
   d : Double
   e : Double
   f : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// The identity transformation.
@@ -51,6 +52,7 @@ pub fn Matrix::apply(self : Matrix, x : Double, y : Double) -> (Double, Double) 
 /// from the current point, so they need one before them (checked by
 /// `PageModel::validate`). `Close` joins a subpath's end to its start, which
 /// becomes the current point.
+#derive(Eq, Debug, ToJson)
 pub(all) enum PathSegment {
   MoveTo(Double, Double)
   LineTo(Double, Double)
@@ -64,36 +66,40 @@ pub(all) enum PathSegment {
   /// extents in its y-up space). Its start is the current point after it.
   Rectangle(Double, Double, Double, Double)
   Close
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Which regions of a self-intersecting path are inside.
+#derive(Eq, Debug, ToJson)
 pub(all) enum FillRule {
   NonZero
   EvenOdd
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// How the ends of an open stroked subpath are drawn.
+#derive(Eq, Debug, ToJson)
 pub(all) enum LineCap {
   ButtCap
   RoundCap
   SquareCap
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// How the corners of a stroked path are drawn.
+#derive(Eq, Debug, ToJson)
 pub(all) enum LineJoin {
   MiterJoin
   RoundJoin
   BevelJoin
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// How wide a stroke is. PDF and SVG disagree about a width of 0 (the
 /// thinnest line a device can draw in PDF, nothing at all in SVG), so a
 /// `Width` must be positive (checked by `PageModel::validate`) and the
 /// thinnest line is asked for explicitly.
+#derive(Eq, Debug, ToJson)
 pub(all) enum StrokeWidth {
   /// This many units of the space the stroke is drawn in.
   Width(Double)
@@ -104,12 +110,13 @@ pub(all) enum StrokeWidth {
   /// each a solid hairline; glyph outlines cannot be drawn so, and text is
   /// not outlined with a dashed hairline (checked by `PageModel::validate`).
   Hairline
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// How a path is stroked. `dash` is the dash pattern (lengths of dashes and
 /// gaps, alternately, at least one of them positive; empty for a solid
 /// line) starting `dash_phase` into it. The miter limit is at least 1.
+#derive(Eq, Debug, ToJson)
 pub(all) struct StrokeStyle {
   width : StrokeWidth
   cap : LineCap
@@ -117,7 +124,7 @@ pub(all) struct StrokeStyle {
   miter_limit : Double
   dash : Array[Double]
   dash_phase : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A solid line one point wide with butt caps and miter joins (limit 10),
@@ -135,14 +142,16 @@ pub fn StrokeStyle::default() -> StrokeStyle {
 
 ///|
 /// A colour at a position (0 to 1) along a gradient.
+#derive(Eq, Debug, ToJson)
 pub(all) struct GradientStop {
   offset : Double
   color : Color
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Where a gradient's colours vary, in gradient space: offset 0 is at its
 /// start and offset 1 at its end.
+#derive(Eq, Debug, ToJson)
 pub(all) enum GradientShape {
   /// Along the line from `(x1, y1)` to `(x2, y2)`, constant across it
   /// (PDF's axial shading, SVG's `<linearGradient>`).
@@ -159,7 +168,7 @@ pub(all) enum GradientShape {
     y2~ : Double,
     r2~ : Double
   )
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A gradient: its colours vary over `shape`, in gradient space, which
@@ -188,11 +197,12 @@ pub(all) enum GradientShape {
 /// are; Cairo (and so librsvg) resolves the parameter to about 1/65536,
 /// so it merges or moves colour changes nearer than that fraction of a
 /// gradient's size.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Gradient {
   shape : GradientShape
   stops : Array[GradientStop]
   transform : Matrix
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// The one colour a gradient without extent paints, its last stop's: a
@@ -216,22 +226,24 @@ pub fn Gradient::degenerate_color(self : Gradient) -> Color? {
 
 ///|
 /// What fills or strokes a path.
+#derive(Eq, Debug, ToJson)
 pub(all) enum Paint {
   Solid(Color)
   GradientPaint(Gradient)
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A path painted with an optional fill (by `fill_rule`) and an optional
 /// stroke (in `stroke_style`); the fill goes first. A path with neither
 /// paints nothing.
+#derive(Eq, Debug, ToJson)
 pub(all) struct PathItem {
   segments : Array[PathSegment]
   fill : Paint?
   fill_rule : FillRule
   stroke : Paint?
   stroke_style : StrokeStyle
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// How `PaintedText` paints its glyphs (PDF's text rendering modes): filled
@@ -239,14 +251,16 @@ pub(all) struct PathItem {
 /// is stroked in `stroke_style` as a path would be, wholly: nothing of the
 /// stroke style of the paths before it carries over. A run neither filled
 /// nor stroked is invisible but still text (it extracts and searches).
+#derive(Eq, Debug, ToJson)
 pub(all) struct TextPaint {
   fill : Bool
   stroke : Color?
   stroke_style : StrokeStyle
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One operation of a graphic, in order.
+#derive(Eq, Debug, ToJson)
 pub(all) enum GraphicOp {
   /// Remember the transformation, clip and alpha, for `Restore`.
   Save
@@ -270,7 +284,7 @@ pub(all) enum GraphicOp {
   /// top-left corner) `w_pt` by `h_pt` in the graphic's space, whatever
   /// its own aspect ratio.
   Image(ImageItem)
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A vector graphic whose space has its origin at `(x_pt, y_pt)` on the
@@ -289,8 +303,9 @@ pub(all) enum GraphicOp {
 /// writes a graphic's numbers exactly (an integral one beyond 2147483647
 /// with a decimal point, so that it reads as a real), leaving precision
 /// beyond five digits to the readers that keep it.
+#derive(Eq, Debug, ToJson)
 pub(all) struct GraphicItem {
   x_pt : Double
   y_pt : Double
   ops : Array[GraphicOp]
-} derive(Eq, Debug, ToJson)
+}

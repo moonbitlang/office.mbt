@@ -12,6 +12,7 @@
 /// its cached result, which is the best available answer for a field
 /// whose value this engine cannot compute (a cross reference, a
 /// citation, a merge field).
+#derive(Eq, Debug, ToJson)
 pub(all) enum FieldKind {
   /// Not a field: ordinary text.
   NotAField
@@ -19,7 +20,7 @@ pub(all) enum FieldKind {
   PageNumber
   /// `NUMPAGES` — the document's total page count.
   PageCount
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Classify a field instruction such as `" PAGE \\* MERGEFORMAT "`. Only

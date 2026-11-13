@@ -23,11 +23,12 @@
 /// - `click` — Resolved relationship id emitted as `<a:hlinkClick r:id="…">`.
 /// - `action` — Optional `action` attribute — `"ppaction://hlinksldjump"` for
 ///   internal-slide jumps (set by the resolver), `None` for external URLs.
+#derive(Eq, Debug)
 pub(all) struct ShapeHyperlink {
   target : HyperlinkTarget?
   click : String?
   action : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ShapeHyperlink with @debug.Debug::{to_repr}

@@ -7,6 +7,7 @@
 
 ///|
 /// `w:numFmt` — how a level's counter renders.
+#derive(Eq, Debug, ToJson)
 pub(all) enum NumberFormat {
   Decimal
   LowerLetter
@@ -17,7 +18,7 @@ pub(all) enum NumberFormat {
   Bullet
   /// `w:numFmt="none"` — the level shows no label at all.
   NoNumber
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Parse an OOXML `w:numFmt` value. Formats this engine does not render
@@ -37,15 +38,17 @@ pub fn number_format(name : String) -> NumberFormat {
 
 ///|
 /// What separates a level's label from its text (`w:suff`).
+#derive(Eq, Debug, ToJson)
 pub(all) enum Suffix {
   /// The default: advance to the level's indent position.
   SuffTab
   SuffSpace
   SuffNothing
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One level of an abstract numbering definition.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Level {
   format : NumberFormat
   /// `w:lvlText`, e.g. `"%1."` or `"%1.%2"` or a bullet glyph.
@@ -69,7 +72,7 @@ pub(all) struct Level {
   /// The size from the level's own `w:rPr/w:sz`, in half-points. A level
   /// may size its marker independently of the paragraph text.
   size : @pagelayout.HalfPoints?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A level with Word's defaults: decimal, `%N.`, starting at 1.
@@ -91,19 +94,21 @@ pub fn Level::default(depth : Int32) -> Level {
 
 ///|
 /// An `w:abstractNum`: up to nine levels, by depth.
+#derive(Eq, Debug, ToJson)
 pub(all) struct AbstractNum {
   levels : Map[Int32, Level]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A `w:num` instance: which abstract definition it uses, plus any
 /// per-instance level overrides (`w:lvlOverride`).
+#derive(Eq, Debug, ToJson)
 pub(all) struct NumInstance {
   abstract_id : Int32
   overrides : Map[Int32, Level]
   /// `w:startOverride` per level, which also forces a restart.
   start_overrides : Map[Int32, Int32]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A parsed `word/numbering.xml`.

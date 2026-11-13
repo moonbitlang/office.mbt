@@ -15,14 +15,16 @@ pub fn trunc_i16(Int32) -> Int32
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct BoundingBox[T] {
   x_min : T
   y_min : T
   x_max : T
   y_max : T
-} derive(Eq, @debug.Debug)
+}
 
-pub(all) struct F26Dot6(Int32) derive(Compare, Eq, Hash, @debug.Debug)
+#derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct F26Dot6(Int32)
 pub fn F26Dot6::abs(Self) -> Self
 pub fn F26Dot6::floor(Self) -> Self
 pub fn F26Dot6::fract(Self) -> Self
@@ -43,7 +45,8 @@ pub impl Mul for F26Dot6
 pub impl Neg for F26Dot6
 pub impl Sub for F26Dot6
 
-pub(all) struct F2Dot14(Int32) derive(Compare, Eq, Hash, @debug.Debug)
+#derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct F2Dot14(Int32)
 pub fn F2Dot14::from_bits(Int32) -> Self
 pub fn F2Dot14::from_f32(Float) -> Self
 pub fn F2Dot14::one() -> Self
@@ -52,7 +55,8 @@ pub fn F2Dot14::to_f32(Self) -> Float
 pub fn F2Dot14::to_fixed(Self) -> Fixed
 pub fn F2Dot14::zero() -> Self
 
-pub(all) struct Fixed(Int32) derive(Compare, Eq, Hash, @debug.Debug)
+#derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct Fixed(Int32)
 pub fn Fixed::abs(Self) -> Self
 pub fn Fixed::checked_add(Self, Self) -> Self?
 pub fn Fixed::floor(Self) -> Self
@@ -83,6 +87,7 @@ pub impl Mul for Fixed
 pub impl Neg for Fixed
 pub impl Sub for Fixed
 
+#derive(Eq, @debug.Debug)
 pub(all) struct FontMatrix {
   xx : Fixed
   yx : Fixed
@@ -90,13 +95,14 @@ pub(all) struct FontMatrix {
   yy : Fixed
   dx : Fixed
   dy : Fixed
-} derive(Eq, @debug.Debug)
+}
 pub fn FontMatrix::elements(Self) -> FixedArray[Fixed]
 pub fn FontMatrix::from_elements(FixedArray[Fixed]) -> Self
 pub fn FontMatrix::identity() -> Self
 pub fn FontMatrix::transform(Self, Fixed, Fixed) -> (Fixed, Fixed)
 
-pub(all) struct GlyphId(UInt32) derive(Compare, Eq, Hash, @debug.Debug)
+#derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct GlyphId(UInt32)
 pub fn GlyphId::from_int(Int32) -> Self
 pub fn GlyphId::new(UInt32) -> Self
 pub fn GlyphId::notdef() -> Self
@@ -105,13 +111,15 @@ pub fn GlyphId::to_u16(Self) -> Int32?
 pub fn GlyphId::to_u32(Self) -> UInt32
 pub impl Show for GlyphId
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Point[T] {
   x : T
   y : T
-} derive(Eq, @debug.Debug)
+}
 pub fn[T] Point::new(T, T) -> Self[T]
 
-pub(all) struct Tag(UInt32) derive(Compare, Eq, Hash, @debug.Debug)
+#derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct Tag(UInt32)
 pub fn Tag::from_u32(UInt32) -> Self
 pub fn Tag::new(String) -> Self
 pub fn Tag::to_u32(Self) -> UInt32

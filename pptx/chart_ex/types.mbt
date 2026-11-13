@@ -31,11 +31,12 @@
 /// - `chart_data` (`<cx:chartData>`) — the data dimensions block. Captured
 ///   XmlElement; typed dimensions can lift in a later slice.
 /// - `chart` (`<cx:chart>`) — REQUIRED chart definition body.
+#derive(Eq, Debug)
 pub(all) struct ChartEx {
   chart_data : @xml.XmlElement?
   chart : ChartExBody
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartEx with @debug.Debug::{to_repr}
@@ -59,12 +60,13 @@ pub impl Show for ChartEx with fn output(self, logger) {
 /// - `plot_area` (`<cx:plotArea>`) — REQUIRED.
 /// - `legend` — `<cx:legend>`. Optional. Captured XmlElement.
 /// - `extension` — `<cx:extLst>` plus any foreign-namespace siblings.
+#derive(Eq, Debug)
 pub(all) struct ChartExBody {
   title : @xml.XmlElement?
   plot_area : ChartExPlotArea
   legend : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartExBody with @debug.Debug::{to_repr}
@@ -90,11 +92,12 @@ pub impl Show for ChartExBody with fn output(self, logger) {
 /// - `axes` (`<cx:axis id="…">*`) — zero or more axes. Captured XmlElement
 ///   until a later slice types them.
 /// - `extension` — Unmodelled children.
+#derive(Eq, Debug)
 pub(all) struct ChartExPlotArea {
   plot_area_region : ChartExPlotAreaRegion
   axes : Array[@xml.XmlElement]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartExPlotArea with @debug.Debug::{to_repr}
@@ -120,11 +123,12 @@ pub impl Show for ChartExPlotArea with fn output(self, logger) {
 /// - `series` (`<cx:series>+`) — one or more series, each tagged with its
 ///   `layoutId` chart kind.
 /// - `extension` — Unmodelled children.
+#derive(Eq, Debug)
 pub(all) struct ChartExPlotAreaRegion {
   plot_surface : @xml.XmlElement?
   series : Array[ChartExSeries]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartExPlotAreaRegion with @debug.Debug::{to_repr}
@@ -157,13 +161,14 @@ pub impl Show for ChartExPlotAreaRegion with fn output(self, logger) {
 ///   `<cx:tx>`, `<cx:dataLabels>`, `<cx:dataPt>`, `<cx:dataId>`,
 ///   `<cx:layoutPr>`, etc. The full subtree is preserved verbatim; only the
 ///   discriminator and the wrapper attributes lift.
+#derive(Eq, Debug)
 pub(all) struct ChartExSeries {
   layout_id : ChartExKind
   format_idx : Int32?
   hidden : Bool?
   owner_idx : Int32?
   body : @xml.XmlElement
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartExSeries with @debug.Debug::{to_repr}
@@ -199,6 +204,7 @@ pub impl Show for ChartExSeries with fn output(self, logger) {
 /// - `Waterfall` — `layoutId="waterfall"`
 /// - `Histogram` — `layoutId="histogram"`
 /// - `Other` — Unknown / future layout id, kept verbatim for round-trip.
+#derive(Eq, Debug)
 pub(all) enum ChartExKind {
   BoxWhisker
   ClusteredColumn
@@ -210,7 +216,7 @@ pub(all) enum ChartExKind {
   Waterfall
   Histogram
   Other(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartExKind with @debug.Debug::{to_repr}

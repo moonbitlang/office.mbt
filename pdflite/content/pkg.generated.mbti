@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/content"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/syntax",
@@ -20,6 +21,7 @@ pub fn pdf_content_parse_known_section(ArrayView[@syntax.PdfObject], BytesView) 
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfContentOp {
   Op_w(Double)
   Op_J(Int32)
@@ -95,13 +97,13 @@ pub(all) enum PdfContentOp {
   Op_BX
   Op_EX
   Op_Unknown(Bytes)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfContentOp::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfContentOp::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfContentOp::to_json(Self) -> Json
+pub fn PdfContentOp::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfContentOp::to_repr(Self) -> @debug.Repr
 

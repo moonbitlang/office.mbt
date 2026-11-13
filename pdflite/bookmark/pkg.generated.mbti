@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/bookmark"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/destination",
 }
 
@@ -12,6 +13,7 @@ pub let pdf_bookmark_black : PdfBookmarkColour
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfBookmark {
   level : Int32
   text : Bytes
@@ -19,27 +21,28 @@ pub(all) struct PdfBookmark {
   is_open : Bool
   colour : PdfBookmarkColour
   flags : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfBookmark::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfBookmark::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfBookmark::to_json(Self) -> Json
+pub fn PdfBookmark::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfBookmark::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfBookmarkColour {
   red : Double
   green : Double
   blue : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfBookmarkColour::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfBookmarkColour::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfBookmarkColour::to_json(Self) -> Json
+pub fn PdfBookmarkColour::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfBookmarkColour::to_repr(Self) -> @debug.Repr
 

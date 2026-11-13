@@ -4,6 +4,7 @@
 /// These values name the base fonts that a conforming PDF reader is expected
 /// to know without an embedded font program. The variants match the canonical
 /// PDF names used in `/BaseFont` entries.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
   PdfTimesBold
@@ -19,7 +20,7 @@ pub(all) enum PdfStandardFont {
   PdfCourierBoldOblique
   PdfSymbol
   PdfZapfDingbats
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Return the canonical standard-font name without the leading PDF slash.

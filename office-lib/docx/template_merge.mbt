@@ -9,12 +9,14 @@
 /// publication with bounded findings.
 
 ///|
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxTemplateFinding {
   location : String
   detail : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxTemplateReport {
   mut placeholders_found : Int32
   mut replaced : Int32
@@ -32,13 +34,14 @@ pub(all) struct DocxTemplateReport {
   mut unused_total : Int32
   stories_scanned : Array[String]
   mut changed : Bool
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Raised when strict findings refuse publication.
+#derive(@debug.Debug)
 pub suberror DocxTemplateRefused {
   DocxTemplateRefused(DocxTemplateReport)
-} derive(@debug.Debug)
+}
 
 ///|
 let docx_template_finding_limit : Int32 = 64

@@ -9,13 +9,14 @@ import {
 pub fn decode_xml_bytes(BytesView) -> String raise XmlError
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror XmlError {
   Malformed(String)
   MismatchedEndTag(String)
   UnexpectedEof
   UnboundPrefix(String)
   WriterMisuse(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn XmlError::equal(Self, Self) -> Bool
 pub fn XmlError::not_equal(Self, Self) -> Bool
 pub fn XmlError::output(Self, &Logger) -> Unit
@@ -24,10 +25,11 @@ pub fn XmlError::to_string(Self) -> String
 pub impl Show for XmlError
 
 // Types and methods
+#derive(Eq, Hash, @debug.Debug)
 pub struct QName {
   uri : String
   local_name : String
-} derive(Eq, Hash, @debug.Debug)
+}
 pub fn QName::equal(Self, Self) -> Bool
 pub fn QName::hash(Self) -> Int32
 pub fn QName::hash_combine(Self, Hasher) -> Unit
@@ -40,11 +42,12 @@ pub fn QName::to_string(Self) -> String
 pub fn QName::unqualified(String) -> Self
 pub impl Show for QName
 
+#derive(Eq, @debug.Debug)
 pub(all) struct XmlElement {
   name : QName
   attributes : Array[(QName, String)]
   children : Array[XmlNode]
-} derive(Eq, @debug.Debug)
+}
 pub fn XmlElement::equal(Self, Self) -> Bool
 pub fn XmlElement::new(QName, Array[(QName, String)], Array[XmlNode]) -> Self
 pub fn XmlElement::not_equal(Self, Self) -> Bool
@@ -53,22 +56,24 @@ pub fn XmlElement::to_repr(Self) -> @debug.Repr
 pub fn XmlElement::to_string(Self) -> String
 pub impl Show for XmlElement
 
+#derive(@debug.Debug)
 pub(all) enum XmlEvent {
   StartElement(QName, Array[(QName, String)])
   EndElement(QName)
   Text(String)
   CData(String)
-} derive(@debug.Debug)
+}
 pub fn XmlEvent::output(Self, &Logger) -> Unit
 pub fn XmlEvent::to_repr(Self) -> @debug.Repr
 pub fn XmlEvent::to_string(Self) -> String
 pub impl Show for XmlEvent
 
+#derive(Eq, @debug.Debug)
 pub(all) enum XmlNode {
   Element(XmlElement)
   Text(String)
   CData(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn XmlNode::equal(Self, Self) -> Bool
 pub fn XmlNode::not_equal(Self, Self) -> Bool
 pub fn XmlNode::output(Self, &Logger) -> Unit

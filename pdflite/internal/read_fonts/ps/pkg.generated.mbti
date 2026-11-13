@@ -50,6 +50,7 @@ pub(all) suberror PsError {
 pub impl Show for PsError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct BcdComponents {
   error : @font_types.Fixed?
   number : Int32
@@ -58,7 +59,7 @@ pub(all) struct BcdComponents {
   exponent_add : Int32
   integer_len : Int32
   fraction_len : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn BcdComponents::value(Self, Bool) -> @font_types.Fixed
 
 pub struct BlendState {
@@ -73,9 +74,10 @@ pub fn BlendState::region_count(Self) -> Int32
 pub fn BlendState::scalar(Self, Int32) -> @font_types.Fixed raise PsError
 pub fn BlendState::set_store_index(Self, Int32) -> Unit raise PsError
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Blues {
   values : Array[(@font_types.Fixed, @font_types.Fixed)]
-} derive(Eq, @debug.Debug)
+}
 pub fn Blues::default() -> Self
 pub fn Blues::new(Array[@font_types.Fixed]) -> Self
 
@@ -164,10 +166,11 @@ pub enum CharsetKind {
   Custom(CustomCharset)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum CharstringKind {
   Type1
   Type2
-} derive(Eq, @debug.Debug)
+}
 
 pub enum CustomCharset {
   Format0(BytesView)
@@ -182,6 +185,7 @@ pub enum CustomEncoding {
 pub fn CustomEncoding::map(Self, Charset, Int32) -> @font_types.GlyphId?
 pub fn CustomEncoding::new(BytesView) -> Self raise PsError
 
+#derive(Eq, @debug.Debug)
 pub(all) enum DictOperator {
   Version
   Notice
@@ -238,7 +242,7 @@ pub(all) enum DictOperator {
   StemSnapV
   ForceBold
   InitialRandomSeed
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Encoding {
   encoding : RawEncoding
@@ -248,6 +252,7 @@ pub fn Encoding::charset(Self) -> Charset
 pub fn Encoding::map(Self, Byte) -> @font_types.GlyphId?
 pub fn Encoding::predefined(Self) -> PredefinedEncoding?
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Entry {
   Version(Sid)
   Notice(Sid)
@@ -303,7 +308,7 @@ pub(all) enum Entry {
   StemSnapV(StemSnaps)
   ForceBold(Bool)
   InitialRandomSeed(Int32)
-} derive(Eq, @debug.Debug)
+}
 
 pub enum FdSelect {
   Format0(BytesView)
@@ -313,6 +318,7 @@ pub enum FdSelect {
 pub fn FdSelect::font_index(Self, @font_types.GlyphId) -> Int32?
 pub fn FdSelect::read(BytesView) -> Self raise PsError
 
+#derive(Eq, @debug.Debug)
 pub(all) struct HintingParams {
   mut blues : Blues
   mut family_blues : Blues
@@ -322,7 +328,7 @@ pub(all) struct HintingParams {
   mut blue_shift : @font_types.Fixed
   mut blue_fuzz : @font_types.Fixed
   mut language_group : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn HintingParams::default() -> Self
 
 pub(all) enum Index {
@@ -360,10 +366,11 @@ pub struct NopFilterSink {
 pub fn NopFilterSink::new(&CommandSink) -> Self
 pub impl CommandSink for NopFilterSink
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Number {
   I32(Int32)
   Fixed(@font_types.Fixed)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct PenSink {
   pen : &@read_fonts.OutlinePen
@@ -371,11 +378,12 @@ pub struct PenSink {
 pub fn PenSink::new(&@read_fonts.OutlinePen) -> Self
 pub impl CommandSink for PenSink
 
+#derive(Eq, @debug.Debug)
 pub(all) enum PredefinedEncoding {
   Standard
   Expert
   IsoLatin1
-} derive(Eq, @debug.Debug)
+}
 pub fn PredefinedEncoding::name(Self, Int32) -> String
 pub fn PredefinedEncoding::sid(Self, Int32) -> Sid?
 
@@ -386,13 +394,15 @@ pub enum RawEncoding {
 pub fn RawEncoding::map(Self, Charset, Int32) -> @font_types.GlyphId?
 pub fn RawEncoding::new(BytesView, Int32) -> Self raise PsError
 
+#derive(Eq, @debug.Debug)
 pub(all) struct ScaledFontMatrix {
   matrix : @font_types.FontMatrix
   scale : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn ScaledFontMatrix::normalize(Self) -> Self
 
-pub(all) struct Sid(Int32) derive(Compare, Eq, Hash, @debug.Debug)
+#derive(Compare, Eq, Hash, @debug.Debug)
+pub(all) struct Sid(Int32)
 pub fn Sid::new(Int32) -> Self
 pub fn Sid::resolve_standard(Self) -> Result[String, Int32]
 pub fn Sid::to_u16(Self) -> Int32
@@ -420,9 +430,10 @@ pub fn Stack::push(Self, Number) -> Unit raise PsError
 pub fn Stack::push_fixed(Self, @font_types.Fixed) -> Unit raise PsError
 pub fn Stack::push_i32(Self, Int32) -> Unit raise PsError
 
+#derive(Eq, @debug.Debug)
 pub(all) struct StemSnaps {
   values : Array[@font_types.Fixed]
-} derive(Eq, @debug.Debug)
+}
 pub fn StemSnaps::new(Array[@font_types.Fixed]) -> Self
 
 pub struct Subfont {
@@ -438,10 +449,11 @@ pub fn Subfont::nominal_width(Self) -> @font_types.Fixed
 pub fn Subfont::subrs_offset(Self) -> UInt32
 pub fn Subfont::vs_index(Self) -> Int32
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Transform {
   matrix : @font_types.FontMatrix
   scale : @font_types.Fixed?
-} derive(Eq, @debug.Debug)
+}
 pub fn Transform::compute_scale(Float, Int32) -> @font_types.Fixed
 pub fn Transform::identity() -> Self
 pub fn Transform::transform_h_metric(Self, @font_types.Fixed) -> @font_types.Fixed

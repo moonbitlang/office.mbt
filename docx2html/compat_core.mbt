@@ -12,6 +12,7 @@ pub type DocxXmlResourceLimit = @core.DocxXmlResourceLimit
 
 ///|
 /// Errors raised for invalid archives, invalid XML, missing parts, or unsupported input.
+#derive(Debug, Eq)
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)
@@ -24,7 +25,7 @@ pub(all) suberror DocxError {
     actual~ : Int64,
     message~ : String
   )
-} derive(Debug, Eq)
+}
 
 ///|
 /// Creates a warning diagnostic.

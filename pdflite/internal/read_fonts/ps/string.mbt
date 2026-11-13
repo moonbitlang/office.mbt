@@ -2,7 +2,8 @@
 
 ///|
 /// PostScript string identifier (SID).
-pub(all) struct Sid(Int32) derive(Eq, Compare, Hash, Debug)
+#derive(Eq, Compare, Hash, Debug)
+pub(all) struct Sid(Int32)
 
 ///|
 /// Creates an identifier from a 16-bit unsigned integer.

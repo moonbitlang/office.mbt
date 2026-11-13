@@ -7,6 +7,7 @@
 
 ///|
 /// How `insert_rows`/`duplicate_row_to` treat a class today.
+#derive(Eq, @debug.Debug)
 pub(all) enum RowStateHandling {
   /// Insertion adjusts the stored positions (staged, atomic — #136).
   ShiftedByInsert
@@ -14,10 +15,11 @@ pub(all) enum RowStateHandling {
   StaticOnWrite
   /// Read into the model but never emitted by the writer.
   DroppedByWriter
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// The row extent a class occupies.
+#derive(Eq, @debug.Debug)
 pub(all) enum RowStateExtent {
   /// Parsed positions; the highest 1-based row addressed.
   RowsUpTo(Int32)
@@ -26,9 +28,10 @@ pub(all) enum RowStateExtent {
   WholeSheet
   /// Present but carries no row semantics (view / pane presentation state).
   Positionless
-} derive(Eq, @debug.Debug)
+}
 
 ///|
+#derive(Eq, @debug.Debug)
 pub(all) enum RowStateClass {
   Cells
   RowDimensions
@@ -67,14 +70,15 @@ pub(all) enum RowStateClass {
   /// text untouched, so an insertion silently changes what unqualified
   /// context resolves them to.
   SheetScopedNamesUnadjusted
-} derive(Eq, @debug.Debug)
+}
 
 ///|
+#derive(Eq, @debug.Debug)
 pub struct RowStateEntry {
   class : RowStateClass
   extent : RowStateExtent
   handling : RowStateHandling
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Highest 1-based row of a cell or range reference, None when unparsable.
@@ -599,12 +603,13 @@ let xml_probe_cfrule : String = "<cfRule"
 /// collapses them, which makes literal-ness undecidable downstream —
 /// "It""s,ok" and "a"&B1&"b" collapse to structurally similar text).
 /// Entries the raw scan cannot interpret carry validation_type "opaque".
+#derive(Eq, @debug.Debug)
 pub struct RawDataValidationCriteria {
   validation_type : String
   sqref : String
   formula1 : String
   formula2 : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 fn raw_tag_end(xml : String, from : Int32) -> Int32? {

@@ -74,11 +74,12 @@ pub fn transform_runs((DocumentElement) -> DocumentElement) -> (DocumentElement)
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum BreakType {
   Line
   Page
   Column
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn BreakType::equal(Self, Self) -> Bool
 #deprecated
@@ -86,12 +87,13 @@ pub fn BreakType::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn BreakType::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Comment {
   comment_id : String
   body : Array[DocumentElement]
   author_name : String
   author_initials : String
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn Comment::equal(Self, Self) -> Bool
 #deprecated
@@ -99,6 +101,7 @@ pub fn Comment::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Comment::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum DocumentElement {
   Document(children~ : Array[DocumentElement], notes~ : Array[Note], comments~ : Array[Comment])
   Paragraph(children~ : Array[DocumentElement], properties~ : ParagraphProperties)
@@ -116,7 +119,7 @@ pub(all) enum DocumentElement {
   Break(BreakType)
   BookmarkStart(String)
   Field(instruction~ : String, result~ : String)
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocumentElement::equal(Self, Self) -> Bool
 #deprecated
@@ -125,11 +128,12 @@ pub fn DocumentElement::to_raw_text(Self) -> String
 #deprecated
 pub fn DocumentElement::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DocumentSection {
   ends_after_paragraph : Int32?
   headers : Array[SectionRef]
   footers : Array[SectionRef]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocumentSection::equal(Self, Self) -> Bool
 #deprecated
@@ -137,9 +141,10 @@ pub fn DocumentSection::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocumentSection::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct HeaderFooterPart {
   body : Array[DocumentElement]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn HeaderFooterPart::equal(Self, Self) -> Bool
 #deprecated
@@ -147,11 +152,12 @@ pub fn HeaderFooterPart::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn HeaderFooterPart::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Image {
   content_type : String
   alt_text : String?
   data : Bytes
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn Image::equal(Self, Self) -> Bool
 #deprecated
@@ -159,12 +165,13 @@ pub fn Image::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Image::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Indent {
   start : String?
   end : String?
   first_line : String?
   hanging : String?
-} derive(Eq, @debug.Debug)
+}
 pub fn Indent::default() -> Self
 #deprecated
 pub fn Indent::equal(Self, Self) -> Bool
@@ -173,11 +180,12 @@ pub fn Indent::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Indent::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Note {
   note_type : String
   note_id : String
   body : Array[DocumentElement]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn Note::equal(Self, Self) -> Bool
 #deprecated
@@ -185,10 +193,11 @@ pub fn Note::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Note::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Numbering {
   is_ordered : Bool
   level : Int32
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn Numbering::equal(Self, Self) -> Bool
 #deprecated
@@ -196,13 +205,14 @@ pub fn Numbering::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn Numbering::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct ParagraphProperties {
   style_id : String?
   style_name : String?
   numbering : Numbering?
   alignment : String?
   indent : Indent
-} derive(Eq, @debug.Debug)
+}
 pub fn ParagraphProperties::default() -> Self
 #deprecated
 pub fn ParagraphProperties::equal(Self, Self) -> Bool
@@ -211,6 +221,7 @@ pub fn ParagraphProperties::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn ParagraphProperties::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RunProperties {
   style_id : String?
   style_name : String?
@@ -226,7 +237,7 @@ pub(all) struct RunProperties {
   font_size_cs : Double?
   highlight : String?
   color : String?
-} derive(Eq, @debug.Debug)
+}
 pub fn RunProperties::default() -> Self
 #deprecated
 pub fn RunProperties::equal(Self, Self) -> Bool
@@ -235,10 +246,11 @@ pub fn RunProperties::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn RunProperties::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct SectionRef {
   variant : String
   part : Int32
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn SectionRef::equal(Self, Self) -> Bool
 #deprecated
@@ -246,10 +258,11 @@ pub fn SectionRef::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn SectionRef::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct TableProperties {
   style_id : String?
   style_name : String?
-} derive(Eq, @debug.Debug)
+}
 pub fn TableProperties::default() -> Self
 #deprecated
 pub fn TableProperties::equal(Self, Self) -> Bool
@@ -258,11 +271,12 @@ pub fn TableProperties::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn TableProperties::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum VerticalAlignment {
   Baseline
   Superscript
   Subscript
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn VerticalAlignment::equal(Self, Self) -> Bool
 #deprecated

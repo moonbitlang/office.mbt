@@ -35,6 +35,7 @@
 ///   rendered.
 /// - `smooth` (`<c:smooth>`) — optional bool. Whether the line is smoothed.
 /// - `ax_ids` — `<c:axId>` references — REQUIRED, exactly two per schema.
+#derive(Eq, Debug)
 pub(all) struct LineChartBody {
   grouping : Grouping
   vary_colors : Bool?
@@ -47,7 +48,7 @@ pub(all) struct LineChartBody {
   smooth : Bool?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LineChartBody with @debug.Debug::{to_repr}
@@ -77,11 +78,12 @@ pub impl Show for LineChartBody with fn output(self, logger) {
 /// - `Standard` — `val="standard"`
 /// - `Stacked` — `val="stacked"`
 /// - `PercentStacked` — `val="percentStacked"`
+#derive(Eq, Debug)
 pub(all) enum Grouping {
   Standard
   Stacked
   PercentStacked
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Grouping with @debug.Debug::{to_repr}

@@ -17,6 +17,7 @@
 ///
 /// - `Other` — Any `ST_PlaceholderType` value we don't model — preserved
 ///   verbatim.
+#derive(Eq, Debug)
 pub(all) enum PlaceholderType {
   Title // "title"
   Body // "body"
@@ -35,7 +36,7 @@ pub(all) enum PlaceholderType {
   SldImg // "sldImg"   — slide image (notes)
   Pic // "pic"
   Other(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PlaceholderType with @debug.Debug::{to_repr}

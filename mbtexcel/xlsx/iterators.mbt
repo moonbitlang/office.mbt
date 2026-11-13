@@ -12,12 +12,13 @@ struct RowCells {
 }
 
 ///|
+#derive(Debug)
 pub struct RowOpts {
   height : Double
   hidden : Bool
   style_id : Int32
   outline_level : Int32
-} derive(Debug)
+}
 
 ///|
 pub fn RowOpts::with_values(

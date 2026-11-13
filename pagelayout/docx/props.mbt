@@ -5,13 +5,14 @@
 
 ///|
 /// Character formatting as authored at one cascade level.
+#derive(Eq, Debug, ToJson)
 pub(all) struct RunProps {
   family : String?
   size : @pagelayout.HalfPoints?
   bold : Bool?
   italic : Bool?
   color : @pagelayout.Color?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Formatting that specifies nothing — the identity for `merge`.
@@ -83,6 +84,7 @@ pub fn RunProps::resolve(self : RunProps) -> @paragraph.RunStyle {
 ///|
 /// Paragraph formatting as authored at one cascade level. Indents and
 /// spacing stay in twips until resolution.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ParaProps {
   align : @paragraph.Alignment?
   indent_left : @pagelayout.Twips?
@@ -100,7 +102,7 @@ pub(all) struct ParaProps {
   num_level : Int32?
   /// `w:tabs`, in authored order.
   tabs : Array[@paragraph.TabStop]?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Formatting that specifies nothing — the identity for `merge`.

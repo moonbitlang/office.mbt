@@ -18,13 +18,14 @@
 ///
 /// - `band_fmts` — `<c:bandFmts>` (CT_BandFmts) — band formatting overrides.
 ///   Captured XmlElement.
+#derive(Eq, Debug)
 pub(all) struct SurfaceChartBody {
   wireframe : Bool?
   series : Array[ChartSeriesCore]
   band_fmts : @xml.XmlElement?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SurfaceChartBody with @debug.Debug::{to_repr}
@@ -44,13 +45,14 @@ pub impl Show for SurfaceChartBody with fn output(self, logger) {
 
 ///|
 /// Body of `<c:surface3DChart>` (CT_Surface3DChart).
+#derive(Eq, Debug)
 pub(all) struct Surface3DChartBody {
   wireframe : Bool?
   series : Array[ChartSeriesCore]
   band_fmts : @xml.XmlElement?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Surface3DChartBody with @debug.Debug::{to_repr}

@@ -10,13 +10,14 @@
 ///|
 /// Everything `read_docx_with_messages` returns, plus sections and
 /// header/footer stories.
+#derive(Debug, Eq)
 pub(all) struct DocxPackageResult {
   document : DocumentElement
   headers : Array[@document.HeaderFooterPart]
   footers : Array[@document.HeaderFooterPart]
   sections : Array[@document.DocumentSection]
   messages : Array[Message]
-} derive(Debug, Eq)
+}
 
 ///|
 /// Reads DOCX bytes into the package-level representation: the body

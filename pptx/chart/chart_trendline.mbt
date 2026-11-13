@@ -58,6 +58,7 @@
 /// - `disp_eq` (`<c:dispEq val="…"/>`) — show the fitted equation.
 /// - `trendline_lbl` — `<c:trendlineLbl>` (CT_TrendlineLbl). Captured until
 ///   later typing.
+#derive(Eq, Debug)
 pub(all) struct Trendline {
   name : String?
   sp_pr : @xml.XmlElement?
@@ -71,7 +72,7 @@ pub(all) struct Trendline {
   disp_eq : Bool?
   trendline_lbl : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Trendline with @debug.Debug::{to_repr}
@@ -99,6 +100,7 @@ pub impl Show for Trendline with fn output(self, logger) {
 ///   `period`).
 /// - `TrendlinePoly` (`val="poly"`) — polynomial fit (uses `order`).
 /// - `TrendlinePower` (`val="power"`) — power-law fit.
+#derive(Eq, Debug)
 pub(all) enum TrendlineType {
   TrendlineExp
   TrendlineLinear
@@ -106,7 +108,7 @@ pub(all) enum TrendlineType {
   TrendlineMovingAvg
   TrendlinePoly
   TrendlinePower
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TrendlineType with @debug.Debug::{to_repr}

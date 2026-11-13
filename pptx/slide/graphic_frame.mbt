@@ -45,6 +45,7 @@
 ///   `Presentation::update_slide_mut`. `None` for a parsed frame (its
 ///   `<a:hlinkClick>` round-trips via the captured `<p:cNvPr>` in
 ///   `extension`).
+#derive(Eq, Debug)
 pub(all) struct GraphicFrame {
   id : Int32
   name : String
@@ -52,7 +53,7 @@ pub(all) struct GraphicFrame {
   content : GraphicFrameContent
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GraphicFrame with @debug.Debug::{to_repr}
@@ -80,12 +81,13 @@ pub extend GraphicFrame with Eq::{not_equal, equal}
 ///   don't recognise. The string is the raw `uri` attribute; the element is
 ///   the full `<a:graphicData>` child(ren) captured as one `XmlElement` so
 ///   the writer can re-emit it verbatim.
+#derive(Eq, Debug)
 pub(all) enum GraphicFrameContent {
   TableContent(Table)
   ChartContent(String)
   ChartExContent(String)
   OtherGraphic(String, @xml.XmlElement)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GraphicFrameContent with @debug.Debug::{to_repr}
@@ -106,12 +108,13 @@ pub extend GraphicFrameContent with Eq::{not_equal, equal}
 ///   `<a:gridCol>`. Cell positions in `Table.rows[i].cells` line up with
 ///   these positions.
 /// - `rows` — `<a:tr>` rows in source order.
+#derive(Eq, Debug)
 pub(all) struct Table {
   properties : TableProperties?
   grid : Array[@units.Emu]
   rows : Array[TableRow]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Table with @debug.Debug::{to_repr}
@@ -126,11 +129,12 @@ pub extend Table with Eq::{not_equal, equal}
 ///   required; we surface it directly rather than `Option` because any
 ///   well-formed table emits it.
 /// - `cells` — `<a:tc>` cells, left-to-right.
+#derive(Eq, Debug)
 pub struct TableRow {
   height : @units.Emu
   cells : Array[TableCell]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TableRow with @debug.Debug::{to_repr}
@@ -158,6 +162,7 @@ pub extend TableRow with Eq::{not_equal, equal}
 ///   decorative or part of a merge.
 /// - `properties` — `<a:tcPr>` typed body — margins, anchor, fill, borders.
 ///   `None` when the spec-optional element is absent.
+#derive(Eq, Debug)
 pub(all) struct TableCell {
   grid_span : Int32
   row_span : Int32
@@ -166,7 +171,7 @@ pub(all) struct TableCell {
   text_body : TextBody?
   properties : TableCellProperties?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TableCell with @debug.Debug::{to_repr}

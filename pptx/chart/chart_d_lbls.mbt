@@ -57,6 +57,7 @@
 ///   size value (bubble only).
 /// - `separator` — `<c:separator>` (text content) — string used to separate
 ///   concatenated label parts (e.g. "Value: 42 (50%)").
+#derive(Eq, Debug)
 pub(all) struct DLbls {
   d_lbl : Array[DLbl]
   num_fmt : NumFmt?
@@ -71,7 +72,7 @@ pub(all) struct DLbls {
   show_bubble_size : Bool?
   separator : String?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DLbls with @debug.Debug::{to_repr}
@@ -101,6 +102,7 @@ pub impl Show for DLbls with fn output(self, logger) {
 /// - `DLblOutEnd` (`val="outEnd"`) — outside the end of the bar / wedge.
 /// - `DLblRight` (`val="r"`) — to the right.
 /// - `DLblTop` (`val="t"`) — above the data point.
+#derive(Eq, Debug)
 pub(all) enum DLblPos {
   DLblBestFit
   DLblBottom
@@ -111,7 +113,7 @@ pub(all) enum DLblPos {
   DLblOutEnd
   DLblRight
   DLblTop
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DLblPos with @debug.Debug::{to_repr}

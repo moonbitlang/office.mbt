@@ -41,6 +41,7 @@
 /// - `sp_pr` — `<c:spPr>` (CT_ShapeProperties). Captured.
 /// - `tx_pr` — `<c:txPr>` (CT_TextBody). Captured.
 /// - `d_lbl_pos` (`<c:dLblPos val="…"/>`) — per-point label placement.
+#derive(Eq, Debug)
 pub(all) struct DLbl {
   idx : Int32
   delete : Bool?
@@ -58,7 +59,7 @@ pub(all) struct DLbl {
   show_bubble_size : Bool?
   separator : String?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DLbl with @debug.Debug::{to_repr}

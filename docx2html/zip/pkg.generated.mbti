@@ -22,9 +22,10 @@ pub fn zip_archive_entries(Iter[(String, BytesView)]) -> ZipArchive raise @core.
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub struct ZipArchive {
   // private fields
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn ZipArchive::equal(Self, Self) -> Bool
 pub fn ZipArchive::exists(Self, String) -> Bool

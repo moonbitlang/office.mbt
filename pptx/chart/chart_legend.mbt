@@ -40,6 +40,7 @@
 ///   effect. Captured.
 /// - `tx_pr` — `<c:txPr>` (CT_TextBody) — default text styling for legend
 ///   entries. Captured.
+#derive(Eq, Debug)
 pub(all) struct ChartLegend {
   legend_pos : LegendPos?
   legend_entries : Array[LegendEntry]
@@ -48,7 +49,7 @@ pub(all) struct ChartLegend {
   sp_pr : @xml.XmlElement?
   tx_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartLegend with @debug.Debug::{to_repr}
@@ -74,13 +75,14 @@ pub impl Show for ChartLegend with fn output(self, logger) {
 /// - `LegendLeft` (`val="l"`) — left.
 /// - `LegendRight` (`val="r"`) — right (default in PowerPoint).
 /// - `LegendTop` (`val="t"`) — top.
+#derive(Eq, Debug)
 pub(all) enum LegendPos {
   LegendBottom
   LegendTopRight
   LegendLeft
   LegendRight
   LegendTop
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LegendPos with @debug.Debug::{to_repr}
@@ -144,12 +146,13 @@ pub fn LegendPos::to_xml(self : LegendPos) -> String {
 /// - `delete` (`<c:delete val="…"/>`) — when present and `true`, hide the
 ///   entry.
 /// - `tx_pr` — `<c:txPr>` (CT_TextBody) — per-entry text override. Captured.
+#derive(Eq, Debug)
 pub(all) struct LegendEntry {
   idx : Int32
   delete : Bool?
   tx_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LegendEntry with @debug.Debug::{to_repr}

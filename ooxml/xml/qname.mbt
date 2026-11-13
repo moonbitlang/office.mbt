@@ -11,10 +11,11 @@
 ///
 /// Use the empty string for `uri` to represent an unqualified name (i.e.
 /// belonging to no namespace).
+#derive(Eq, Hash, Debug)
 pub struct QName {
   uri : String
   local_name : String
-} derive(Eq, Hash, Debug)
+}
 
 ///|
 pub extend QName with @debug.Debug::{to_repr}

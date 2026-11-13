@@ -30,9 +30,10 @@
 ///|
 /// Neutral error type raised by the shared XML read helpers.  Callers
 /// translate it into their own domain suberror at the use site.
+#derive(Eq, Debug)
 pub(all) suberror XmlReadError {
   XmlReadError(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend XmlReadError with @debug.Debug::{to_repr}

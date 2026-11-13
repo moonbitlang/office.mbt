@@ -3,6 +3,7 @@ package "moonbitlang/pagelayout/paragraph"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/fonts",
 }
@@ -17,48 +18,51 @@ pub fn layout_paragraph_with_images(ParagraphInput, Double, Array[InlineImage], 
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum Alignment {
   AlignLeft
   AlignCenter
   AlignRight
   AlignJustify
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn Alignment::equal(Self, Self) -> Bool
 #deprecated
 pub fn Alignment::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn Alignment::to_json(Self) -> Json
+pub fn Alignment::to_json(Self) -> @json.Json
 #deprecated
 pub fn Alignment::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum FieldKind {
   NotAField
   PageNumber
   PageCount
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn FieldKind::equal(Self, Self) -> Bool
 #deprecated
 pub fn FieldKind::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn FieldKind::to_json(Self) -> Json
+pub fn FieldKind::to_json(Self) -> @json.Json
 #deprecated
 pub fn FieldKind::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct InlineImage {
   offset_utf16 : Int32
   width_pt : Double
   height_pt : Double
   data : Bytes
   mime : String
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn InlineImage::equal(Self, Self) -> Bool
 #deprecated
 pub fn InlineImage::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn InlineImage::to_json(Self) -> Json
+pub fn InlineImage::to_json(Self) -> @json.Json
 #deprecated
 pub fn InlineImage::to_repr(Self) -> @debug.Repr
 
@@ -67,62 +71,67 @@ pub(all) struct InlineParagraphLayout {
   images : Array[PlacedInlineImage]
 }
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct LineBox {
   baseline_pt : Double
   height_pt : Double
   runs : Array[PlacedRun]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn LineBox::equal(Self, Self) -> Bool
 #deprecated
 pub fn LineBox::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn LineBox::to_json(Self) -> Json
+pub fn LineBox::to_json(Self) -> @json.Json
 #deprecated
 pub fn LineBox::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum LineSpacing {
   Single
   Multiple(Double)
   Exact(Double)
   AtLeast(Double)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn LineSpacing::equal(Self, Self) -> Bool
 #deprecated
 pub fn LineSpacing::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn LineSpacing::to_json(Self) -> Json
+pub fn LineSpacing::to_json(Self) -> @json.Json
 #deprecated
 pub fn LineSpacing::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ParagraphInput {
   runs : Array[RunInput]
   style : ParagraphStyle
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn ParagraphInput::equal(Self, Self) -> Bool
 pub fn ParagraphInput::has_fields(Self) -> Bool
 #deprecated
 pub fn ParagraphInput::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn ParagraphInput::to_json(Self) -> Json
+pub fn ParagraphInput::to_json(Self) -> @json.Json
 #deprecated
 pub fn ParagraphInput::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ParagraphLayout {
   height_pt : Double
   lines : Array[LineBox]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn ParagraphLayout::equal(Self, Self) -> Bool
 #deprecated
 pub fn ParagraphLayout::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn ParagraphLayout::to_json(Self) -> Json
+pub fn ParagraphLayout::to_json(Self) -> @json.Json
 #deprecated
 pub fn ParagraphLayout::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ParagraphStyle {
   align : Alignment
   indent_left_pt : Double
@@ -132,14 +141,14 @@ pub(all) struct ParagraphStyle {
   space_after_pt : Double
   line_spacing : LineSpacing
   tabs : TabRuler
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ParagraphStyle::default() -> Self
 #deprecated
 pub fn ParagraphStyle::equal(Self, Self) -> Bool
 #deprecated
 pub fn ParagraphStyle::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn ParagraphStyle::to_json(Self) -> Json
+pub fn ParagraphStyle::to_json(Self) -> @json.Json
 #deprecated
 pub fn ParagraphStyle::to_repr(Self) -> @debug.Repr
 pub fn ParagraphStyle::with_hanging_tab_stop(Self) -> Self
@@ -154,6 +163,7 @@ pub(all) struct PlacedInlineImage {
   mime : String
 }
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PlacedRun {
   font : @pagelayout.FontSpec
   size_pt : Double
@@ -161,21 +171,22 @@ pub(all) struct PlacedRun {
   text : String
   advances_pt : Array[Double]
   color : @pagelayout.Color
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PlacedRun::equal(Self, Self) -> Bool
 #deprecated
 pub fn PlacedRun::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PlacedRun::to_json(Self) -> Json
+pub fn PlacedRun::to_json(Self) -> @json.Json
 #deprecated
 pub fn PlacedRun::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct RunInput {
   text : String
   style : RunStyle
   field : FieldKind
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn RunInput::equal(Self, Self) -> Bool
 pub fn RunInput::evaluate(Self, Int32, Int32) -> Self
@@ -183,46 +194,49 @@ pub fn RunInput::evaluate(Self, Int32, Int32) -> Self
 pub fn RunInput::not_equal(Self, Self) -> Bool
 pub fn RunInput::plain(String, RunStyle) -> Self
 #deprecated
-pub fn RunInput::to_json(Self) -> Json
+pub fn RunInput::to_json(Self) -> @json.Json
 #deprecated
 pub fn RunInput::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct RunStyle {
   family : String
   size_pt : Double
   bold : Bool
   italic : Bool
   color : @pagelayout.Color
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn RunStyle::equal(Self, Self) -> Bool
 #deprecated
 pub fn RunStyle::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn RunStyle::to_json(Self) -> Json
+pub fn RunStyle::to_json(Self) -> @json.Json
 #deprecated
 pub fn RunStyle::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum TabAlign {
   TabLeft
   TabCenter
   TabRight
   TabDecimal
   TabBar
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn TabAlign::equal(Self, Self) -> Bool
 #deprecated
 pub fn TabAlign::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn TabAlign::to_json(Self) -> Json
+pub fn TabAlign::to_json(Self) -> @json.Json
 #deprecated
 pub fn TabAlign::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct TabRuler {
   stops : Array[TabStop]
   default_interval_pt : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn TabRuler::default() -> Self
 #deprecated
 pub fn TabRuler::equal(Self, Self) -> Bool
@@ -231,20 +245,21 @@ pub fn TabRuler::next_stop_of(Self, Double) -> TabStop
 #deprecated
 pub fn TabRuler::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn TabRuler::to_json(Self) -> Json
+pub fn TabRuler::to_json(Self) -> @json.Json
 #deprecated
 pub fn TabRuler::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct TabStop {
   position_pt : Double
   align : TabAlign
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn TabStop::equal(Self, Self) -> Bool
 #deprecated
 pub fn TabStop::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn TabStop::to_json(Self) -> Json
+pub fn TabStop::to_json(Self) -> @json.Json
 #deprecated
 pub fn TabStop::to_repr(Self) -> @debug.Repr
 

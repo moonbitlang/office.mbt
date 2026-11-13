@@ -48,10 +48,11 @@ pub fn validate_docx_package_report_limited(BytesView, max_findings~ : Int32, ma
 pub fn zip_item_name_from_logical_part_name(StringView) -> String?
 
 // Errors
+#derive(Eq)
 pub(all) suberror PackageBuildError {
   PackageBuildError(String)
   PackageLimitExceeded(kind~ : String, limit~ : Int64, actual~ : Int64)
-} derive(Eq)
+}
 #deprecated
 pub fn PackageBuildError::equal(Self, Self) -> Bool
 #deprecated

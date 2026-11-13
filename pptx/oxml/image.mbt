@@ -24,13 +24,14 @@
 /// - `Bmp` — Windows Bitmap. Magic: `42 4D` (`"BM"`).
 /// - `Tiff` — TIFF (little- or big-endian). Magic: `49 49 2A 00` or `4D 4D 00
 ///   2A`.
+#derive(Eq, Debug)
 pub(all) enum ImageFormat {
   Png
   Jpeg
   Gif
   Bmp
   Tiff
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ImageFormat with @debug.Debug::{to_repr}
@@ -138,13 +139,14 @@ pub fn detect_image_format(bytes : FixedArray[Byte]) -> ImageFormat? {
 /// - `height_px` — Image height in pixels.
 /// - `dpi_x` — Horizontal DPI (dots per inch). 96.0 when the file omits it.
 /// - `dpi_y` — Vertical DPI (dots per inch). 96.0 when the file omits it.
+#derive(Eq, Debug)
 pub(all) struct ImageDimensions {
   format : ImageFormat
   width_px : Int32
   height_px : Int32
   dpi_x : Double
   dpi_y : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ImageDimensions with @debug.Debug::{to_repr}

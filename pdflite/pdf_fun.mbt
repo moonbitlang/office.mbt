@@ -116,11 +116,12 @@ fn pdf_fun_bounds_key() -> @core.PdfName {
 ///
 /// `c0` and `c1` are the output vectors at the low and high ends of the input
 /// domain, and `n` is the exponent used to shape interpolation between them.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfInterpolationFunction {
   c0 : Array[Double]
   c1 : Array[Double]
   n : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// PDF function type 0, sampled from a packed sample table.
@@ -129,6 +130,7 @@ pub(all) struct PdfInterpolationFunction {
 /// clamped domain inputs to sample coordinates, `decode` maps sample values to
 /// output values, and `samples` stores decoded integer samples with the first
 /// input dimension varying fastest.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfSampledFunction {
   size : Array[Int32]
   order : Int32
@@ -136,18 +138,19 @@ pub(all) struct PdfSampledFunction {
   decode : Array[Double]
   bits_per_sample : Int32
   samples : Array[Int32]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// PDF function type 3, stitching several child functions over one input.
 ///
 /// `bounds` partitions the parent domain, and `stitch_encode` maps each chosen
 /// segment into the selected child function's input domain.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfStitchingFunction {
   functions : Array[PdfFunction]
   bounds : Array[Double]
   stitch_encode : Array[Double]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Operation in a PDF type 4 PostScript calculator function.
@@ -155,6 +158,7 @@ pub(all) struct PdfStitchingFunction {
 /// Literals push values onto the calculator stack. `PdfCalculatorIf` and
 /// `PdfCalculatorIfElse` store nested procedure bodies; the remaining variants
 /// correspond to PDF calculator-language operators.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfCalculatorOp {
   PdfCalculatorInt(Int32)
   PdfCalculatorFloat(Double)
@@ -199,25 +203,27 @@ pub(all) enum PdfCalculatorOp {
   PdfCalculatorSqrt
   PdfCalculatorTruncate
   PdfCalculatorXor
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// PDF function type 4, represented as parsed calculator operations.
 ///
 /// Evaluation starts with the function inputs on the stack and returns the
 /// numeric values left on the stack after all operations have run.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfCalculatorFunction {
   operations : Array[PdfCalculatorOp]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Discriminated PDF function body for supported `/FunctionType` values.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfFunctionKind {
   PdfFunctionSampled(PdfSampledFunction)
   PdfFunctionInterpolation(PdfInterpolationFunction)
   PdfFunctionStitching(PdfStitchingFunction)
   PdfFunctionCalculator(PdfCalculatorFunction)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Parsed PDF function with common domain and optional output range.
@@ -225,8 +231,9 @@ pub(all) enum PdfFunctionKind {
 /// `domain` is stored as low/high pairs, one pair per input. `range`, when
 /// present, is stored as output low/high pairs and is used to clamp evaluation
 /// results.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfFunction {
   func : PdfFunctionKind
   domain : Array[Double]
   range : Array[Double]?
-} derive(Debug, Eq, ToJson)
+}

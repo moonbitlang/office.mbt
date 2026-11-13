@@ -17,10 +17,11 @@
 /// `id` is a layout-internal numeric id (a 32-bit unsigned per spec, so we
 /// hold it as `Int64` to fit unsigned values). `r_id` is the relationship
 /// id pointing at the layout part inside the master's `.rels`.
+#derive(Eq, Debug)
 pub(all) struct SlideLayoutRef {
   id : Int64
   r_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideLayoutRef with @debug.Debug::{to_repr}
@@ -38,11 +39,12 @@ pub extend SlideLayoutRef with Eq::{not_equal, equal}
 ///   `<p:txStyles>`, `<p:hf>`, `<p:transition>`, `<p:timing>`, `<p:extLst>`,
 ///   foreign-namespace siblings). Once those subdomains gain typed parsers
 ///   their entries will graduate off this field.
+#derive(Eq, Debug)
 pub(all) struct SlideMaster {
   color_mapping : ColorMapping
   layout_refs : Array[SlideLayoutRef]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideMaster with @debug.Debug::{to_repr}

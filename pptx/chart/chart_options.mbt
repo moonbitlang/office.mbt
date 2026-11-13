@@ -47,6 +47,7 @@
 ///   visible cells.
 /// - `DisplayBlanks` — Set `<c:dispBlanksAs val="…"/>` — how blank cells
 ///   render.
+#derive(Eq, Debug)
 pub(all) enum ChartOption {
   Title(String)
   TitleDeleted
@@ -59,7 +60,7 @@ pub(all) enum ChartOption {
   RoundedCorners(Bool)
   PlotVisibleOnly(Bool)
   DisplayBlanks(DisplayBlanksAs)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartOption with @debug.Debug::{to_repr}

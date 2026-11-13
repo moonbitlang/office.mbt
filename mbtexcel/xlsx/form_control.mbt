@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub struct FormControl {
   cell : String
   control_type : String
@@ -16,7 +17,7 @@ pub struct FormControl {
   mut horizontally : Bool?
   mut format : GraphicOptions
   mut paragraph : Array[RichTextRun]
-} derive(Debug)
+}
 
 ///|
 let max_form_control_value = 30000
@@ -202,6 +203,7 @@ pub fn FormControl::set_paragraph(
 }
 
 ///|
+#derive(Debug)
 struct FormControlVmlPreset {
   filled : String?
   fill_color : String?
@@ -214,7 +216,7 @@ struct FormControlVmlPreset {
   text_v_align : String?
   no_three_d : Bool
   first_button : Bool
-} derive(Debug)
+}
 
 ///|
 fn form_control_vml_preset(control_type : StringView) -> FormControlVmlPreset? {

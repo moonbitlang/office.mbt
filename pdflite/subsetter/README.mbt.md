@@ -35,7 +35,7 @@ test "subset a font" {
   inspect(remapper.remap(68), content="1")
   inspect(remapper.num_gids(), content="3")
   let error = try @subsetter.subset(b"\x00\x02\x00\x00", 0, remapper) catch {
-    e => e.to_string()
+    e => Show::to_string(e)
   } noraise {
     _ => "ok"
   }

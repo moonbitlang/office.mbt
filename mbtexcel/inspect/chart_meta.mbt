@@ -22,11 +22,12 @@ let chart_kind_tags : Array[String] = [
 ///|
 /// Series metadata scanned from one `c:ser` block: the `c:f` cell-range
 /// references of its name, categories, and values, when present.
+#derive(Eq, @debug.Debug)
 pub struct ChartSeriesMeta {
   name : String?
   categories : String?
   values : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// The plot-kind element names present in the chart XML (e.g. `barChart`),

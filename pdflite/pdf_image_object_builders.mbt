@@ -1,11 +1,12 @@
 ///|
 /// Pixel layout for extracted raw image data.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfPixelLayout {
   PdfBPP1
   PdfBPP8
   PdfBPP24
   PdfBPP48
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Extracted PDF image data.
@@ -13,19 +14,21 @@ pub(all) enum PdfPixelLayout {
 /// JPEG, JPEG2000, and JBIG2 variants keep their encoded bytes and optional
 /// decode array. `PdfJBIG2` also carries the optional `/JBIG2Globals` object
 /// number. `PdfRawImage` stores width, height, layout, and decoded pixel bytes.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfImage {
   PdfJPEG(@core.PdfBytes, Array[Double]?)
   PdfJPEG2000(@core.PdfBytes, Array[Double]?)
   PdfJBIG2(@core.PdfBytes, Array[Double]?, Int32?)
   PdfRawImage(Int32, Int32, PdfPixelLayout, @core.PdfBytes)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// One file that cpdf-style image extraction would write.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfExtractedImageFile {
   path : String
   data : @core.PdfBytes
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Build a PDF image XObject for JPEG data: the file as it is, under

@@ -1,12 +1,14 @@
 ///|
 /// Matcher for style names in style-map rules.
+#derive(Debug, Eq)
 pub(all) enum StyleNameMatcher {
   ExactStyleName(String)
   PrefixStyleName(String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Matcher for document elements in style-map rules.
+#derive(Debug, Eq)
 pub(all) enum DocumentMatcher {
   ParagraphMatcher(
     style_id~ : String?,
@@ -19,30 +21,33 @@ pub(all) enum DocumentMatcher {
   TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   BreakMatcher(BreakType)
   CommentReferenceMatcher
-} derive(Debug, Eq)
+}
 
 ///|
 /// One element in a parsed style-map HTML path.
+#derive(Debug, Eq)
 pub(all) struct HtmlPathElement {
   tag : String
   attributes : Map[String, String]
   fresh : Bool
   separator : String?
-} derive(Debug, Eq)
+}
 
 ///|
 /// Parsed mapping from a document matcher to an HTML path.
+#derive(Debug, Eq)
 pub(all) struct StyleMapping {
   from : DocumentMatcher
   to : Array[HtmlPathElement]
-} derive(Debug, Eq)
+}
 
 ///|
 /// Parsed style mappings together with style-map diagnostics.
+#derive(Debug, Eq)
 pub(all) struct StyleMapParseResult {
   mappings : Array[StyleMapping]
   messages : Array[Message]
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct ParsedMatcherSuffixes {

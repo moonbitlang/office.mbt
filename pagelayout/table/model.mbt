@@ -6,6 +6,7 @@
 
 ///|
 /// A table or cell width as OOXML authors it (`w:tblW`, `w:tcW`).
+#derive(Eq, Debug, ToJson)
 pub(all) enum Width {
   /// `w:type="auto"` — size to content within the available space.
   Auto
@@ -15,33 +16,36 @@ pub(all) enum Width {
   Percent(Double)
   /// `w:type="nil"` — explicitly zero.
   Nil
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Word's two column-sizing algorithms.
+#derive(Eq, Debug, ToJson)
 pub(all) enum TableLayout {
   /// `w:tblLayout w:type="fixed"` — honor the grid and cell widths.
   Fixed
   /// The default: widths are hints, and content may widen a column.
   Autofit
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One side of a border. `none` is represented by `Border?::None` at the
 /// use site, so a present border always paints.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Border {
   width : @pagelayout.EighthPoints
   color : @pagelayout.Color
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// The four borders of a table or cell.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Borders {
   top : Border?
   bottom : Border?
   left : Border?
   right : Border?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// No borders on any side.
@@ -51,12 +55,13 @@ pub fn Borders::none() -> Borders {
 
 ///|
 /// Padding inside a cell, between its border and its content.
+#derive(Eq, Debug, ToJson)
 pub(all) struct CellMargins {
   top : @pagelayout.Twips
   bottom : @pagelayout.Twips
   left : @pagelayout.Twips
   right : @pagelayout.Twips
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Word's default cell padding: 0 vertical, 108 twips (0.075") each side.
@@ -66,16 +71,18 @@ pub fn CellMargins::default() -> CellMargins {
 
 ///|
 /// How a cell participates in a vertical merge.
+#derive(Eq, Debug, ToJson)
 pub(all) enum VMerge {
   /// Not merged, or the first row of a merge (`w:vMerge w:val="restart"`).
   VStart
   /// A continuation row (`w:vMerge` with no val, or val="continue").
   VContinue
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One cell. `content` is the block flow inside it; `grid_span` is how
 /// many grid columns it covers (`w:gridSpan`).
+#derive(Eq, Debug, ToJson)
 pub(all) struct Cell {
   content : Array[@paragraph.ParagraphInput]
   width : Width
@@ -84,7 +91,7 @@ pub(all) struct Cell {
   borders : Borders
   margins : CellMargins
   shading : @pagelayout.Color?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A cell with Word's defaults, spanning one column.
@@ -103,6 +110,7 @@ pub fn Cell::new(
 ///|
 /// One row. `header` marks `w:tblHeader` — repeated at the top of each
 /// page a split table continues onto.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Row {
   cells : Array[Cell]
   header : Bool
@@ -110,7 +118,7 @@ pub(all) struct Row {
   cant_split : Bool
   /// `w:trHeight w:hRule="atLeast"` minimum, if any.
   min_height : @pagelayout.Twips?
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A row of cells, with Word's defaults.
@@ -126,6 +134,7 @@ pub fn Row::new(
 ///|
 /// A whole table. `grid` is `w:tblGrid`: the authored width of each grid
 /// column, which fixed layout honors and autofit treats as a hint.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Table {
   rows : Array[Row]
   grid : Array[@pagelayout.Twips]
@@ -133,7 +142,7 @@ pub(all) struct Table {
   layout : TableLayout
   borders : Borders
   indent : @pagelayout.Twips
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A table with Word's defaults: autofit, no borders, no indent.

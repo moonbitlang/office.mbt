@@ -2,10 +2,11 @@
 /// Parsed PDF header version.
 ///
 /// The fields correspond to the digits in a `%PDF-major.minor` header.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfVersion {
   major : Int32
   minor : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Fallback version used when a PDF header cannot be found.

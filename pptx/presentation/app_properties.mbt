@@ -23,12 +23,13 @@ let app_part_name : String = "/docProps/app.xml"
 /// - `app_version` (`<AppVersion>`) — Office expects the `XX.YYYY` shape
 ///   (e.g. `"16.0000"`).
 /// Direct attribute mappings: `company`, `manager`.
+#derive(Eq, Debug)
 pub struct AppProperties {
   company : String?
   manager : String?
   application : String?
   app_version : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AppProperties with @debug.Debug::{to_repr}

@@ -1,34 +1,38 @@
 ///|
 /// Boolean polygon operation used by cpdf's GPC-backed clipping helpers.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfClipOperation {
   PdfClipDifference
   PdfClipIntersection
   PdfClipExclusiveOr
   PdfClipUnion
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// A vertex in a cpdf/GPC polygon contour.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfClipVertex {
   x : Double
   y : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// One contour in a cpdf/GPC polygon.
 ///
 /// `hole=true` matches cpdf's `1` hole flag. `hole=false` matches cpdf's `0`
 /// exterior-contour flag.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfClipContour {
   hole : Bool
   vertices : Array[PdfClipVertex]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// A cpdf/GPC polygon represented as an ordered list of contours.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfClipPolygon {
   contours : Array[PdfClipContour]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Build a cpdf/GPC polygon vertex.

@@ -16,10 +16,11 @@
 ///   `bgFillStyleLst` (the `Int` `idx`, one-based) plus a colour that
 ///   resolves the referenced style's `phClr` placeholder. This is the form
 ///   `Presentation::new()` emits on its slide master.
+#derive(Eq, Debug)
 pub(all) enum Background {
   Properties(BackgroundProperties)
   StyleReference(Int32, @oxml.Color)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Background with @debug.Debug::{to_repr}
@@ -37,12 +38,13 @@ pub extend Background with Eq::{not_equal, equal}
 ///   being dropped.
 /// - `shade_to_title` — The `shadeToTitle` attribute (default `false`).
 /// - `effects` — `<a:effectLst>` if present.
+#derive(Eq, Debug)
 pub struct BackgroundProperties {
   fill : @oxml.Fill?
   shade_to_title : Bool
   effects : @oxml.EffectList?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BackgroundProperties with @debug.Debug::{to_repr}

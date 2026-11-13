@@ -37,6 +37,7 @@
 ///   next comment's idx without scanning every comments part.
 /// - `clr_idx` (`clrIdx`) — per-author colour-palette index. Not a theme slot
 ///   (`ST_ColorSchemeIndex`) — just an opaque integer.
+#derive(Eq, Debug)
 pub(all) struct CommentAuthor {
   id : Int32
   name : String
@@ -44,7 +45,7 @@ pub(all) struct CommentAuthor {
   last_idx : Int32
   clr_idx : Int32
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CommentAuthor with @debug.Debug::{to_repr}
@@ -60,10 +61,11 @@ pub extend CommentAuthor with Eq::{not_equal, equal}
 /// - `authors` — Authors in source order. Order is not semantically
 ///   meaningful — `id` is the join key — but we preserve it for round-trip
 ///   stability.
+#derive(Eq, Debug)
 pub(all) struct CommentAuthorList {
   authors : Array[CommentAuthor]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CommentAuthorList with @debug.Debug::{to_repr}
@@ -79,10 +81,11 @@ pub extend CommentAuthorList with Eq::{not_equal, equal}
 /// `ST_PositiveCoordinate32` — non-negative EMU values up to ~27 trillion.
 /// We widen to `Emu` (`Int64`) so the type unifies with every other
 /// EMU-bearing field even though the spec range is narrower.
+#derive(Eq, Debug)
 pub(all) struct CommentPos {
   x : @units.Emu
   y : @units.Emu
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CommentPos with @debug.Debug::{to_repr}
@@ -108,6 +111,7 @@ pub extend CommentPos with Eq::{not_equal, equal}
 ///   marker.
 /// - `text` — `<p:text>` plain-text body. We extract the text content
 ///   directly; `<p:text>` does not nest any rich-text children in the schema.
+#derive(Eq, Debug)
 pub(all) struct Comment {
   author_id : Int32
   dt : String?
@@ -115,7 +119,7 @@ pub(all) struct Comment {
   pos : CommentPos
   text : String
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Comment with @debug.Debug::{to_repr}
@@ -128,10 +132,11 @@ pub extend Comment with Eq::{not_equal, equal}
 ///
 /// - `comments` — Comments in source order. Mid-thread reordering is rare but
 ///   we preserve whatever order the file shipped with for round-trip.
+#derive(Eq, Debug)
 pub(all) struct CommentList {
   comments : Array[Comment]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CommentList with @debug.Debug::{to_repr}

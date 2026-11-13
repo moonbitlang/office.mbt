@@ -70,6 +70,7 @@
 ///   Stored as `String?` to round-trip the source token verbatim (the value
 ///   is a `Double` but we want to dodge float-format drift, matching how
 ///   `OfPieChartBody.split_pos` is handled).
+#derive(Eq, Debug)
 pub(all) struct AxisCore {
   ax_id : Int32
   scaling : Scaling?
@@ -88,7 +89,7 @@ pub(all) struct AxisCore {
   crosses : Crosses?
   crosses_at : String?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AxisCore with @debug.Debug::{to_repr}
@@ -117,13 +118,14 @@ pub impl Show for AxisCore with fn output(self, logger) {
 /// - `max` (`<c:max val="…"/>`) — explicit axis maximum. `String?` to
 ///   preserve representation.
 /// - `min` (`<c:min val="…"/>`) — explicit axis minimum. `String?`.
+#derive(Eq, Debug)
 pub(all) struct Scaling {
   log_base : String?
   orientation : Orientation?
   max : String?
   min : String?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Scaling with @debug.Debug::{to_repr}
@@ -146,10 +148,11 @@ pub impl Show for Scaling with fn output(self, logger) {
 /// - `MinMax` (`val="minMax"`) — values increase from min toward max along
 ///   the axis (the usual configuration).
 /// - `MaxMin` (`val="maxMin"`) — values decrease, flipping the axis.
+#derive(Eq, Debug)
 pub(all) enum Orientation {
   MinMax
   MaxMin
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Orientation with @debug.Debug::{to_repr}
@@ -194,12 +197,13 @@ pub fn Orientation::to_xml(self : Orientation) -> String {
 /// - `Bottom` (`val="b"`) — bottom (usual for catAx in a vertical bar chart).
 /// - `Left` (`val="l"`) — left (usual for valAx in a vertical bar chart).
 /// Direct attribute mappings: `Right`→`val="r"`, `Top`→`val="t"`.
+#derive(Eq, Debug)
 pub(all) enum AxPos {
   Bottom
   Left
   Right
   Top
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AxPos with @debug.Debug::{to_repr}
@@ -252,12 +256,13 @@ pub fn AxPos::to_xml(self : AxPos) -> String {
 /// - `In` (`val="in"`) — tick on the inside of the plot.
 /// - `NoTick` (`val="none"`) — no tick.
 /// - `Out` (`val="out"`) — tick on the outside (default).
+#derive(Eq, Debug)
 pub(all) enum TickMark {
   Cross
   In
   NoTick
   Out
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TickMark with @debug.Debug::{to_repr}
@@ -309,12 +314,13 @@ pub fn TickMark::to_xml(self : TickMark) -> String {
 /// - `Low` (`val="low"`) — labels on the low side.
 /// - `NextTo` (`val="nextTo"`) — labels next to the axis (typical default).
 /// - `NoLbl` (`val="none"`) — labels hidden.
+#derive(Eq, Debug)
 pub(all) enum TickLblPos {
   High
   Low
   NextTo
   NoLbl
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TickLblPos with @debug.Debug::{to_repr}
@@ -365,11 +371,12 @@ pub fn TickLblPos::to_xml(self : TickLblPos) -> String {
 /// - `AutoZero` (`val="autoZero"`) — paired axis crosses at zero (default).
 /// - `Min` (`val="min"`) — at the minimum value.
 /// - `Max` (`val="max"`) — at the maximum value.
+#derive(Eq, Debug)
 pub(all) enum Crosses {
   AutoZero
   Min
   Max
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Crosses with @debug.Debug::{to_repr}
@@ -421,10 +428,11 @@ pub fn Crosses::to_xml(self : Crosses) -> String {
 ///   is non-conforming but tolerated).
 /// - `source_linked` — `sourceLinked` attribute — optional Bool indicating
 ///   whether the format code follows the source data's format.
+#derive(Eq, Debug)
 pub(all) struct NumFmt {
   format_code : String
   source_linked : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NumFmt with @debug.Debug::{to_repr}

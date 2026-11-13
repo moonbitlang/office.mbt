@@ -18,10 +18,11 @@
 /// - `id` — `id` attribute. Spec says `>= 2147483648`; we keep an `Int64` so
 ///   the high bit is representable.
 /// - `r_id` (`r:id`) — the relationship ID into `presentation.xml.rels`.
+#derive(Eq, Debug)
 pub(all) struct SlideMasterIdRef {
   id : Int64
   r_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideMasterIdRef with @debug.Debug::{to_repr}
@@ -36,10 +37,11 @@ pub extend SlideMasterIdRef with Eq::{not_equal, equal}
 ///
 /// - `id` — `id` attribute. Spec says `>= 256 && <= 2147483647`.
 /// - `r_id` (`r:id`) — the relationship ID into `presentation.xml.rels`.
+#derive(Eq, Debug)
 pub(all) struct SlideIdRef {
   id : Int64
   r_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideIdRef with @debug.Debug::{to_repr}
@@ -54,11 +56,12 @@ pub extend SlideIdRef with Eq::{not_equal, equal}
 /// custom enum values we'd otherwise have to enumerate.
 ///
 /// - `size_type` — `type` attribute. Empty when the producer didn't emit one.
+#derive(Eq, Debug)
 pub(all) struct SlideSize {
   cx : @units.Emu
   cy : @units.Emu
   size_type : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideSize with @debug.Debug::{to_repr}
@@ -69,10 +72,11 @@ pub extend SlideSize with Eq::{not_equal, equal}
 ///|
 /// Notes-coordinate-space size. Same `cx` / `cy` semantics as
 /// `SlideSize` but no `type` attribute on the spec.
+#derive(Eq, Debug)
 pub(all) struct NotesSize {
   cx : @units.Emu
   cy : @units.Emu
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NotesSize with @debug.Debug::{to_repr}
@@ -100,6 +104,7 @@ pub extend NotesSize with Eq::{not_equal, equal}
 ///   emits this; `None` only happens on malformed input.
 /// - `notes_sz` (`<p:notesSz>`) — notes dimensions. Real PPTX always emits
 ///   this too.
+#derive(Eq, Debug)
 pub(all) struct PresentationPart {
   sld_master_ids : Array[SlideMasterIdRef]
   sld_ids : Array[SlideIdRef]
@@ -108,7 +113,7 @@ pub(all) struct PresentationPart {
   sld_sz : SlideSize?
   notes_sz : NotesSize?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PresentationPart with @debug.Debug::{to_repr}

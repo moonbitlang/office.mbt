@@ -33,6 +33,7 @@
 /// - `identifier` — `dc:identifier`.
 /// - `language` — `dc:language`.
 /// - `version` — `cp:version`.
+#derive(Eq, Debug)
 pub struct CoreProperties {
   title : String?
   creator : String?
@@ -49,7 +50,7 @@ pub struct CoreProperties {
   identifier : String?
   language : String?
   version : String?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CoreProperties with @debug.Debug::{to_repr}

@@ -690,6 +690,7 @@ pub fn render_docx(docx : Bytes) -> @pagelayout.PageModel raise {
 /// the relationship id naming each part. Only the `default` variant is
 /// carried today; `first` and `even` need per-page furniture selection,
 /// which pagination does not model yet.
+#derive(Eq, Debug, ToJson)
 pub(all) struct FurnitureRefs {
   header_default : String?
   footer_default : String?
@@ -709,7 +710,7 @@ pub(all) struct FurnitureRefs {
   title_page : Bool
   /// `w:evenAndOddHeaders` from settings.xml, not from `w:sectPr`.
   even_and_odd : Bool
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// No header or footer referenced.

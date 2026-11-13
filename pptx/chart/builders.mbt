@@ -34,10 +34,11 @@
 /// - `categories` — Category labels, in display order.
 /// - `series` — Each series carries its own label and a parallel array of
 ///   numeric values (one entry per category).
+#derive(Eq, Debug)
 pub struct ChartData {
   categories : Array[String]
   series : Array[ChartSeries]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartData with @debug.Debug::{to_repr}
@@ -64,10 +65,11 @@ pub impl Show for ChartData with fn output(self, logger) {
 /// - `label` — Display label — used as the series legend entry.
 /// - `values` — Numeric values in category order. Shorter arrays are padded
 ///   with zeros at emit time; longer arrays are truncated.
+#derive(Eq, Debug)
 pub struct ChartSeries {
   label : String
   values : Array[Double]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartSeries with @debug.Debug::{to_repr}
@@ -128,9 +130,10 @@ pub fn ChartData::with_series(
 /// Source-of-truth scatter-chart data. Each series carries parallel
 /// arrays of X and Y coordinates (instead of category labels +
 /// values — scatter has two value axes, not a category axis).
+#derive(Eq, Debug)
 pub struct ScatterData {
   series : Array[ScatterSeries]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScatterData with @debug.Debug::{to_repr}
@@ -151,11 +154,12 @@ pub impl Show for ScatterData with fn output(self, logger) {
 ///|
 /// One XY series for a scatter chart. `x` and `y` must be
 /// the same length.
+#derive(Eq, Debug)
 pub struct ScatterSeries {
   label : String
   x : Array[Double]
   y : Array[Double]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScatterSeries with @debug.Debug::{to_repr}
@@ -200,9 +204,10 @@ pub fn ScatterData::with_series(
 ///|
 /// Source-of-truth bubble-chart data. Each series carries parallel
 /// arrays of X coordinates, Y coordinates, and bubble sizes.
+#derive(Eq, Debug)
 pub struct BubbleData {
   series : Array[BubbleSeries]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BubbleData with @debug.Debug::{to_repr}
@@ -223,12 +228,13 @@ pub impl Show for BubbleData with fn output(self, logger) {
 ///|
 /// One XYS series for a bubble chart. `x`, `y`, and `size`
 /// must all be the same length.
+#derive(Eq, Debug)
 pub struct BubbleSeries {
   label : String
   x : Array[Double]
   y : Array[Double]
   size : Array[Double]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BubbleSeries with @debug.Debug::{to_repr}
@@ -276,11 +282,12 @@ pub fn BubbleData::with_series(
 /// One plot in a combo chart (`Chart::of_combo`). Each variant wraps the
 /// category-based `ChartData` it plots; the combo builder threads them onto
 /// a shared category axis (and, optionally, a secondary value axis).
+#derive(Eq, Debug)
 pub(all) enum ChartPlot {
   Bar(ChartData)
   Line(ChartData)
   Area(ChartData)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartPlot with @debug.Debug::{to_repr}
@@ -847,10 +854,11 @@ pub fn Chart::of_stock(data : ChartData, kind~ : StockKind = HLC) -> Chart {
 ///
 /// - `HLC` — High, Low, Close — three series in that order.
 /// - `OHLC` — Open, High, Low, Close — four series in that order.
+#derive(Eq, Debug)
 pub(all) enum StockKind {
   HLC
   OHLC
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StockKind with @debug.Debug::{to_repr}

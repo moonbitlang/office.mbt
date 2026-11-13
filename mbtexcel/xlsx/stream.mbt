@@ -1,9 +1,10 @@
 ///|
+#derive(Eq)
 enum StreamState {
   Idle
   Writing
   Flushed
-} derive(Eq)
+}
 
 ///|
 pub struct StreamCell {

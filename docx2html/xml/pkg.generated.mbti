@@ -53,11 +53,12 @@ pub fn xml_text(String) -> XmlNode
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct XmlElement {
   name : String
   attributes : @sorted_map.SortedMap[String, String]
   children : Array[XmlNode]
-} derive(Eq, @debug.Debug)
+}
 pub fn XmlElement::descendants_by_tag_name(Self, String) -> Array[Self]
 pub fn XmlElement::elements_by_tag_name(Self, String) -> Array[Self]
 #deprecated
@@ -70,10 +71,11 @@ pub fn XmlElement::text(Self) -> String raise @core.DocxError
 #deprecated
 pub fn XmlElement::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum XmlNode {
   XmlElement(XmlElement)
   XmlText(String)
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn XmlNode::equal(Self, Self) -> Bool
 #deprecated

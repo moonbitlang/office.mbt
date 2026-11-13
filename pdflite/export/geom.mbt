@@ -6,11 +6,12 @@
 ///
 /// A value type (two numbers, passed and stored as such): a point is made
 /// for every run of text and every segment of a path.
+#derive(Eq, Debug)
 #valtype
 pub(all) struct Point {
   x : Double
   y : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Point::from_xy(x : Double, y : Double) -> Point {
@@ -19,10 +20,11 @@ pub fn Point::from_xy(x : Double, y : Double) -> Point {
 
 ///|
 /// A size.
+#derive(Eq, Debug)
 pub(all) struct Size {
   width : Double
   height : Double
-} derive(Eq, Debug)
+}
 
 ///|
 /// Create a new size; `None` unless both dimensions are positive and finite.
@@ -36,12 +38,13 @@ pub fn Size::from_wh(width : Double, height : Double) -> Size? {
 
 ///|
 /// A rectangle.
+#derive(Eq, Debug)
 pub(all) struct Rect {
   left : Double
   top : Double
   right : Double
   bottom : Double
-} derive(Eq, Debug)
+}
 
 ///|
 /// Create a rectangle from its left, top, right and bottom edges; `None` if
@@ -134,6 +137,7 @@ fn Rect::to_pdf(self : Rect) -> Obj {
 /// A value type (six numbers, passed and stored as such): every run of
 /// text and every shape concatenates transforms, and each result was an
 /// object.
+#derive(Eq, Debug)
 #valtype
 pub(all) struct Transform {
   sx : Double
@@ -142,7 +146,7 @@ pub(all) struct Transform {
   sy : Double
   tx : Double
   ty : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Transform::identity() -> Transform {
@@ -253,19 +257,21 @@ fn Transform::to_pdf(self : Transform) -> Obj {
 
 ///|
 /// A path segment.
+#derive(Eq, Debug)
 pub(all) enum PathSegment {
   MoveTo(Point)
   LineTo(Point)
   QuadTo(Point, Point)
   CubicTo(Point, Point, Point)
   Close
-} derive(Eq, Debug)
+}
 
 ///|
 /// A path.
+#derive(Eq, Debug)
 pub(all) struct Path {
   segments : Array[PathSegment]
-} derive(Eq, Debug)
+}
 
 ///|
 /// The bounding box of the points of the path (control points included),

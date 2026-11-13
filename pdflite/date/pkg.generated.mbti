@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/date"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -26,6 +27,7 @@ pub fn pdf_string_of_date(PdfDate) -> String raise @core.PdfError
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfDate {
   year : Int32
   month : Int32
@@ -35,16 +37,17 @@ pub(all) struct PdfDate {
   second : Int32
   hour_offset : Int32
   minute_offset : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfDate::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDate::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfDate::to_json(Self) -> Json
+pub fn PdfDate::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfDate::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfStrftimeTime {
   tm_sec : Int32
   tm_min : Int32
@@ -55,13 +58,13 @@ pub(all) struct PdfStrftimeTime {
   tm_wday : Int32
   tm_yday : Int32
   tm_isdst : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfStrftimeTime::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfStrftimeTime::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfStrftimeTime::to_json(Self) -> Json
+pub fn PdfStrftimeTime::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfStrftimeTime::to_repr(Self) -> @debug.Repr
 

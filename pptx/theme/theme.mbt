@@ -19,12 +19,13 @@
 ///   `<a:themeElements>` (`<a:fmtScheme>`, `<a:objectDefaults>`). The
 ///   original parent is recoverable from the element's `name.uri` /
 ///   `name.local_name` when writers re-emit.
+#derive(Eq, Debug)
 pub(all) struct Theme {
   name : String
   color_scheme : ColorScheme
   font_scheme : FontScheme
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Theme with @debug.Debug::{to_repr}

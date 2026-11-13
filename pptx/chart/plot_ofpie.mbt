@@ -36,6 +36,7 @@
 ///   5..200.
 /// - `ser_lines` (`<c:serLines>`) — series-line formatting overrides. Zero or
 ///   more in the schema; captured XmlElement payloads.
+#derive(Eq, Debug)
 pub(all) struct OfPieChartBody {
   of_pie_type : OfPieType
   vary_colors : Bool?
@@ -48,7 +49,7 @@ pub(all) struct OfPieChartBody {
   second_pie_size : Int32?
   ser_lines : Array[@xml.XmlElement]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OfPieChartBody with @debug.Debug::{to_repr}
@@ -71,10 +72,11 @@ pub impl Show for OfPieChartBody with fn output(self, logger) {
 ///
 /// - `Pie` (`val="pie"`) — secondary chart is a pie.
 /// - `Bar` (`val="bar"`) — secondary chart is a bar.
+#derive(Eq, Debug)
 pub(all) enum OfPieType {
   Pie
   Bar
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OfPieType with @debug.Debug::{to_repr}
@@ -120,13 +122,14 @@ pub fn OfPieType::to_xml(self : OfPieType) -> String {
 /// - `Percent` (`val="percent"`) — slices below a percentage threshold move.
 /// - `Pos` (`val="pos"`) — last N slices (by position) move.
 /// - `Val` (`val="val"`) — slices below a value threshold move.
+#derive(Eq, Debug)
 pub(all) enum SplitType {
   Auto
   Cust
   Percent
   Pos
   Val
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SplitType with @debug.Debug::{to_repr}

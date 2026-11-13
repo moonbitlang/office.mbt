@@ -124,11 +124,12 @@ fn drawing_anchor_has_unsupported_reader_object(xml : StringView) -> Bool {
 }
 
 ///|
+#derive(Eq, Debug)
 priv enum DrawingAnchorForm {
   OneCellAnchor
   TwoCellAnchor
   AbsoluteAnchor
-} derive(Eq, Debug)
+}
 
 ///|
 priv struct DrawingAnchor {

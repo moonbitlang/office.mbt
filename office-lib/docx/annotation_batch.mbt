@@ -53,9 +53,10 @@ let annotation_op_member_union : Array[String] = [
 
 ///|
 /// Errors raised while parsing a `docx.annotation-batch/1` script.
+#derive(@debug.Debug)
 pub suberror DocxAnnotationParseError {
   DocxAnnotationParseError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 /// A reference to a comment: an existing engine id, or a label minted
@@ -95,6 +96,7 @@ priv enum AnnotationOp {
 /// id for `comment_reply` (its parent) and `comment_resolve` /
 /// `comment_unresolve` (the comment acted on). Both selectors are always
 /// individually valid — a range is two selectors, never a `..` literal.
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxAnnotationOpResult {
   op : String
   comment_id : String
@@ -102,17 +104,18 @@ pub(all) struct DocxAnnotationOpResult {
   anchor : String?
   anchor_to : String?
   target : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// The complete annotation-batch outcome.
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxAnnotationReport {
   mut ops_applied : Int32
   results : Array[DocxAnnotationOpResult]
   labels : Array[(String, String)]
   changed_parts : Array[String]
   mut changed : Bool
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Result of one strict annotation-batch transaction.

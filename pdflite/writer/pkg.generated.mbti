@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/writer"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/crypt_core",
 }
 
@@ -12,32 +13,34 @@ pub fn pdf_write_encryption(@crypt_core.PdfEncryptionMethod, BytesView, BytesVie
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfWriteEncryption {
   encryption_method : @crypt_core.PdfEncryptionMethod
   user_password : Bytes
   owner_password : Bytes
   denied_permissions : Array[@crypt_core.PdfPermission]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfWriteEncryption::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfWriteEncryption::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfWriteEncryption::to_json(Self) -> Json
+pub fn PdfWriteEncryption::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfWriteEncryption::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfWriteMode {
   PdfWriteClassic
   PdfWriteXRefStream
   PdfWriteCompressedXRefStream
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfWriteMode::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfWriteMode::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfWriteMode::to_json(Self) -> Json
+pub fn PdfWriteMode::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfWriteMode::to_repr(Self) -> @debug.Repr
 

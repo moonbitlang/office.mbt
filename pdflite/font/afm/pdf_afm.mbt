@@ -7,12 +7,13 @@ pub using @core {type PdfBytes, type PdfError}
 /// Headers preserve raw key/value bytes. Character metrics store character
 /// codes and widths, kerns store pair adjustments, and `char_name_widths`
 /// preserves name-based widths for encodings that refer to glyph names.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfAfmData {
   headers : Array[(PdfBytes, PdfBytes)]
   char_metrics : Array[(Int32, Int32)]
   kerns : Array[(Int32, Int32, Int32)]
   char_name_widths : Array[(PdfBytes, Int32)]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Return whether two byte views contain the same bytes.

@@ -1,16 +1,18 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum SparklineType {
   Line
   Column
   WinLoss
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct SparklineColor {
   rgb : String?
   theme : Int32?
   tint : Double?
-} derive(Debug)
+}
 
 ///|
 fn rgb(value : StringView) -> SparklineColor raise XlsxError {
@@ -47,6 +49,7 @@ pub struct Sparkline {
 }
 
 ///|
+#derive(Debug)
 pub struct SparklineGroupOptions {
   mut display_empty_cells_as : String
   mut date_axis : Bool
@@ -70,7 +73,7 @@ pub struct SparklineGroupOptions {
   mut color_last : SparklineColor?
   mut color_high : SparklineColor?
   mut color_low : SparklineColor?
-} derive(Debug)
+}
 
 ///|
 fn SparklineGroupOptions::new() -> SparklineGroupOptions {
@@ -108,6 +111,7 @@ pub struct SparklineGroup {
 }
 
 ///|
+#derive(Debug)
 pub struct SparklineOptions {
   locations : Array[String]
   ranges : Array[String]
@@ -140,7 +144,7 @@ pub struct SparklineOptions {
   mut manual_max : Int32?
   mut manual_min : Int32?
   mut empty_cells : String?
-} derive(Debug)
+}
 
 ///|
 pub fn SparklineOptions::new(

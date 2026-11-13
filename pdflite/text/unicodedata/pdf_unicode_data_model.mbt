@@ -4,6 +4,7 @@
 /// UnicodeData.txt is an ASCII, semicolon-separated data file. The fields stay
 /// as strings to match cpdf's public record and to avoid silently choosing
 /// semantics for numeric-looking values such as code values and mappings.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfUnicodeDataEntry {
   code_value : String
   character_name : String
@@ -20,4 +21,4 @@ pub(all) struct PdfUnicodeDataEntry {
   uppercase_mapping : String
   lowercase_mapping : String
   titlecase_mapping : String
-} derive(Debug, Eq, ToJson)
+}

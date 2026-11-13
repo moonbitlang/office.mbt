@@ -1,11 +1,13 @@
 ///|
+#derive(Eq, Debug)
 pub(all) enum HyperlinkType {
   External
   Location
   Unset
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct Hyperlink {
   reference : String
   target : String
@@ -17,13 +19,14 @@ pub struct Hyperlink {
   location : String?
   display : String?
   tooltip : String?
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct HyperlinkOpts {
   mut display : String?
   mut tooltip : String?
-} derive(Debug)
+}
 
 ///|
 pub fn HyperlinkOpts::new() -> HyperlinkOpts {

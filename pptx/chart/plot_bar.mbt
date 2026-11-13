@@ -35,6 +35,7 @@
 ///   rather than fixed-length so future schema loosening / strict validation
 ///   can be added later.
 /// - `extension` — `<c:extLst>` plus any foreign-namespace siblings.
+#derive(Eq, Debug)
 pub(all) struct BarChartBody {
   bar_dir : BarDir
   grouping : BarGrouping?
@@ -45,7 +46,7 @@ pub(all) struct BarChartBody {
   overlap : Int32?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BarChartBody with @debug.Debug::{to_repr}
@@ -72,10 +73,11 @@ pub impl Show for BarChartBody with fn output(self, logger) {
 ///
 /// - `Bar` (`val="bar"`) — horizontal bars.
 /// - `Col` (`val="col"`) — vertical columns (the default for new charts).
+#derive(Eq, Debug)
 pub(all) enum BarDir {
   Bar
   Col
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BarDir with @debug.Debug::{to_repr}
@@ -118,12 +120,13 @@ pub fn BarDir::to_xml(self : BarDir) -> String {
 /// - `Clustered` (`val="clustered"`) — bars side by side (the default).
 /// - `Standard` — `val="standard"`
 /// - `Stacked` — `val="stacked"`
+#derive(Eq, Debug)
 pub(all) enum BarGrouping {
   PercentStacked
   Clustered
   Standard
   Stacked
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BarGrouping with @debug.Debug::{to_repr}

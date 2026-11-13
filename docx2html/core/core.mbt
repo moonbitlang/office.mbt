@@ -1,9 +1,10 @@
 ///|
 /// Diagnostic emitted while reading or converting a document.
+#derive(Debug, Eq)
 pub(all) enum Message {
   Warning(String)
   Error(String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Creates a warning diagnostic.
@@ -21,13 +22,14 @@ pub fn error(message : String) -> Message {
 /// A machine-readable XML work or allocation guard. Keeping this distinct
 /// from diagnostic text prevents document-controlled names and identifiers
 /// from forging resource-limit status at higher API layers.
+#derive(Debug, Eq)
 pub(all) enum DocxXmlResourceLimit {
   DocxXmlSourceUnits
   DocxXmlTokens
   DocxXmlTokenLength
   DocxXmlMaterializedCharacters
   DocxXmlNestingDepth
-} derive(Debug, Eq)
+}
 
 ///|
 /// Stable human-readable text retained for CLI and validation diagnostics.
@@ -44,6 +46,7 @@ pub fn DocxXmlResourceLimit::message(self : DocxXmlResourceLimit) -> String {
 
 ///|
 /// Errors raised for invalid archives, invalid XML, missing parts, or unsupported input.
+#derive(Debug, Eq)
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)
@@ -60,7 +63,7 @@ pub(all) suberror DocxError {
     actual~ : Int64,
     message~ : String
   )
-} derive(Debug, Eq)
+}
 
 ///|
 /// Constructs a typed XML resource error with its stable default diagnostic.
@@ -102,10 +105,11 @@ pub fn DocxError::description(self : DocxError) -> String {
 
 ///|
 /// Converted value together with accumulated diagnostics.
+#derive(Debug, Eq)
 pub(all) struct ConversionResult {
   value : String
   messages : Array[Message]
-} derive(Debug, Eq)
+}
 
 ///|
 /// Creates a successful conversion result with no diagnostics.

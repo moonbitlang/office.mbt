@@ -83,9 +83,10 @@ pub fn docx_edit_operation_names_list() -> Array[String] {
 
 ///|
 /// Errors raised while parsing a `docx.edit/1` script.
+#derive(@debug.Debug)
 pub suberror DocxEditParseError {
   DocxEditParseError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 /// One parsed literal replacement operation.
@@ -163,6 +164,7 @@ pub fn DocxEditScript::length(self : DocxEditScript) -> Int32 {
 /// One operation's outcome. `find`/`replace`/`occurrence` describe a
 /// `replace_text` op; `selector_*` describe a revision op. Exactly one family
 /// is meaningful per entry, and the serializer nulls out the other.
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxEditOpResult {
   op : String
   find : String
@@ -191,10 +193,11 @@ pub(all) struct DocxEditOpResult {
   // revisions this op resolved. Two ops selecting the SAME revision with the
   // same action each count it, while the report total counts it once.
   mut resolved : Int32
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// The complete literal-edit outcome.
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxEditReport {
   mut ops_applied : Int32
   mut replacements : Int32
@@ -211,13 +214,14 @@ pub(all) struct DocxEditReport {
   mut locations_truncated : Bool
   stories_scanned : Array[String]
   mut changed : Bool
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Raised when strict findings refuse publication.
+#derive(@debug.Debug)
 pub suberror DocxEditRefused {
   DocxEditRefused(DocxEditReport)
-} derive(@debug.Debug)
+}
 
 ///|
 /// Result of one strict literal-edit transaction.

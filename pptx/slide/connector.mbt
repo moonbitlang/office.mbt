@@ -20,10 +20,11 @@
 ///|
 /// One end of a connector — references the target shape by `id` and
 /// chooses one of its connection-point indices.
+#derive(Eq, Debug)
 pub(all) struct ConnectionEnd {
   shape_id : Int32
   idx : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ConnectionEnd with @debug.Debug::{to_repr}
@@ -46,6 +47,7 @@ pub extend ConnectionEnd with Eq::{not_equal, equal}
 ///   `with_hyperlink_to_slide`, resolved by `Presentation::update_slide_mut`.
 ///   `None` for a parsed connector (its `<a:hlinkClick>` round-trips via the
 ///   captured `<p:cNvPr>` in `extension`).
+#derive(Eq, Debug)
 pub(all) struct Connector {
   id : Int32
   name : String
@@ -57,7 +59,7 @@ pub(all) struct Connector {
   end : ConnectionEnd?
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Connector with @debug.Debug::{to_repr}

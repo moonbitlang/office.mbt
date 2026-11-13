@@ -1,9 +1,10 @@
 ///|
 /// Selects whether conversion renders HTML or Markdown.
+#derive(Debug, Eq)
 pub(all) enum OutputFormat {
   Html
   Markdown
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct ConvertOptions {
@@ -20,10 +21,11 @@ priv struct ConvertedNodes {
 
 ///|
 /// Rendered image nodes plus any diagnostics from image conversion.
+#derive(Debug, Eq)
 pub(all) struct ImageConversion {
   nodes : Array[HtmlNode]
   messages : Array[Message]
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds an image conversion result from rendered nodes and diagnostics.

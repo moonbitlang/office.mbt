@@ -1,12 +1,14 @@
 ///|
 /// Cached font resource resolved while interpreting text operators.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentTextFontCacheEntry {
   name : String
   font : PdfFont
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Text state tracked by cpdfcontent before glyph layout is emitted.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentTextState {
   character_spacing : Double
   word_spacing : Double
@@ -21,14 +23,15 @@ pub(all) struct PdfContentTextState {
   knockout : Bool
   text_matrix : @geometry.TransformMatrix
   line_matrix : @geometry.TransformMatrix
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Result of applying a text operator to the current text state.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentTextOpResult {
   text_state : PdfContentTextState
   glyphs : Array[PdfContentTextGlyphPlacement]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_content_initial_text_font() -> PdfFont {

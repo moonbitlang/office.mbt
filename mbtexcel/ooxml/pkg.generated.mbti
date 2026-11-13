@@ -59,10 +59,11 @@ pub fn remove_xml_foreign_namespace_subtrees(StringView, ArrayView[String], canc
 pub fn xml_needs_escape(StringView, attr~ : Bool) -> Bool
 
 // Errors
+#derive(@debug.Debug)
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
   ReadCancelled
-} derive(@debug.Debug)
+}
 #deprecated
 pub fn ParseXmlError::to_repr(Self) -> @debug.Repr
 

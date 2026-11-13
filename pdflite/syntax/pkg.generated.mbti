@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/syntax"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -100,6 +101,7 @@ pub fn stream_to_get(@core.ByteCursor, Int32, Int32) -> ToGet
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfLexeme {
   LexNull
   LexBool(Bool)
@@ -118,16 +120,17 @@ pub(all) enum PdfLexeme {
   LexComment(Bytes)
   StopLexing
   LexNone
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfLexeme::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfLexeme::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfLexeme::to_json(Self) -> Json
+pub fn PdfLexeme::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfLexeme::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfObject {
   PdfNull
   PdfBoolean(Bool)
@@ -140,7 +143,7 @@ pub(all) enum PdfObject {
   PdfDictionary(Array[(@core.PdfName, PdfObject)])
   PdfStreamObject(PdfStream)
   PdfIndirect(Int32)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfObject::add_dict_entry(Self, @core.PdfName, Self) -> Self raise @core.PdfError
 pub fn PdfObject::deep_copy(Self) -> Self
 pub fn PdfObject::dictionary_view(Self) -> ArrayView[(@core.PdfName, Self)]?
@@ -155,58 +158,62 @@ pub fn PdfObject::remove_dict_entry(Self, @core.PdfName) -> Self raise @core.Pdf
 pub fn PdfObject::replace_dict_entry(Self, @core.PdfName, Self) -> Self raise @core.PdfError
 pub fn PdfObject::stream_bytes(Self) -> Bytes raise @core.PdfError
 #deprecated
-pub fn PdfObject::to_json(Self) -> Json
+pub fn PdfObject::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfObject::to_repr(Self) -> @debug.Repr
 pub fn PdfObject::unique_key(Self, String) -> @core.PdfName raise @core.PdfError
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfParsedIndirectObject {
   number : Int32
   generation : Int32
   object : PdfObject
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfParsedIndirectObject::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfParsedIndirectObject::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfParsedIndirectObject::to_json(Self) -> Json
+pub fn PdfParsedIndirectObject::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfParsedIndirectObject::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfStream {
   mut dictionary : PdfObject
   mut data : PdfStreamData
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfStream::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfStream::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfStream::to_json(Self) -> Json
+pub fn PdfStream::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfStream::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfStreamData {
   StreamGot(Bytes)
   StreamToGet(ToGet)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfStreamData::deep_copy(Self) -> Self
 #deprecated
 pub fn PdfStreamData::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfStreamData::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfStreamData::to_json(Self) -> Json
+pub fn PdfStreamData::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfStreamData::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfStreamDataCrypt {
   PdfStreamDataNoCrypt
   PdfStreamDataArc4Decrypt(Int32, Int32, Bytes, Int32)
   PdfStreamDataAesV2Decrypt(Int32, Int32, Bytes, Int32)
   PdfStreamDataAesV3Decrypt(Bytes)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfStreamDataCrypt::decrypt(Self, BytesView) -> Bytes raise @core.PdfError
 pub fn PdfStreamDataCrypt::deep_copy(Self) -> Self
 #deprecated
@@ -215,16 +222,17 @@ pub fn PdfStreamDataCrypt::is_identity(Self) -> Bool
 #deprecated
 pub fn PdfStreamDataCrypt::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfStreamDataCrypt::to_json(Self) -> Json
+pub fn PdfStreamDataCrypt::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfStreamDataCrypt::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ToGet {
   input : @core.ByteCursor
   position : Int32
   length : Int32
   crypt : PdfStreamDataCrypt
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ToGet::crypt(Self) -> PdfStreamDataCrypt
 #deprecated
 pub fn ToGet::equal(Self, Self) -> Bool
@@ -234,7 +242,7 @@ pub fn ToGet::length(Self) -> Int32
 pub fn ToGet::not_equal(Self, Self) -> Bool
 pub fn ToGet::position(Self) -> Int32
 #deprecated
-pub fn ToGet::to_json(Self) -> Json
+pub fn ToGet::to_json(Self) -> @json.Json
 #deprecated
 pub fn ToGet::to_repr(Self) -> @debug.Repr
 

@@ -37,6 +37,7 @@
 /// - `table_style_id` — `<a:tableStyleId>` body — a `{GUID}` referencing a
 ///   style in the `tableStyles.xml` part. PowerPoint Office Theme defaults to
 ///   `{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}`.
+#derive(Eq, Debug)
 pub(all) struct TableProperties {
   first_row : Bool?
   first_col : Bool?
@@ -48,7 +49,7 @@ pub(all) struct TableProperties {
   fill : @oxml.Fill?
   table_style_id : String?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TableProperties with @debug.Debug::{to_repr}
@@ -95,6 +96,7 @@ pub fn TableProperties::default() -> TableProperties {
 /// Direct attribute mappings: `border_left`→`<a:lnL>`,
 /// `border_right`→`<a:lnR>`, `border_top`→`<a:lnT>`,
 /// `border_bottom`→`<a:lnB>`.
+#derive(Eq, Debug)
 pub struct TableCellProperties {
   margin_l : @units.Emu?
   margin_r : @units.Emu?
@@ -111,7 +113,7 @@ pub struct TableCellProperties {
   border_bl_to_tr : @oxml.Stroke?
   fill : @oxml.Fill?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TableCellProperties with @debug.Debug::{to_repr}

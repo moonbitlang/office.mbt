@@ -5,6 +5,7 @@
 
 ///|
 /// Section geometry, in points (the DOCX frontend converts from twips).
+#derive(Eq, Debug, ToJson)
 pub(all) struct SectionProps {
   page_width_pt : Double
   page_height_pt : Double
@@ -18,7 +19,7 @@ pub(all) struct SectionProps {
   /// `w:pgMar w:footer` — distance from the page's bottom edge to the
   /// bottom of the footer.
   footer_pt : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Word's defaults: US Letter (8.5×11in) with 1in margins.
@@ -40,6 +41,7 @@ pub fn SectionProps::default() -> SectionProps {
 /// pagination properties: `keep_lines` forbids splitting the paragraph,
 /// `keep_next` glues it to the start of the following block, and
 /// `widow_control` enforces at least two lines on each side of a split.
+#derive(Eq, Debug, ToJson)
 pub(all) enum Block {
   Paragraph(
     input~ : @paragraph.ParagraphInput,
@@ -68,7 +70,7 @@ pub(all) enum Block {
     mime~ : String
   )
   PageBreak
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A paragraph block with Word's defaults (widow control on, no keeps).
@@ -428,6 +430,7 @@ fn place_table(
 /// Space-before is suppressed for paragraphs that start at the top of a
 /// page (Word's behavior at automatic breaks).
 /// A header or footer: blocks repeated on every page of the section.
+#derive(Eq, Debug, ToJson)
 pub(all) struct PageFurniture {
   header : Array[Block]
   footer : Array[Block]
@@ -444,7 +447,7 @@ pub(all) struct PageFurniture {
   title_page : Bool
   /// `w:evenAndOddHeaders`: whether even pages take the even variants.
   even_and_odd : Bool
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// No running header or footer.

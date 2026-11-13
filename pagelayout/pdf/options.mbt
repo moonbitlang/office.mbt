@@ -99,9 +99,10 @@ pub impl Default for RenderOptions with fn default() {
 ///|
 /// Options `render_pdf` cannot honour; nothing is written. The payload
 /// says what was wrong.
+#derive(Eq)
 pub(all) suberror RenderOptionError {
   RenderOptionError(String)
-} derive(Eq)
+}
 
 ///|
 pub extend RenderOptionError with Eq::{not_equal, equal}
@@ -118,6 +119,7 @@ pub impl Show for RenderOptionError with fn output(self, logger) {
 ///|
 /// How the first page fits the window when the document opens (the
 /// `/OpenAction` destination): the whole page, its width, or its height.
+#derive(Eq, Debug)
 pub(all) enum InitialZoom {
   /// The whole page (`[page /Fit]`).
   Fit
@@ -139,11 +141,12 @@ pub(all) enum InitialZoom {
   /// edge at the left of the window (`[page /FitV left]`). `FitVAt(left=0)`
   /// is `FitV`.
   FitVAt(left~ : Double)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The catalog's `/PageMode` (PDF 32000-1, Table 28): what the viewer shows
 /// beside the pages when the document opens.
+#derive(Eq, Debug)
 pub(all) enum PageMode {
   /// Neither the outline nor thumbnails (`/UseNone`).
   UseNone
@@ -157,7 +160,7 @@ pub(all) enum PageMode {
   UseOC
   /// The attachments panel (`/UseAttachments`).
   UseAttachments
-} derive(Eq, Debug)
+}
 
 ///|
 fn PageMode::pdf_name(self : PageMode) -> String {
@@ -173,6 +176,7 @@ fn PageMode::pdf_name(self : PageMode) -> String {
 
 ///|
 /// Where an outline entry jumps.
+#derive(Eq, Debug)
 pub(all) enum OutlineDest {
   /// The `AnchorItem` of this name (its named destination). An anchor name
   /// the model does not define leaves the entry without a destination: it
@@ -182,7 +186,7 @@ pub(all) enum OutlineDest {
   /// (`x`, `y` down from the page top, points) at the window's top left. A
   /// page the model does not have leaves the entry without a destination.
   Position(page~ : Int32, x~ : Double, y~ : Double)
-} derive(Eq, Debug)
+}
 
 ///|
 /// One entry of the document outline (bookmarks). `level` 0 is the top
@@ -190,16 +194,18 @@ pub(all) enum OutlineDest {
 /// level (a jump of several levels nests directly under that entry). An
 /// `open` entry shows its children when the document opens (a positive
 /// `/Count`); otherwise they start collapsed.
+#derive(Eq, Debug)
 pub(all) struct OutlineEntry {
   title : String
   level : Int32
   dest : OutlineDest
   open : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// The document's `/Trapped` entry (PDF 32000-1, Table 317): whether it has
 /// been trapped for printing.
+#derive(Eq, Debug)
 pub(all) enum Trapped {
   /// `/True`: fully trapped.
   Yes
@@ -207,7 +213,7 @@ pub(all) enum Trapped {
   No
   /// `/Unknown`: not known, or partly trapped.
   Unknown
-} derive(Eq, Debug)
+}
 
 ///|
 /// The document information dictionary (PDF 32000-1, §14.3.3), typed as the
@@ -220,6 +226,7 @@ pub(all) enum Trapped {
 /// further entries, written as text strings; a custom key naming a standard
 /// entry is rejected (set the typed field instead), as are an empty key and
 /// a key given twice.
+#derive(Eq, Debug)
 pub struct DocumentInfo {
   title : String?
   author : String?
@@ -231,7 +238,7 @@ pub struct DocumentInfo {
   mod_date : String?
   trapped : Trapped?
   custom : Array[(String, String)]
-} derive(Eq, Debug)
+}
 
 ///|
 /// Document information; every field left out is not written.

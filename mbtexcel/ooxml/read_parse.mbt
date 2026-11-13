@@ -1,8 +1,9 @@
 ///|
+#derive(Debug)
 pub suberror ParseXmlError {
   InvalidXml(msg~ : String)
   ReadCancelled
-} derive(Debug)
+}
 
 ///|
 fn is_attr_space(ch : UInt16) -> Bool {

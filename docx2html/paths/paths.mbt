@@ -17,9 +17,10 @@
 
 ///|
 /// A path that cannot be parsed or resolved. Its message is agent-facing.
+#derive(Eq)
 pub(all) suberror PathError {
   PathError(String)
-} derive(Eq)
+}
 
 ///|
 pub impl Show for PathError with fn output(self, logger) {

@@ -33,6 +33,7 @@ pub fn Name::storage_offset(self : Name) -> Int32 {
 
 ///|
 /// A name record.
+#derive(Debug)
 pub(all) struct NameRecord {
   platform_id : Int32
   encoding_id : Int32
@@ -40,7 +41,7 @@ pub(all) struct NameRecord {
   name_id : Int32
   length : Int32
   string_offset : Int32
-} derive(Debug)
+}
 
 ///|
 pub fn Name::name_record(self : Name) -> Array[NameRecord] {
@@ -91,11 +92,12 @@ pub fn Name::string_data(self : Name) -> FontData {
 
 ///|
 /// String encodings of name records.
+#derive(Eq, Debug)
 pub(all) enum NameEncoding {
   Utf16Be
   MacRoman
   Unknown
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn NameEncoding::new(

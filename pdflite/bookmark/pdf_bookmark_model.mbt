@@ -2,11 +2,12 @@
 /// Bookmark display colour from the PDF outline `/C` entry.
 ///
 /// PDF stores these as RGB real numbers, normally in the range 0.0 to 1.0.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfBookmarkColour {
   red : Double
   green : Double
   blue : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// One bookmark in the flattened outline representation.
@@ -14,6 +15,7 @@ pub(all) struct PdfBookmarkColour {
 /// Bookmarks are ordered in preorder. `level` is zero-based nesting depth,
 /// `text` is the raw PDF title string bytes, and `target` is the parsed
 /// destination or preserved action.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfBookmark {
   level : Int32
   text : @core.PdfBytes
@@ -21,7 +23,7 @@ pub(all) struct PdfBookmark {
   is_open : Bool
   colour : PdfBookmarkColour
   flags : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Default black bookmark colour.

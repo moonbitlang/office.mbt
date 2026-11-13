@@ -1,6 +1,7 @@
 ///|
 /// Saved graphics/text interpreter frame pushed by PDF `q`/`Q` graphics-state
 /// operators while walking a content stream.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentOperatorFrame {
   ctm : @geometry.TransformMatrix
   partial_path : @path.PdfContentPartialPath
@@ -29,12 +30,13 @@ pub(all) struct PdfContentOperatorFrame {
   marked_content : Array[PdfContentMarkedContent]
   type3_d0 : PdfContentType3D0?
   type3_d1 : PdfContentType3D1?
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Mutable interpreter state for cpdfcontent-style content stream analysis.
 /// It tracks graphics state, text state, marked-content context, Type 3 font
 /// metrics, and the saved graphics-state stack.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentOperatorState {
   ctm : @geometry.TransformMatrix
   partial_path : @path.PdfContentPartialPath
@@ -64,30 +66,33 @@ pub(all) struct PdfContentOperatorState {
   type3_d0 : PdfContentType3D0?
   type3_d1 : PdfContentType3D1?
   state_stack : Array[PdfContentOperatorFrame]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Result of applying a text-related content operator.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentOperatorTextResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Result of applying an operator that can emit resource or graphics-state
 /// JSON entries while updating interpreter state.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentOperatorResourceResult {
   state : PdfContentOperatorState
   entries : Array[PdfContentJsonEntry]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Active marked-content scope captured from `BMC`, `BDC`, `MP`, and `DP`
 /// operators.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentMarkedContent {
   tag : String
   properties : @syntax.PdfObject?
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_content_extgstate_name(text : String) -> @core.PdfName {
@@ -246,14 +251,16 @@ fn pdf_content_extgstate_tk_key() -> @core.PdfName {
 
 ///|
 /// Type 3 font `d0` width declaration captured from a character procedure.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentType3D0 {
   width_x : Double
   width_y : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Type 3 font `d1` width and bounding-box declaration captured from a
 /// character procedure.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentType3D1 {
   width_x : Double
   width_y : Double
@@ -261,7 +268,7 @@ pub(all) struct PdfContentType3D1 {
   lly : Double
   urx : Double
   ury : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Return cpdfcontent's initial operator state for a page boundary.

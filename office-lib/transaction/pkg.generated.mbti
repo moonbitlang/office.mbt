@@ -4,6 +4,7 @@ package "moonbitlang/office-lib/transaction"
 import {
   "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/office-lib",
 }
 
@@ -16,7 +17,7 @@ pub async fn transact(TransactionOptions, (@office-lib.DocumentFormat, Bytes, @z
 
 pub async fn transact_create(CreateTransactionOptions, @office-lib.DocumentFormat, (TransactionBudget) -> TransactionMutation raise, validators? : Array[TransactionValidator], identifier? : TransactionIdentifier) -> TransactionReport
 
-pub fn transaction_failure(String, String, details? : Json) -> TransactionError raise TransactionError
+pub fn transaction_failure(String, String, details? : @json.Json) -> TransactionError raise TransactionError
 
 pub fn transaction_identifier(String, (String, BytesView, @zip.Archive) -> @office-lib.DocumentFormat raise) -> TransactionIdentifier raise TransactionError
 
@@ -36,7 +37,7 @@ pub fn validation_finding(String, String) -> ValidationFinding raise Transaction
 
 // Errors
 pub(all) suberror TransactionError {
-  TransactionError(code~ : String, message~ : String, details~ : Json?)
+  TransactionError(code~ : String, message~ : String, details~ : @json.Json?)
 }
 #deprecated
 pub fn TransactionError::output(Self, &Logger) -> Unit
@@ -82,11 +83,12 @@ pub struct TransactionIdentifier {
   identify : (String, BytesView, @zip.Archive) -> @office-lib.DocumentFormat raise
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TransactionMode {
   InPlace
   Output
   Create
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn TransactionMode::equal(Self, Self) -> Bool
 pub fn TransactionMode::name(Self) -> String
@@ -123,8 +125,8 @@ pub struct TransactionReport {
   preservation : PreservationReport
   warnings : ReadOnlyArray[@office-lib.ProtocolWarning]
 }
-pub fn TransactionReport::to_json(Self) -> Json
-pub fn TransactionReport::to_output(Self) -> Json
+pub fn TransactionReport::to_json(Self) -> @json.Json
+pub fn TransactionReport::to_output(Self) -> @json.Json
 pub fn TransactionReport::warning_records(Self) -> ReadOnlyArray[@office-lib.ProtocolWarning]
 
 pub struct TransactionValidator {

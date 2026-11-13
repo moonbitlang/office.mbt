@@ -1,8 +1,9 @@
 ///|
+#derive(Debug)
 pub struct MergeCell {
   range_ref : String
   value : String
-} derive(Debug)
+}
 
 ///|
 fn MergeCell::new(range_ref : String, value : String) -> MergeCell {

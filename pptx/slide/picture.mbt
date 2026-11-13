@@ -39,6 +39,7 @@
 ///   the whole picture. Build-only: set by `with_hyperlink` /
 ///   `with_hyperlink_to_slide`, resolved by `Presentation::update_slide_mut`.
 ///   `None` for a parsed picture (round-trips via the captured `<p:cNvPr>`).
+#derive(Eq, Debug)
 pub(all) struct Picture {
   id : Int32
   name : String
@@ -50,7 +51,7 @@ pub(all) struct Picture {
   media : MediaInfo?
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Picture with @debug.Debug::{to_repr}

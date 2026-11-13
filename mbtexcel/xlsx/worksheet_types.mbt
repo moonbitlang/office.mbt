@@ -91,27 +91,30 @@ pub fn Chart::drawing_frame_is_canonical(self : Chart) -> Bool {
 }
 
 ///|
+#derive(Eq, Debug)
 pub enum SheetState {
   Visible
   Hidden
   VeryHidden
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct RowDimension {
   height : Double?
   hidden : Bool
   outline_level : Int32
   style_id : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub struct ColDimension {
   width : Double?
   hidden : Bool
   outline_level : Int32
   style_id : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub struct Worksheet {

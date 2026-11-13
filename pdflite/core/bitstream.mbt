@@ -5,12 +5,13 @@
 /// bit order used by PDF filters such as CCITT and Flate Huffman tables.
 /// `align` discards any unread bits in the current byte and resumes at the next
 /// byte boundary.
+#derive(Debug, Eq, ToJson)
 pub struct BitStream {
   input : ByteCursor
   mut current_byte : Int32
   mut bit_mask : Int32
   mut bits_read : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// A restorable snapshot of a `BitStream` position.
@@ -18,12 +19,13 @@ pub struct BitStream {
 /// The snapshot captures both the underlying byte cursor position and the
 /// partially consumed current byte, so seeking back to it is safe even in the
 /// middle of a byte.
+#derive(Debug, Eq, ToJson)
 pub struct BitStreamPosition {
   input_position : Int32
   current_byte : Int32
   bit_mask : Int32
   bits_read : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Creates a bit stream that reads from an existing byte cursor.

@@ -21,6 +21,7 @@
 /// 27 spec values plus `Custom` for `type="cust"`. Real PPTX uses about a
 /// half-dozen of these in practice; we model all of them so we can preserve
 /// values from third-party tools.
+#derive(Eq, Debug)
 pub(all) enum SlideLayoutType {
   Title // "title"
   Tx // "tx"
@@ -58,7 +59,7 @@ pub(all) enum SlideLayoutType {
   TwoTxTwoObj // "twoTxTwoObj"
   ObjTx // "objTx"
   PicTx // "picTx"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideLayoutType with @debug.Debug::{to_repr}
@@ -162,10 +163,11 @@ pub fn SlideLayoutType::to_xml(self : SlideLayoutType) -> String {
 /// `MasterMapping` means "inherit the master's `clrMap` verbatim" (the
 /// default). `Override(...)` supplies an explicit twelve-slot mapping that
 /// replaces the master's mapping for slides using this layout.
+#derive(Eq, Debug)
 pub(all) enum ClrMapOverride {
   MasterMapping
   Override(ColorMapping)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ClrMapOverride with @debug.Debug::{to_repr}
@@ -181,12 +183,13 @@ pub extend ClrMapOverride with Eq::{not_equal, equal}
 ///   default if the attribute is missing.
 /// - `clr_map_override` — `<p:clrMapOvr>` resolution. Empty `<p:clrMapOvr>`
 ///   is treated the same as an explicit `<a:masterClrMapping/>`.
+#derive(Eq, Debug)
 pub(all) struct SlideLayout {
   name : String
   layout_type : SlideLayoutType
   clr_map_override : ClrMapOverride
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideLayout with @debug.Debug::{to_repr}

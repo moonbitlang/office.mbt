@@ -3,6 +3,7 @@ package "moonbitlang/office/internal/pdf_commands"
 
 import {
   "moonbitlang/core/argparse",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -23,7 +24,7 @@ pub struct PdfArtifact {
 }
 
 pub struct PdfResult {
-  data : Json
+  data : @json.Json
   text : Bytes
   artifact : PdfArtifact?
 }

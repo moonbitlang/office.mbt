@@ -10,6 +10,7 @@
 /// gallery ("Medium Style 2 - Accent 1" → `MediumStyle2Accent1`).
 /// `NoStyleNoGrid` / `NoStyleTableGrid` are the two unstyled entries;
 /// the `DarkStyle2Accent*And*` styles pair two accent colours.
+#derive(Eq, Debug)
 pub(all) enum TableStylePreset {
   NoStyleNoGrid
   ThemedStyle1Accent1
@@ -85,7 +86,7 @@ pub(all) enum TableStylePreset {
   DarkStyle2Accent1And2
   DarkStyle2Accent3And4
   DarkStyle2Accent5And6
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TableStylePreset with @debug.Debug::{to_repr}

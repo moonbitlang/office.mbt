@@ -15,10 +15,11 @@
 /// One slide section: its panel `title` and the 0-based index of its
 /// first slide. Two sections may share a `start` — the earlier one is
 /// then empty (PowerPoint allows slide-less sections).
+#derive(Eq, Debug)
 pub(all) struct Section {
   title : String
   start : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Section with @debug.Debug::{to_repr}

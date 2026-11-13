@@ -4,12 +4,13 @@
 
 ///|
 /// Outer and inner indices for reading from an [ItemVariationStore].
+#derive(Eq, Debug)
 pub(all) struct DeltaSetIndex {
   /// Outer delta set index.
   outer : Int32
   /// Inner delta set index.
   inner : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub let no_variation_index : DeltaSetIndex = { outer: 0xFFFF, inner: 0xFFFF, }

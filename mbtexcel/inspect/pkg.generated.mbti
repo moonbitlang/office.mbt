@@ -3,6 +3,7 @@ package "moonbitlang/mbtexcel/inspect"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/mbtexcel/xlsx",
 }
 
@@ -23,9 +24,9 @@ pub const SCHEMA_OUTLINE : String = "xlsx.outline/1"
 
 pub const SCHEMA_QUERY : String = "xlsx.query/1"
 
-pub fn calc(@xlsx.Workbook, file~ : String, String, String) -> Json raise
+pub fn calc(@xlsx.Workbook, file~ : String, String, String) -> @json.Json raise
 
-pub fn cells(@xlsx.Workbook, file~ : String, String, String) -> Json raise
+pub fn cells(@xlsx.Workbook, file~ : String, String, String) -> @json.Json raise
 
 pub fn chart_kinds(String) -> Array[String]
 
@@ -35,22 +36,23 @@ pub fn chart_title(String) -> String?
 
 pub fn effective_style_id(@xlsx.Workbook, String, String, row~ : Int32, col~ : Int32) -> Int32 raise @xlsx.XlsxError
 
-pub fn lint(@xlsx.Workbook, file~ : String, sheet? : String) -> Json raise
+pub fn lint(@xlsx.Workbook, file~ : String, sheet? : String) -> @json.Json raise
 
-pub fn outline(@xlsx.Workbook, file~ : String) -> Json raise @xlsx.XlsxError
+pub fn outline(@xlsx.Workbook, file~ : String) -> @json.Json raise @xlsx.XlsxError
 
 pub fn parse_range(String) -> CellRange raise RangeError
 
 pub fn parse_range_unbounded(String) -> CellRange raise RangeError
 
-pub fn query(@xlsx.Workbook, file~ : String, String, range~ : String, String) -> Json raise
+pub fn query(@xlsx.Workbook, file~ : String, String, range~ : String, String) -> @json.Json raise
 
-pub fn style_to_json(@xlsx.Style) -> Json
+pub fn style_to_json(@xlsx.Style) -> @json.Json
 
 // Errors
+#derive(@debug.Debug)
 pub suberror QueryError {
   QueryError(String)
-} derive(@debug.Debug)
+}
 #deprecated
 pub fn QueryError::output(Self, &Logger) -> Unit
 #deprecated
@@ -59,10 +61,11 @@ pub fn QueryError::to_repr(Self) -> @debug.Repr
 pub fn QueryError::to_string(Self) -> String
 pub impl Show for QueryError
 
+#derive(@debug.Debug)
 pub suberror RangeError {
   RangeTooLarge(range~ : String, count~ : Int64)
   MalformedRef(ref_~ : String)
-} derive(@debug.Debug)
+}
 #deprecated
 pub fn RangeError::output(Self, &Logger) -> Unit
 #deprecated
@@ -72,12 +75,13 @@ pub fn RangeError::to_string(Self) -> String
 pub impl Show for RangeError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub struct CellRange {
   col_lo : Int32
   row_lo : Int32
   col_hi : Int32
   row_hi : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn CellRange::cell_count(Self) -> Int64
 pub fn CellRange::cells(Self) -> Array[String] raise @xlsx.XlsxError
 #deprecated
@@ -88,11 +92,12 @@ pub fn CellRange::range_ref(Self) -> String raise @xlsx.XlsxError
 #deprecated
 pub fn CellRange::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub struct ChartSeriesMeta {
   name : String?
   categories : String?
   values : String?
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn ChartSeriesMeta::equal(Self, Self) -> Bool
 #deprecated

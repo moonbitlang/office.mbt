@@ -598,6 +598,7 @@ fn range_id_key(family : RangeFamily, raw : String) -> String {
 /// `String` by LENGTH first, so `"aa" < "b"` is false, and a list of
 /// labels put through `sort` comes back ordered by length. Ordering
 /// these by hand is what keeps the two agreeable.
+#derive(Eq, Hash, Compare)
 priv enum RangeFamily {
   BookmarkRange
   ConflictDel
@@ -610,7 +611,7 @@ priv enum RangeFamily {
   RangePermission
   TrackedMoveFrom
   TrackedMoveTo
-} derive(Eq, Hash, Compare)
+}
 
 ///|
 /// How a family reads in a refusal. Prose only — nothing branches on it.

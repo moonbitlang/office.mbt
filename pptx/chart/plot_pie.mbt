@@ -23,13 +23,14 @@
 /// - `first_slice_ang` (`<c:firstSliceAng val="…"/>`) — integer degrees
 ///   0..360 for the starting position of the first slice. `0` (top) is the
 ///   default.
+#derive(Eq, Debug)
 pub(all) struct PieChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
   first_slice_ang : Int32?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PieChartBody with @debug.Debug::{to_repr}

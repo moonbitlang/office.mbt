@@ -6,10 +6,11 @@
 /// `XmlFailure` flattens `@xml.XmlError` at the package boundary; `Malformed`
 /// is the catch-all for schema violations (e.g. the root element is not
 /// `<c:chartSpace>`). Same shape as `CommentsError` / `NotesError`.
+#derive(Eq, Debug)
 pub(all) suberror ChartError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartError with @debug.Debug::{to_repr}

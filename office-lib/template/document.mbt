@@ -31,11 +31,12 @@ pub const MAX_TEMPLATE_PATH_ORDINAL_DIGITS : Int32 = 7
 /// Which story of a DOCX document a table path addresses. v1 merges only
 /// body tables; header/footer paths parse (they are well-formed addresses)
 /// and the merge layer refuses them as unsupported.
+#derive(Eq, @debug.Debug)
 pub(all) enum TemplateStory {
   BodyStory
   HeaderStory(Int32)
   FooterStory(Int32)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend TemplateStory with Eq::{not_equal, equal}
@@ -49,10 +50,11 @@ pub extend TemplateStory with @moonbitlang/core/debug.Debug::{to_repr}
 /// quoting grammar) or a DOCX table-row ordinal path
 /// (`{"path": "/docx/body/tbl[N]/tr[M]"}`, the dump grammar). The form must
 /// match the merged file's format; the merge layer enforces that.
+#derive(Eq, @debug.Debug)
 pub(all) enum TemplateRegionAddress {
   SheetRow(sheet~ : String, row~ : Int32)
   TableRow(story~ : TemplateStory, table~ : Int32, row~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend TemplateRegionAddress with Eq::{not_equal, equal}
@@ -63,11 +65,12 @@ pub extend TemplateRegionAddress with @moonbitlang/core/debug.Debug::{to_repr}
 ///|
 /// One repeating region: the template row it addresses and the records to
 /// merge, one cloned row per record, in document order.
+#derive(@debug.Debug)
 pub(all) struct TemplateRegion {
   name : String
   address : TemplateRegionAddress
   records : Array[Map[String, TemplateValue]]
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend TemplateRegion with @moonbitlang/core/debug.Debug::{to_repr}
@@ -75,10 +78,11 @@ pub extend TemplateRegion with @moonbitlang/core/debug.Debug::{to_repr}
 ///|
 /// A parsed template data document. `regions` is empty for scalar-only
 /// documents; iteration order follows the data document.
+#derive(@debug.Debug)
 pub(all) struct TemplateData {
   values : Map[String, TemplateValue]
   regions : Array[TemplateRegion]
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend TemplateData with @moonbitlang/core/debug.Debug::{to_repr}

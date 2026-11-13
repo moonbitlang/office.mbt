@@ -21,6 +21,7 @@
 /// "alignment point" inside the bounding rect. Same nine values as
 /// `TileAlignment`, kept distinct so the two contexts don't get
 /// conflated.
+#derive(Eq, Debug)
 pub(all) enum RectAlignment {
   RectTopLeft // "tl"
   RectTop // "t"
@@ -31,7 +32,7 @@ pub(all) enum RectAlignment {
   RectBottomLeft // "bl"
   RectBottom // "b"
   RectBottomRight // "br"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RectAlignment with @debug.Debug::{to_repr}
@@ -59,10 +60,11 @@ pub fn RectAlignment::from_xml(s : String) -> RectAlignment? {
 
 ///|
 /// `<a:blur rad="…" grow="0"/>` — Gaussian blur.
+#derive(Eq, Debug)
 pub struct Blur {
   rad : @units.Emu
   grow : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Blur with @debug.Debug::{to_repr}
@@ -72,10 +74,11 @@ pub extend Blur with Eq::{not_equal, equal}
 
 ///|
 /// `<a:glow rad="…">…color…</a:glow>` — outer glow.
+#derive(Eq, Debug)
 pub struct Glow {
   rad : @units.Emu
   color : Color
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Glow with @debug.Debug::{to_repr}
@@ -85,12 +88,13 @@ pub extend Glow with Eq::{not_equal, equal}
 
 ///|
 /// `<a:innerShdw blurRad="…" dist="…" dir="…">…color…</a:innerShdw>`
+#derive(Eq, Debug)
 pub struct InnerShadow {
   blur_rad : @units.Emu
   dist : @units.Emu
   dir : @units.Angle
   color : Color
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend InnerShadow with @debug.Debug::{to_repr}
@@ -101,6 +105,7 @@ pub extend InnerShadow with Eq::{not_equal, equal}
 ///|
 /// `<a:outerShdw blurRad="…" dist="…" dir="…" sx="…" sy="…" kx="…"
 ///               ky="…" algn="…" rotWithShape="…">…color…</a:outerShdw>`
+#derive(Eq, Debug)
 pub struct OuterShadow {
   blur_rad : @units.Emu
   dist : @units.Emu
@@ -112,7 +117,7 @@ pub struct OuterShadow {
   alignment : RectAlignment?
   rotate_with_shape : Bool?
   color : Color
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend OuterShadow with @debug.Debug::{to_repr}
@@ -125,12 +130,13 @@ pub extend OuterShadow with Eq::{not_equal, equal}
 /// preset-named shadow. PowerPoint exposes 20 named presets in
 /// `ST_PresetShadowVal`. Kept as a `String` so unknown presets
 /// round-trip.
+#derive(Eq, Debug)
 pub struct PresetShadow {
   preset : String
   dist : @units.Emu
   dir : @units.Angle
   color : Color
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PresetShadow with @debug.Debug::{to_repr}
@@ -140,9 +146,10 @@ pub extend PresetShadow with Eq::{not_equal, equal}
 
 ///|
 /// `<a:softEdge rad="…"/>` — fades the shape edge inward.
+#derive(Eq, Debug)
 pub struct SoftEdge {
   rad : @units.Emu
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SoftEdge with @debug.Debug::{to_repr}
@@ -153,6 +160,7 @@ pub extend SoftEdge with Eq::{not_equal, equal}
 ///|
 /// `<a:reflection …/>` — mirrored reflection beneath the shape. Many
 /// optional attributes; most real PPTX uses just a few.
+#derive(Eq, Debug)
 pub struct Reflection {
   blur_rad : @units.Emu?
   st_a : @units.Percentage?
@@ -168,7 +176,7 @@ pub struct Reflection {
   ky : @units.Angle?
   alignment : RectAlignment?
   rotate_with_shape : Bool?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Reflection with @debug.Debug::{to_repr}
@@ -182,6 +190,7 @@ pub extend Reflection with Eq::{not_equal, equal}
 /// modelled (it carries a nested `Fill` plus a blend mode); we drop it
 /// rather than block parsing for now.
 ///
+#derive(Eq, Debug)
 pub struct EffectList {
   blur : Blur?
   glow : Glow?
@@ -191,7 +200,7 @@ pub struct EffectList {
   reflection : Reflection?
   soft_edge : SoftEdge?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EffectList with @debug.Debug::{to_repr}
@@ -201,12 +210,13 @@ pub extend EffectList with Eq::{not_equal, equal}
 
 ///|
 /// Errors raised by `parse_effect_list`.
+#derive(Eq, Debug)
 pub(all) suberror EffectError {
   /// Schema violated — missing required attribute or required colour.
   MalformedEffect(String)
   /// A nested colour child raised `ColorError`.
   EffectColorFailure(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EffectError with @debug.Debug::{to_repr}

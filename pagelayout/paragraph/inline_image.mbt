@@ -1,13 +1,14 @@
 ///|
 /// An inline image replaces one U+FFFC code unit in a paragraph's text.
 /// Offsets are relative to the concatenated runs and dimensions are points.
+#derive(Eq, Debug, ToJson)
 pub(all) struct InlineImage {
   offset_utf16 : Int32
   width_pt : Double
   height_pt : Double
   data : Bytes
   mime : String
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 #deprecated("call via the trait")

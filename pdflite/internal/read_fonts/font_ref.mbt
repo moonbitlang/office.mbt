@@ -58,12 +58,13 @@ fn TableDirectory::records(self : TableDirectory) -> FontData {
 
 ///|
 /// A table record: (tag, checksum, offset, length).
+#derive(Debug)
 pub(all) struct TableRecord {
   tag : Tag
   checksum : UInt32
   offset : UInt32
   length : UInt32
-} derive(Debug)
+}
 
 ///|
 pub fn TableDirectory::table_records(

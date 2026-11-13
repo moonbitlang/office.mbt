@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub(all) struct ConditionalFormatOptions {
   mut format_type : String
   mut above_average : Bool
@@ -24,15 +25,16 @@ pub(all) struct ConditionalFormatOptions {
   mut reverse_icons : Bool
   mut icons_only : Bool
   mut stop_if_true : Bool
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 struct X14DataBarProps {
   sqref : String
   bar_direction : String
   bar_solid : Bool
   bar_border_color : String
-} derive(Debug)
+}
 
 ///|
 pub fn ConditionalFormatOptions::new(

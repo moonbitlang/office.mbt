@@ -1,20 +1,23 @@
 ///|
 /// Colour operands carried by cpdfcontent's path drawing state.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfContentColourValues {
   PdfContentColourFloats(Array[Double])
   PdfContentColourNamed(String, Array[Double])
   PdfContentColourPattern
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Dash pattern carried by cpdfcontent's path drawing state.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentDashPattern {
   array : Array[Double]
   phase : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Path drawing state exported by cpdfcontent's JSON view.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentPathState {
   clipping_path : Array[@shape.PdfPath]
   colourspace_stroke : PdfColourSpace
@@ -26,44 +29,49 @@ pub(all) struct PdfContentPathState {
   line_join : Int32
   dash_pattern : PdfContentDashPattern
   rendering_intent : String
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Clipping-only state exported for inline images, images, and shadings.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentClippingState {
   clipping_path : Array[@shape.PdfPath]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Text state fields exported alongside glyph content objects.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentGlyphState {
   rendering_mode : Int32
   knockout : Bool
   font : String
   font_size : Double
   clipping_path : Array[@shape.PdfPath]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Content objects emitted by cpdfcontent's JSON exporter.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfContentObject {
   PdfContentGlyphObject(Int32, String, String)
   PdfContentInlineImageObject
   PdfContentImageObject(String)
   PdfContentPathObject(@shape.PdfDrawnPath)
   PdfContentShadingObject(String)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Content state variant carried by one cpdfcontent JSON entry.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfContentState {
   PdfContentStateGlyph(PdfContentGlyphState)
   PdfContentStatePath(PdfContentPathState)
   PdfContentStateClipping(PdfContentClippingState)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Eight-point cpdfcontent bounding box quad.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentBoundingBox {
   x0 : Double
   y0 : Double
@@ -73,12 +81,13 @@ pub(all) struct PdfContentBoundingBox {
   y2 : Double
   x3 : Double
   y3 : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// One item in cpdfcontent's JSON content list.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfContentJsonEntry {
   object : PdfContentObject
   state : PdfContentState
   bounding_box : PdfContentBoundingBox
-} derive(Debug, Eq, ToJson)
+}

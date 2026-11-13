@@ -2,6 +2,7 @@
 package "moonbitlang/docx2html/batch"
 
 import {
+  "moonbitlang/core/json",
   "moonbitlang/docx2html/document",
 }
 
@@ -22,14 +23,15 @@ pub fn check_script_text(String) -> Unit raise BatchError
 
 pub fn operation_names() -> Array[String]
 
-pub fn parse_annotate(Json) -> AnnotateEnvelope raise BatchError
+pub fn parse_annotate(@json.Json) -> AnnotateEnvelope raise BatchError
 
-pub fn parse_batch(Json) -> BatchScript raise BatchError
+pub fn parse_batch(@json.Json) -> BatchScript raise BatchError
 
 // Errors
+#derive(Eq)
 pub(all) suberror BatchError {
   BatchError(String)
-} derive(Eq)
+}
 #deprecated
 pub fn BatchError::equal(Self, Self) -> Bool
 #deprecated

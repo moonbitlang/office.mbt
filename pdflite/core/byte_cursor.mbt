@@ -12,12 +12,13 @@ pub let pdf_no_more : Int32 = -1
 /// `ByteCursor` keeps a source label for diagnostics and supports an optional
 /// logical offset. After `set_offset`, public positions are relative to that
 /// offset while absolute positions still refer to the underlying byte view.
+#derive(Debug, Eq, ToJson)
 pub struct ByteCursor {
   data : BytesView
   mut position : Int32
   mut offset : Int32
   source : String
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Creates a cursor over owned PDF bytes.

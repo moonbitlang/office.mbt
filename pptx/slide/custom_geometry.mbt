@@ -52,10 +52,11 @@
 ///
 /// - `Literal` — A literal EMU value (`ST_Coordinate`).
 /// - `GuideRef` — A reference to a named guide formula (`ST_GeomGuideName`).
+#derive(Eq, Debug)
 pub(all) enum AdjCoordinate {
   Literal(@units.Emu)
   GuideRef(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AdjCoordinate with @debug.Debug::{to_repr}
@@ -67,10 +68,11 @@ pub extend AdjCoordinate with Eq::{not_equal, equal}
 /// One angle attribute (`stAng` / `swAng` on `<a:arcTo>`, `ang` on
 /// `<a:cxn>`). Same union shape as `AdjCoordinate` but with `Angle` as
 /// the literal type — the spec calls this `ST_AdjAngle`.
+#derive(Eq, Debug)
 pub(all) enum AdjAngle {
   Literal(@units.Angle)
   GuideRef(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AdjAngle with @debug.Debug::{to_repr}
@@ -81,10 +83,11 @@ pub extend AdjAngle with Eq::{not_equal, equal}
 ///|
 /// One `<a:pt x="…" y="…"/>` point inside a path command. Both axes
 /// independently use `ST_AdjCoordinate`.
+#derive(Eq, Debug)
 pub(all) struct PathPoint {
   x : AdjCoordinate
   y : AdjCoordinate
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PathPoint with @debug.Debug::{to_repr}
@@ -110,6 +113,7 @@ pub extend PathPoint with Eq::{not_equal, equal}
 /// - `ArcTo` (`<a:arcTo>`) — elliptical arc. `(wR, hR, stAng, swAng)`.
 /// - `Close` (`<a:close/>`) — close the current subpath back to the last
 ///   `MoveTo`.
+#derive(Eq, Debug)
 pub(all) enum PathCommand {
   MoveTo(PathPoint)
   LnTo(PathPoint)
@@ -117,7 +121,7 @@ pub(all) enum PathCommand {
   QuadBezTo(PathPoint, PathPoint)
   ArcTo(AdjCoordinate, AdjCoordinate, AdjAngle, AdjAngle)
   Close
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PathCommand with @debug.Debug::{to_repr}
@@ -138,6 +142,7 @@ pub extend PathCommand with Eq::{not_equal, equal}
 /// - `PathFillLightenLess` — `lightenLess`
 /// - `PathFillDarken` — `darken`
 /// - `PathFillDarkenLess` — `darkenLess`
+#derive(Eq, Debug)
 pub(all) enum PathFillMode {
   PathFillNone
   PathFillNorm
@@ -145,7 +150,7 @@ pub(all) enum PathFillMode {
   PathFillLightenLess
   PathFillDarken
   PathFillDarkenLess
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PathFillMode with @debug.Debug::{to_repr}
@@ -197,6 +202,7 @@ pub fn PathFillMode::to_xml(self : PathFillMode) -> String {
 /// - `stroke` — `stroke` attribute (default `true`).
 /// - `extrusion_ok` — `extrusionOk` attribute (default `true`).
 /// - `commands` — Draw commands in source order.
+#derive(Eq, Debug)
 pub(all) struct Path {
   w : @units.Emu
   h : @units.Emu
@@ -205,7 +211,7 @@ pub(all) struct Path {
   extrusion_ok : Bool
   commands : Array[PathCommand]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Path with @debug.Debug::{to_repr}
@@ -218,12 +224,13 @@ pub extend Path with Eq::{not_equal, equal}
 /// edge is an `ST_AdjCoordinate`, so corners can reference guide
 /// formulas (`l="l"`, `t="t"`, `r="r"`, `b="b"` is the common case for
 /// shapes that derive their rect from named guides).
+#derive(Eq, Debug)
 pub(all) struct GeomRect {
   l : AdjCoordinate
   t : AdjCoordinate
   r : AdjCoordinate
   b : AdjCoordinate
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend GeomRect with @debug.Debug::{to_repr}
@@ -239,11 +246,12 @@ pub extend GeomRect with Eq::{not_equal, equal}
 /// - `ang` — `ang` attribute — the surface-normal angle at the site.
 /// - `pos` — `<a:pos x="…" y="…"/>` child — site position in path
 ///   coordinates.
+#derive(Eq, Debug)
 pub(all) struct ConnectionSite {
   ang : AdjAngle
   pos : PathPoint
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ConnectionSite with @debug.Debug::{to_repr}
@@ -274,6 +282,7 @@ pub extend ConnectionSite with Eq::{not_equal, equal}
 /// - `paths` (`<a:pathLst>`) — one or more paths. Required by the spec; we
 ///   keep it as `Array[Path]` so the typical single-path case carries no
 ///   allocation overhead beyond the array.
+#derive(Eq, Debug)
 pub(all) struct CustomGeometry {
   adjust_values : Array[ShapeAdjustValue]
   guides : Array[ShapeAdjustValue]
@@ -281,7 +290,7 @@ pub(all) struct CustomGeometry {
   rect : GeomRect?
   paths : Array[Path]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CustomGeometry with @debug.Debug::{to_repr}

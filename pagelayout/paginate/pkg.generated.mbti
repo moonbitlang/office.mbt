@@ -3,6 +3,7 @@ package "moonbitlang/pagelayout/paginate"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/paragraph",
   "moonbitlang/pagelayout/table",
@@ -14,13 +15,14 @@ pub fn paginate(Array[Block], section? : SectionProps, furniture? : PageFurnitur
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum Block {
   Paragraph(input~ : @paragraph.ParagraphInput, keep_lines~ : Bool, keep_next~ : Bool, widow_control~ : Bool)
   ParagraphWithImages(input~ : @paragraph.ParagraphInput, images~ : Array[@paragraph.InlineImage], keep_lines~ : Bool, keep_next~ : Bool, widow_control~ : Bool)
   TableBlock(table~ : @table.Table, keep_next~ : Bool)
   ImageBlock(width_pt~ : Double, height_pt~ : Double, data~ : Bytes, mime~ : String)
   PageBreak
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn Block::equal(Self, Self) -> Bool
 pub fn Block::image(Double, Double, Bytes, String) -> Self
@@ -30,10 +32,11 @@ pub fn Block::paragraph(@paragraph.ParagraphInput, keep_lines? : Bool, keep_next
 pub fn Block::paragraph_with_images(@paragraph.ParagraphInput, Array[@paragraph.InlineImage], keep_lines? : Bool, keep_next? : Bool, widow_control? : Bool) -> Self
 pub fn Block::table(@table.Table, keep_next? : Bool) -> Self
 #deprecated
-pub fn Block::to_json(Self) -> Json
+pub fn Block::to_json(Self) -> @json.Json
 #deprecated
 pub fn Block::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PageFurniture {
   header : Array[Block]
   footer : Array[Block]
@@ -43,17 +46,18 @@ pub(all) struct PageFurniture {
   even_footer : Array[Block]
   title_page : Bool
   even_and_odd : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PageFurniture::equal(Self, Self) -> Bool
 pub fn PageFurniture::none() -> Self
 #deprecated
 pub fn PageFurniture::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PageFurniture::to_json(Self) -> Json
+pub fn PageFurniture::to_json(Self) -> @json.Json
 #deprecated
 pub fn PageFurniture::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct SectionProps {
   page_width_pt : Double
   page_height_pt : Double
@@ -63,14 +67,14 @@ pub(all) struct SectionProps {
   margin_left_pt : Double
   header_pt : Double
   footer_pt : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn SectionProps::default() -> Self
 #deprecated
 pub fn SectionProps::equal(Self, Self) -> Bool
 #deprecated
 pub fn SectionProps::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn SectionProps::to_json(Self) -> Json
+pub fn SectionProps::to_json(Self) -> @json.Json
 #deprecated
 pub fn SectionProps::to_repr(Self) -> @debug.Repr
 

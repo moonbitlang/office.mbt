@@ -5,10 +5,11 @@
 /// `commentAuthors.xml` (`CommentAuthorList::parse`) or `commentsN.xml`
 /// (`CommentList::parse`). Same flatten-at-the-boundary convention as
 /// `OpcError::ZipFailure`, `ThemeError::XmlFailure`, etc.
+#derive(Eq, Debug)
 pub(all) suberror CommentsError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CommentsError with @debug.Debug::{to_repr}

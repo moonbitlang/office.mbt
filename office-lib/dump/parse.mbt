@@ -2,9 +2,10 @@
 /// Errors raised while parsing an `office.dump/1` document back into an
 /// envelope. Malformed or truncated dumps fail here rather than producing a
 /// partial replay.
+#derive(@debug.Debug)
 pub suberror DumpParseError {
   DumpParseError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend DumpParseError with @moonbitlang/core/debug.Debug::{to_repr}

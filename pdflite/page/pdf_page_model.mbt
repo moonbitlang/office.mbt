@@ -1,11 +1,12 @@
 ///|
 /// Page rotation normalized to the four rotations allowed by PDF page dictionaries.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfPageRotation {
   Rotate0
   Rotate90
   Rotate180
   Rotate270
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// In-memory page description used by page-tree read and write helpers.
@@ -13,13 +14,14 @@ pub(all) enum PdfPageRotation {
 /// `content` stores stream objects or indirect stream references. `mediabox`,
 /// `resources`, and `rest` preserve PDF objects so byte-oriented dictionary
 /// data is not forced through MoonBit strings.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfPage {
   content : Array[PdfObject]
   mediabox : PdfObject
   resources : PdfObject
   rotate : PdfPageRotation
   rest : PdfObject
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Convert a normalized page rotation to the integer stored in `/Rotate`.

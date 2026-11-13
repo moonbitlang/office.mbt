@@ -14,10 +14,11 @@
 ///|
 /// One typeface assignment within a `FontCollection` for a specific script.
 /// `script` is a four-letter ISO 15924 code (`"Jpan"`, `"Hans"`, `"Arab"`, …).
+#derive(Eq, Debug)
 pub(all) struct ScriptFont {
   script : String
   typeface : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScriptFont with @debug.Debug::{to_repr}
@@ -46,13 +47,14 @@ pub impl Show for ScriptFont with fn output(self, logger) {
 /// - `cs` (`<a:cs typeface="…"/>`) — Complex Script. May be empty.
 /// - `scripts` — `<a:font script="…" typeface="…"/>` overrides, in source
 ///   order.
+#derive(Eq, Debug)
 pub(all) struct FontCollection {
   latin : String
   ea : String
   cs : String
   scripts : Array[ScriptFont]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FontCollection with @debug.Debug::{to_repr}
@@ -64,12 +66,13 @@ pub extend FontCollection with Eq::{not_equal, equal}
 /// The major (heading) and minor (body) font families.
 ///
 /// - `extension` — `<a:extLst>` etc. on `<a:fontScheme>`.
+#derive(Eq, Debug)
 pub(all) struct FontScheme {
   name : String
   major_font : FontCollection
   minor_font : FontCollection
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend FontScheme with @debug.Debug::{to_repr}
@@ -82,6 +85,7 @@ pub extend FontScheme with Eq::{not_equal, equal}
 /// PowerPoint writes these instead of a literal font name whenever a run
 /// follows the theme, so a parsed `RunProperties.latin` very often holds
 /// `"+mn-lt"` rather than something you can render.
+#derive(Eq, Debug)
 pub(all) enum ThemeFontRef {
   MajorLatin
   MajorEastAsian
@@ -89,7 +93,7 @@ pub(all) enum ThemeFontRef {
   MinorLatin
   MinorEastAsian
   MinorComplexScript
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ThemeFontRef with @debug.Debug::{to_repr}
@@ -144,11 +148,12 @@ let complex_scripts : Array[String] = [
 /// Which of a `FontCollection`'s three typeface slots renders a given script.
 /// The run-level `<a:latin>` / `<a:ea>` / `<a:cs>` overrides follow the same
 /// split, so callers use this to decide which override applies.
+#derive(Eq, Debug)
 pub(all) enum ScriptSlot {
   LatinSlot
   EastAsianSlot
   ComplexScriptSlot
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScriptSlot with @debug.Debug::{to_repr}

@@ -19,9 +19,10 @@ pub const MAX_TEMPLATE_VALUE_UNITS : Int32 = 65536
 
 ///|
 /// Errors raised while parsing a template data document.
+#derive(@debug.Debug)
 pub suberror TemplateDataError {
   TemplateDataError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend TemplateDataError with @moonbitlang/core/debug.Debug::{to_repr}
@@ -29,11 +30,12 @@ pub extend TemplateDataError with @moonbitlang/core/debug.Debug::{to_repr}
 ///|
 /// One substitutable value, typed so a whole-cell XLSX placeholder can
 /// keep the value's native type.
+#derive(Eq, @debug.Debug)
 pub(all) enum TemplateValue {
   TextValue(String)
   NumberValue(Double)
   BoolValue(Bool)
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend TemplateValue with Eq::{not_equal, equal}

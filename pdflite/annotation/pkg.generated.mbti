@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/annotation"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/geometry",
   "moonbitlang/pdflite/syntax",
@@ -16,6 +17,7 @@ pub fn pdf_annotation_make_border(Double, vertical_radius? : Double, horizontal_
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAnnotation {
   subtype : PdfAnnotationSubtype
   contents : Bytes?
@@ -24,46 +26,49 @@ pub(all) struct PdfAnnotation {
   border : PdfAnnotationBorder
   colour : PdfAnnotationColour?
   rest : @syntax.PdfObject
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAnnotation::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotation::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAnnotation::to_json(Self) -> Json
+pub fn PdfAnnotation::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAnnotation::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAnnotationBorder {
   width : Double
   vertical_radius : Double
   horizontal_radius : Double
   style : PdfAnnotationStyle
   dash_array : Array[Int32]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAnnotationBorder::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationBorder::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAnnotationBorder::to_json(Self) -> Json
+pub fn PdfAnnotationBorder::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAnnotationBorder::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAnnotationColour {
   red : Int32
   green : Int32
   blue : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAnnotationColour::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationColour::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAnnotationColour::to_json(Self) -> Json
+pub fn PdfAnnotationColour::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAnnotationColour::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfAnnotationStyle {
   AnnotationNoStyle
   AnnotationSolid
@@ -71,16 +76,17 @@ pub(all) enum PdfAnnotationStyle {
   AnnotationBeveled
   AnnotationInset
   AnnotationUnderlineStyle
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAnnotationStyle::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationStyle::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAnnotationStyle::to_json(Self) -> Json
+pub fn PdfAnnotationStyle::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAnnotationStyle::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfAnnotationSubtype {
   AnnotationText
   AnnotationLink
@@ -108,13 +114,13 @@ pub(all) enum PdfAnnotationSubtype {
   AnnotationWatermark
   AnnotationThreeDee
   AnnotationUnknown(@core.PdfName)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAnnotationSubtype::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAnnotationSubtype::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAnnotationSubtype::to_json(Self) -> Json
+pub fn PdfAnnotationSubtype::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAnnotationSubtype::to_repr(Self) -> @debug.Repr
 

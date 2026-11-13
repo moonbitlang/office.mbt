@@ -26,10 +26,11 @@ pub let package_root : String = "/"
 ///|
 /// Whether a relationship target is internal (another part in the package)
 /// or external (a URI).
+#derive(Eq, Debug)
 pub(all) enum TargetMode {
   Internal
   External
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TargetMode with @debug.Debug::{to_repr}
@@ -45,12 +46,13 @@ pub extend TargetMode with Eq::{not_equal, equal}
 /// `…/officeDocument/2006/relationships/officeDocument`). `target` is a
 /// part-name fragment, relative to the source's directory unless absolute
 /// (starts with `/`) or `target_mode == External`.
+#derive(Eq, Debug)
 pub(all) struct Relationship {
   id : String
   rel_type : String
   target : String
   target_mode : TargetMode
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Relationship with @debug.Debug::{to_repr}
@@ -82,10 +84,11 @@ pub impl Show for Relationship with fn output(self, logger) {
 /// `source` is the OPC name of the originating part, or `"/"` for the
 /// package-level relationships. Lookup helpers (`by_id` / `by_type`) and an
 /// immutable builder (`with_relationship`) are provided.
+#derive(Debug)
 pub struct Relationships {
   source : String
   priv items : Array[Relationship]
-} derive(Debug)
+}
 
 ///|
 pub extend Relationships with @debug.Debug::{to_repr}

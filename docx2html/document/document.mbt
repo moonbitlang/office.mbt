@@ -1,25 +1,28 @@
 ///|
 /// Vertical positioning for text within a run.
+#derive(Debug, Eq)
 pub(all) enum VerticalAlignment {
   Baseline
   Superscript
   Subscript
-} derive(Debug, Eq)
+}
 
 ///|
 /// Kind of break represented in the document model.
+#derive(Debug, Eq)
 pub(all) enum BreakType {
   Line
   Page
   Column
-} derive(Debug, Eq)
+}
 
 ///|
 /// List numbering metadata attached to a paragraph.
+#derive(Debug, Eq)
 pub(all) struct Numbering {
   is_ordered : Bool
   level : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds paragraph numbering metadata.
@@ -29,12 +32,13 @@ pub fn numbering(is_ordered : Bool, level : Int32) -> Numbering {
 
 ///|
 /// Paragraph indentation values from WordprocessingML.
+#derive(Debug, Eq)
 pub(all) struct Indent {
   start : String?
   end : String?
   first_line : String?
   hanging : String?
-} derive(Debug, Eq)
+}
 
 ///|
 fn none_if_empty(value : String?) -> String? {
@@ -68,13 +72,14 @@ pub fn Indent::default() -> Indent {
 
 ///|
 /// Formatting metadata attached to a paragraph.
+#derive(Debug, Eq)
 pub(all) struct ParagraphProperties {
   style_id : String?
   style_name : String?
   numbering : Numbering?
   alignment : String?
   indent : Indent
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds paragraph formatting metadata.
@@ -102,6 +107,7 @@ pub fn ParagraphProperties::default() -> ParagraphProperties {
 
 ///|
 /// Formatting metadata attached to a run.
+#derive(Debug, Eq)
 pub(all) struct RunProperties {
   style_id : String?
   style_name : String?
@@ -119,7 +125,7 @@ pub(all) struct RunProperties {
   highlight : String?
   /// Resolved RRGGBB text color, or "auto" for the consumer default.
   color : String?
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds run formatting metadata.
@@ -165,10 +171,11 @@ pub fn RunProperties::default() -> RunProperties {
 
 ///|
 /// Formatting metadata attached to a table.
+#derive(Debug, Eq)
 pub(all) struct TableProperties {
   style_id : String?
   style_name : String?
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds table formatting metadata.
@@ -187,31 +194,35 @@ pub fn TableProperties::default() -> TableProperties {
 
 ///|
 /// Footnote or endnote content in the document model.
+#derive(Debug, Eq)
 pub(all) struct Note {
   note_type : String
   note_id : String
   body : Array[DocumentElement]
-} derive(Debug, Eq)
+}
 
 ///|
 /// Word comment metadata and body content.
+#derive(Debug, Eq)
 pub(all) struct Comment {
   comment_id : String
   body : Array[DocumentElement]
   author_name : String
   author_initials : String
-} derive(Debug, Eq)
+}
 
 ///|
 /// Image payload and metadata read from a DOCX package.
+#derive(Debug, Eq)
 pub(all) struct Image {
   content_type : String
   alt_text : String?
   data : Bytes
-} derive(Debug, Eq)
+}
 
 ///|
 /// Node in the Mammoth-style document tree.
+#derive(Debug, Eq)
 pub(all) enum DocumentElement {
   Document(
     children~ : Array[DocumentElement],
@@ -250,7 +261,7 @@ pub(all) enum DocumentElement {
   /// an AUTHORING-SIDE node — the reader projects a read field's cached
   /// result as ordinary runs and never produces this variant.
   Field(instruction~ : String, result~ : String)
-} derive(Debug, Eq)
+}
 
 ///|
 /// Builds a document element.

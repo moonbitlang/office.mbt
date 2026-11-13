@@ -15,6 +15,7 @@
 /// `accent1`..`accent6` are the brand colours, `hlink` and `folHlink` the
 /// hyperlink and followed-hyperlink colours.
 ///
+#derive(Eq, Debug)
 pub(all) struct ColorScheme {
   name : String
   dk1 : @oxml.Color
@@ -30,7 +31,7 @@ pub(all) struct ColorScheme {
   hlink : @oxml.Color
   fol_hlink : @oxml.Color
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ColorScheme with @debug.Debug::{to_repr}

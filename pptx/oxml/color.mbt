@@ -20,10 +20,11 @@
 /// colour with a fallback RGB used when the system value can't be
 /// resolved. The string `val` is the spec's `ST_SystemColorVal`; we
 /// keep it raw so unrecognised system values round-trip.
+#derive(Eq, Debug)
 pub(all) struct SysColor {
   val : String
   last_clr : @units.RgbColor?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SysColor with @debug.Debug::{to_repr}
@@ -62,6 +63,7 @@ pub impl Show for SysColor with fn output(self, logger) {
 ///   `"slateGray"`). We keep the string because the preset palette is large
 ///   and rarely the deciding factor in fidelity.
 /// - `Scrgb` (`<a:scrgbClr r="..." g="..." b="..."/>`) — percentage RGB.
+#derive(Eq, Debug)
 pub(all) enum ColorBase {
   Srgb(@units.RgbColor)
   Hsl(@units.HslColor)
@@ -69,7 +71,7 @@ pub(all) enum ColorBase {
   Scheme(@units.ThemeColor)
   Preset(String)
   Scrgb(@units.Percentage, @units.Percentage, @units.Percentage)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ColorBase with @debug.Debug::{to_repr}
@@ -137,11 +139,12 @@ pub impl Show for ColorBase with fn output(self, logger) {
 ///   `gray`, … — and any foreign-namespace children. Modeled modifiers
 ///   (`tint`, `shade`, `satMod`, `lumMod`, `alpha`) live in `transforms` and
 ///   do NOT duplicate here.
+#derive(Eq, Debug)
 pub struct Color {
   base : ColorBase
   transforms : Array[@units.ColorTransform]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Color with @debug.Debug::{to_repr}
@@ -274,13 +277,14 @@ fn write_color_transform(
 
 ///|
 /// Errors raised by `parse_color_element`.
+#derive(Eq, Debug)
 pub(all) suberror ColorError {
   /// The element is not one of the six known colour-element local names.
   UnknownColorElement(String)
   /// A required attribute (`val`, `hue`/`sat`/`lum`, `r`/`g`/`b`) is
   /// missing or unparseable. Payload is a human-readable description.
   MalformedColor(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ColorError with @debug.Debug::{to_repr}

@@ -17,11 +17,12 @@
 ///|
 /// `ST_TransitionSpeed` (ECMA-376 §19.7.49) — the `spd` attribute. The schema
 /// default is `Fast`.
+#derive(Eq, Debug)
 pub(all) enum TransitionSpeed {
   Slow
   Medium
   Fast
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionSpeed with @debug.Debug::{to_repr}
@@ -52,12 +53,13 @@ pub fn TransitionSpeed::to_xml(self : TransitionSpeed) -> String {
 ///|
 /// `ST_TransitionSideDirectionType` (l/u/r/d) — the `dir` attribute on
 /// `<p:push>` and `<p:wipe>`.
+#derive(Eq, Debug)
 pub(all) enum TransitionSide {
   Left
   Up
   Right
   Down
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionSide with @debug.Debug::{to_repr}
@@ -88,6 +90,7 @@ pub fn TransitionSide::to_xml(self : TransitionSide) -> String {
 ///|
 /// `ST_TransitionEightDirectionType` (l/u/r/d/lu/ru/ld/rd) — the `dir`
 /// attribute on `<p:cover>` and `<p:pull>`.
+#derive(Eq, Debug)
 pub(all) enum TransitionDirection {
   Left
   Up
@@ -97,7 +100,7 @@ pub(all) enum TransitionDirection {
   RightUp
   LeftDown
   RightDown
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionDirection with @debug.Debug::{to_repr}
@@ -137,10 +140,11 @@ pub fn TransitionDirection::to_xml(self : TransitionDirection) -> String {
 /// `ST_Direction` (horz/vert) — the `dir` attribute on `<p:blinds>` /
 /// `<p:checker>` / `<p:comb>` / `<p:randomBar>` and the `orient` attribute on
 /// `<p:split>`.
+#derive(Eq, Debug)
 pub(all) enum TransitionOrientation {
   Horizontal
   Vertical
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionOrientation with @debug.Debug::{to_repr}
@@ -167,10 +171,11 @@ pub fn TransitionOrientation::to_xml(self : TransitionOrientation) -> String {
 ///|
 /// `ST_TransitionInOutDirectionType` (in/out) — the `dir` attribute on
 /// `<p:split>` and `<p:zoom>`.
+#derive(Eq, Debug)
 pub(all) enum TransitionInOut {
   In
   Out
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionInOut with @debug.Debug::{to_repr}
@@ -197,12 +202,13 @@ pub fn TransitionInOut::to_xml(self : TransitionInOut) -> String {
 ///|
 /// `ST_TransitionCornerDirectionType` (lu/ru/ld/rd) — the `dir` attribute on
 /// `<p:strips>`.
+#derive(Eq, Debug)
 pub(all) enum TransitionCorner {
   LeftUp
   RightUp
   LeftDown
   RightDown
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionCorner with @debug.Debug::{to_repr}
@@ -245,6 +251,7 @@ let transition_default_spokes : Int32 = 4
 /// The `Bool` on `Fade` / `Cut` is the `thruBlk` (through-black) attribute; the
 /// `Int` on `Wheel` is the `spokes` count (schema default 4). Direction- and
 /// orientation-bearing variants carry the corresponding typed enum.
+#derive(Eq, Debug)
 pub(all) enum TransitionKind {
   NoEffect
   Blinds(TransitionOrientation)
@@ -268,7 +275,7 @@ pub(all) enum TransitionKind {
   Wheel(Int32) // spokes
   Wipe(TransitionSide)
   Zoom(TransitionInOut)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TransitionKind with @debug.Debug::{to_repr}
@@ -287,13 +294,14 @@ pub extend TransitionKind with Eq::{not_equal, equal}
 ///   slide. Schema default `true`.
 /// - `advance_after` (`advTm`) — auto-advance after this many milliseconds.
 ///   `None` means the slide advances only on click (the attribute is absent).
+#derive(Eq, Debug)
 pub struct Transition {
   kind : TransitionKind
   speed : TransitionSpeed
   advance_on_click : Bool
   advance_after : Int32?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Transition with @debug.Debug::{to_repr}

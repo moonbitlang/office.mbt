@@ -6,6 +6,7 @@
 
 ///|
 /// Body of `<c:radarChart>` (CT_RadarChart).
+#derive(Eq, Debug)
 pub(all) struct RadarChartBody {
   radar_style : RadarStyle
   vary_colors : Bool?
@@ -13,7 +14,7 @@ pub(all) struct RadarChartBody {
   d_lbls : DLbls?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RadarChartBody with @debug.Debug::{to_repr}
@@ -38,11 +39,12 @@ pub impl Show for RadarChartBody with fn output(self, logger) {
 ///   points.
 /// - `Marker` (`val="marker"`) — same as standard plus markers at points.
 /// - `Filled` (`val="filled"`) — filled-area radar.
+#derive(Eq, Debug)
 pub(all) enum RadarStyle {
   Standard
   Marker
   Filled
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RadarStyle with @debug.Debug::{to_repr}

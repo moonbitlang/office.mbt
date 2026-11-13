@@ -11,10 +11,11 @@
 ///|
 /// A 2D point in EMU coordinates. Both axes use `@units.Emu` so slide-
 /// level arithmetic never silently truncates.
+#derive(Eq, Debug)
 pub(all) struct Point {
   x : @units.Emu
   y : @units.Emu
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Point with @debug.Debug::{to_repr}
@@ -24,10 +25,11 @@ pub extend Point with Eq::{not_equal, equal}
 
 ///|
 /// A 2D size in EMU coordinates.
+#derive(Eq, Debug)
 pub(all) struct Size {
   cx : @units.Emu
   cy : @units.Emu
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Size with @debug.Debug::{to_repr}
@@ -48,13 +50,14 @@ pub extend Size with Eq::{not_equal, equal}
 ///   emits no `rot` attribute (PowerPoint treats that as `0`).
 /// - `flip_h` (`flipH`) — mirror horizontally.
 /// - `flip_v` (`flipV`) — mirror vertically.
+#derive(Eq, Debug)
 pub struct Transform {
   offset : Point
   extent : Size
   rotation : @units.Angle?
   flip_h : Bool
   flip_v : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Transform with @debug.Debug::{to_repr}
@@ -107,10 +110,11 @@ pub fn Transform::with_flip(
 /// absent attribute (the common body/content case) round-trips losslessly
 /// as `""`. The typed view lives in `Placeholder::kind() -> PlaceholderType`
 /// (see `placeholders.mbt`) rather than in this field.
+#derive(Eq, Debug)
 pub(all) struct Placeholder {
   ph_type : String
   idx : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Placeholder with @debug.Debug::{to_repr}
@@ -131,6 +135,7 @@ pub extend Placeholder with Eq::{not_equal, equal}
 /// - `Unknown` — The full XML subtree of an unmodelled shape kind. Typically
 ///   `<p:contentPart>` extension shapes; new shape kinds start here and
 ///   graduate to a typed variant when added.
+#derive(Eq, Debug)
 pub(all) enum Shape {
   AutoShape(AutoShape)
   Picture(Picture)
@@ -138,7 +143,7 @@ pub(all) enum Shape {
   Group(GroupShape)
   GraphicFrame(GraphicFrame)
   Unknown(@xml.XmlElement)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Shape with @debug.Debug::{to_repr}
@@ -169,6 +174,7 @@ pub extend Shape with Eq::{not_equal, equal}
 ///   `with_hyperlink_to_slide`, resolved by `Presentation::update_slide_mut`.
 ///   `None` for a parsed shape (its `<a:hlinkClick>` round-trips via the
 ///   captured `<p:cNvPr>` in `extension`).
+#derive(Eq, Debug)
 pub(all) struct AutoShape {
   id : Int32
   name : String
@@ -181,7 +187,7 @@ pub(all) struct AutoShape {
   text_body : TextBody?
   hyperlink : ShapeHyperlink?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutoShape with @debug.Debug::{to_repr}
@@ -212,6 +218,7 @@ pub extend AutoShape with Eq::{not_equal, equal}
 ///   `with_animations` and emitted by the writer; on *parse* an existing
 ///   `<p:timing>` round-trips through `extension` and this stays
 ///   `None`. See `animation.mbt` / `animation_writer.mbt`.
+#derive(Eq, Debug)
 pub(all) struct Slide {
   name : String
   background : Background?
@@ -220,7 +227,7 @@ pub(all) struct Slide {
   transition : Transition?
   timing : Timeline?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Slide with @debug.Debug::{to_repr}

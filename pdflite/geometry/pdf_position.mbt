@@ -1,5 +1,6 @@
 ///|
 /// Position keywords used by cpdf-style text and layout operations.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfPosition {
   PdfPositionPosCentre(Double, Double)
   PdfPositionPosLeft(Double, Double)
@@ -15,15 +16,16 @@ pub(all) enum PdfPosition {
   PdfPositionDiagonal
   PdfPositionReverseDiagonal
   PdfPositionCentre
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Absolute placement calculated from a position keyword and page bounds.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfCalculatedPosition {
   x : Double
   y : Double
   rotation : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_position_distance(ignore_distance : Bool, distance : Double) -> Double {
