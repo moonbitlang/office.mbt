@@ -1077,8 +1077,8 @@ async fn publish_candidate(
   cleanup_release : String?,
 ) -> (Bool, Bool) {
   let temp = create_temp(policy)
-  errdefer {
-    match cleanup_release {
+  try {
+    errdefer (match cleanup_release {
       Some(release) =>
         publication_temp_cleanup(
           temp,
@@ -1086,145 +1086,150 @@ async fn publish_candidate(
           cleanup_release=release,
         )
       None => publication_temp_cleanup(temp, policy.output_path)
+    })
+    // Exclusive creation and staging chmod are cancellation-shielded so their
+    // outcome is never ambiguous. Observe a cancellation before doing more
+    // work; the `errdefer` above then owns deterministic cleanup.
+    @async.pause()
+    match faults.relocate_parent_to {
+      Some(target) =>
+        @afs.rename(
+          path_parent(policy.destination_target),
+          filesystem_path(target),
+          replace=false,
+        ) catch {
+          error if @async.is_being_cancelled() => raise error
+          error =>
+            raise transaction_error(
+              "office.transaction.commit_failed",
+              "could not inject the destination-parent relocation: \{bounded_text(error.to_string(), 240)}",
+            )
+        }
+      None => ()
     }
-    if @async.is_being_cancelled() {
-      @async.pause()
+    if faults.deny_cleanup {
+      publication_temp_substitute(temp)
     }
-  }
-  // Exclusive creation and staging chmod are cancellation-shielded so their
-  // outcome is never ambiguous. Observe a cancellation before doing more
-  // work; the `errdefer` above then owns deterministic cleanup.
-  @async.pause()
-  match faults.relocate_parent_to {
-    Some(target) =>
-      @afs.rename(
-        path_parent(policy.destination_target),
-        filesystem_path(target),
-        replace=false,
+    if faults.stall_after_temp {
+      @async.sleep(60_000)
+    }
+    if faults.fail_write {
+      raise transaction_error(
+        "office.transaction.write_failed", "injected temporary-file write failure",
+      )
+    }
+    publication_temp_write(
+      temp,
+      candidate,
+      fail_after_bytes=faults.fail_write_after_bytes,
+      stall_after_bytes=faults.stall_write_after_bytes,
+    )
+    publication_temp_sync(temp)
+    if policy.mode is InPlace {
+      match faults.concurrent_replacement {
+        Some(replacement) => {
+          match faults.relocate_parent_to {
+            Some(_) =>
+              @afs.mkdir(path_parent(policy.source_target)) catch {
+                error if @async.is_being_cancelled() => raise error
+                error =>
+                  raise transaction_error(
+                    "office.transaction.commit_failed",
+                    "could not inject the replacement source parent: \{bounded_text(error.to_string(), 240)}",
+                  )
+              }
+            None => ()
+          }
+          @afs.write_file(
+            policy.source_target,
+            replacement,
+            create_mode=if faults.relocate_parent_to is Some(_) {
+              CreateNew
+            } else {
+              CreateOrTruncate
+            },
+            permission=options.permission,
+          ) catch {
+            error if @async.is_being_cancelled() => raise error
+            error =>
+              raise transaction_error(
+                "office.transaction.commit_failed",
+                "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
+              )
+          }
+        }
+        None => ()
+      }
+      check_source_unchanged(
+        policy.source_directory,
+        policy.source_leaf,
+        original,
       ) catch {
         error if @async.is_being_cancelled() => raise error
-        error =>
-          raise transaction_error(
-            "office.transaction.commit_failed",
-            "could not inject the destination-parent relocation: \{bounded_text(error.to_string(), 240)}",
+        error => raise error
+      }
+    }
+    if policy.mode is Output || policy.mode is Create {
+      match faults.concurrent_destination {
+        Some(replacement) =>
+          @afs.write_file(
+            policy.destination_target,
+            replacement,
+            create_mode=CreateNew,
+            permission=options.permission,
+          ) catch {
+            error if @async.is_being_cancelled() => raise error
+            error =>
+              raise transaction_error(
+                "office.transaction.commit_failed",
+                "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
+              )
+          }
+        None => ()
+      }
+    }
+    if faults.fail_rename {
+      raise transaction_error(
+        "office.transaction.commit_failed", "injected atomic-rename failure",
+      )
+    }
+    let temp_clean = publication_temp_publish(
+      temp,
+      policy.destination_leaf,
+      policy.replace,
+      policy.output_path,
+      options.permission,
+    )
+    publication_temp_close(temp)
+    let parent_synced = @async.protect_from_cancel(() => {
+      match faults.post_rename_release {
+        Some(release) => {
+          @afs.write_file(
+            release + ".ready",
+            b"ready",
+            create_mode=CreateNew,
+            permission=0o600,
           )
+          while !@afs.exists(release) {
+            @async.pause()
+          }
+        }
+        None => ()
       }
-    None => ()
-  }
-  if faults.deny_cleanup {
-    publication_temp_substitute(temp)
-  }
-  if faults.stall_after_temp {
-    @async.sleep(60_000)
-  }
-  if faults.fail_write {
-    raise transaction_error(
-      "office.transaction.write_failed", "injected temporary-file write failure",
-    )
-  }
-  publication_temp_write(
-    temp,
-    candidate,
-    fail_after_bytes=faults.fail_write_after_bytes,
-    stall_after_bytes=faults.stall_write_after_bytes,
-  )
-  publication_temp_sync(temp)
-  if policy.mode is InPlace {
-    match faults.concurrent_replacement {
-      Some(replacement) => {
-        match faults.relocate_parent_to {
-          Some(_) =>
-            @afs.mkdir(path_parent(policy.source_target)) catch {
-              error if @async.is_being_cancelled() => raise error
-              error =>
-                raise transaction_error(
-                  "office.transaction.commit_failed",
-                  "could not inject the replacement source parent: \{bounded_text(error.to_string(), 240)}",
-                )
-            }
-          None => ()
-        }
-        @afs.write_file(
-          policy.source_target,
-          replacement,
-          create_mode=if faults.relocate_parent_to is Some(_) {
-            CreateNew
-          } else {
-            CreateOrTruncate
-          },
-          permission=options.permission,
-        ) catch {
-          error if @async.is_being_cancelled() => raise error
-          error =>
-            raise transaction_error(
-              "office.transaction.commit_failed",
-              "could not inject the concurrent-source test replacement: \{bounded_text(error.to_string(), 240)}",
-            )
-        }
-      }
-      None => ()
+      publication_directory_sync(policy.destination_directory)
+    }) catch {
+      _ => false
     }
-    check_source_unchanged(
-      policy.source_directory,
-      policy.source_leaf,
-      original,
-    ) catch {
-      error if @async.is_being_cancelled() => raise error
-      error => raise error
+    (parent_synced, temp_clean)
+  } catch {
+    error if @async.is_being_cancelled() => {
+      // Cleanup may finish under a pending cancellation. Re-observe it before
+      // propagating an ordinary failure, outside the protected errdefer.
+      @async.pause()
+      raise error
     }
+    error => raise error
   }
-  if policy.mode is Output || policy.mode is Create {
-    match faults.concurrent_destination {
-      Some(replacement) =>
-        @afs.write_file(
-          policy.destination_target,
-          replacement,
-          create_mode=CreateNew,
-          permission=options.permission,
-        ) catch {
-          error if @async.is_being_cancelled() => raise error
-          error =>
-            raise transaction_error(
-              "office.transaction.commit_failed",
-              "could not inject the concurrent-destination test file: \{bounded_text(error.to_string(), 240)}",
-            )
-        }
-      None => ()
-    }
-  }
-  if faults.fail_rename {
-    raise transaction_error(
-      "office.transaction.commit_failed", "injected atomic-rename failure",
-    )
-  }
-  let temp_clean = publication_temp_publish(
-    temp,
-    policy.destination_leaf,
-    policy.replace,
-    policy.output_path,
-    options.permission,
-  )
-  publication_temp_close(temp)
-  let parent_synced = @async.protect_from_cancel(() => {
-    match faults.post_rename_release {
-      Some(release) => {
-        @afs.write_file(
-          release + ".ready",
-          b"ready",
-          create_mode=CreateNew,
-          permission=0o600,
-        )
-        while !@afs.exists(release) {
-          @async.pause()
-        }
-      }
-      None => ()
-    }
-    publication_directory_sync(policy.destination_directory)
-  }) catch {
-    _ => false
-  }
-  (parent_synced, temp_clean)
 }
 
 ///|
