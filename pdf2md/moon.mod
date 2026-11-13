@@ -4,7 +4,7 @@ version = "0.1.3"
 
 import {
   "moonbitlang/pdflite@0.4.0",
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.9",
 }
 
 readme = "README.md"

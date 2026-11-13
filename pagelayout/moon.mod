@@ -15,7 +15,7 @@ description = "Paginated document layout engine: format-neutral page-model IR wi
 import {
   "moonbitlang/pptx@0.1.0",
   "moonbitlang/ooxml@0.1.0",
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.9",
   "moonbitlang/x@0.5.6",
   "moonbitlang/docx2html@0.7.0",
   "moonbitlang/pdflite@0.4.0",

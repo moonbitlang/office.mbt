@@ -16,7 +16,7 @@ import {
   "moonbitlang/pdflite@0.4.1",
   "moonbitlang/ooxml@0.1.1",
   "moonbitlang/office-lib@0.7.1",
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.9",
   "moonbitlang/docx2html@0.7.1",
   "moonbitlang/mbtexcel@0.3.1",
   "moonbitlang/pagelayout@0.8.1",

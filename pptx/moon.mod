@@ -4,7 +4,7 @@ name = "moonbitlang/pptx"
 version = "0.1.1"
 
 import {
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.9",
   "moonbit-community/flate@0.10.0",
   "moonbitlang/ooxml@0.1.0",
 }
