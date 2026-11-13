@@ -352,28 +352,31 @@ pub const UNSCALED_COMPONENT_OFFSET : Int32 = 0x1000
 
 ///|
 /// Anchor position for a composite component.
+#derive(Eq, Debug)
 pub(all) enum Anchor {
   Offset(x~ : Int32, y~ : Int32)
   Point(base~ : Int32, component~ : Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Transform for a composite component (2.14 values).
+#derive(Eq, Debug)
 pub(all) struct ComponentTransform {
   xx : F2Dot14
   yx : F2Dot14
   xy : F2Dot14
   yy : F2Dot14
-} derive(Eq, Debug)
+}
 
 ///|
 /// A reference to another glyph. Part of [CompositeGlyph].
+#derive(Eq, Debug)
 pub(all) struct Component {
   flags : Int32
   glyph : Int32
   anchor : Anchor
   transform : ComponentTransform
-} derive(Eq, Debug)
+}
 
 ///|
 /// Returns the components of the composite glyph.

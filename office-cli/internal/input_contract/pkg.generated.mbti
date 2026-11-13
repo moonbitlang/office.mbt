@@ -1,28 +1,32 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "moonbitlang/office/internal/input_contract"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 pub const SCHEMA_INVENTORY : String = "office.input-contracts/1"
 
 pub const SCHEMA_RECORD : String = "office.input-contract/1"
 
-pub fn contract_envelope(Array[(String, String)], Array[String]) -> Json
+pub fn contract_envelope(Array[(String, String)], Array[String]) -> @json.Json
 
-pub fn contract_members(Array[(String, String)]) -> Json
+pub fn contract_members(Array[(String, String)]) -> @json.Json
 
-pub fn contract_object(String, Array[(String, String)], required? : Array[String], constraints? : Array[String]) -> Json
+pub fn contract_object(String, Array[(String, String)], required? : Array[String], constraints? : Array[String]) -> @json.Json
 
-pub fn contract_strings(Array[String]) -> Json
+pub fn contract_strings(Array[String]) -> @json.Json
 
-pub fn contract_type(String, String, constraints? : Array[String]) -> Json
+pub fn contract_type(String, String, constraints? : Array[String]) -> @json.Json
 
-pub fn core_json(Core) -> Json
+pub fn core_json(Core) -> @json.Json
 
 pub fn fingerprint(Core) -> String
 
-pub fn inventory(Array[Core]) -> Json
+pub fn inventory(Array[Core]) -> @json.Json
 
-pub fn record(Core) -> Json
+pub fn record(Core) -> @json.Json
 
 // Errors
 
@@ -31,12 +35,12 @@ pub(all) struct Core {
   id : String
   summary : String
   consumed_by : Array[String]
-  envelope : Json
-  definitions : Array[Json]
-  operations : Array[Json]
+  envelope : @json.Json
+  definitions : Array[@json.Json]
+  operations : Array[@json.Json]
   constraints : Array[String]
-  limits : Json
-  examples : Array[Json]
+  limits : @json.Json
+  examples : Array[@json.Json]
 }
 
 // Type aliases

@@ -24,6 +24,7 @@ pub struct Table {
 }
 
 ///|
+#derive(Debug)
 struct TableOptions {
   range_ref : String
   mut name : String
@@ -33,7 +34,7 @@ struct TableOptions {
   mut show_row_stripes : Bool?
   mut show_column_stripes : Bool
   mut show_header_row : Bool?
-} derive(Debug)
+}
 
 ///|
 pub fn TableOptions::new(range_ref : String) -> TableOptions raise XlsxError {

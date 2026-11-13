@@ -11,6 +11,7 @@
 /// Raw-package feature flags with the first triggering part path per
 /// class (archive entry order, deterministic per package). API-built
 /// workbooks carry `XlsxPackageFeatures::none()`.
+#derive(Eq, @debug.Debug)
 pub struct XlsxPackageFeatures {
   external_links : Bool
   query_tables : Bool
@@ -24,7 +25,7 @@ pub struct XlsxPackageFeatures {
   first_pivot_part : String?
   first_vml_part : String?
   first_unknown_part : String?
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub fn XlsxPackageFeatures::none() -> XlsxPackageFeatures {

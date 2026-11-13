@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub(all) struct Comment {
   cell : String
   author : String
@@ -7,7 +8,7 @@ pub(all) struct Comment {
   paragraph : Array[RichTextRun]
   width : Int32?
   height : Int32?
-} derive(Debug)
+}
 
 ///|
 fn clone_comment(comment : Comment) -> Comment {

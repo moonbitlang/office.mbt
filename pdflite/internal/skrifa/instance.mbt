@@ -14,7 +14,8 @@ pub using @font_types {type GlyphId, type Fixed, type F26Dot6, type F2Dot14}
 
 ///|
 /// Font size in pixels per em (or unscaled).
-pub(all) struct Size(Float?) derive(Eq, Debug)
+#derive(Eq, Debug)
+pub(all) struct Size(Float?)
 
 ///|
 /// Creates a new font size from the given value in pixels per em units.
@@ -121,9 +122,9 @@ pub impl Show for DrawError with fn output(self, f) {
       f.write_string(
         "Invalid anchor point index (\{index}) for composite glyph \{gid}",
       )
-    PostScript(e) => f.write_string(e.to_string())
-    ToPath(e) => f.write_string(e.to_string())
-    Read(e) => f.write_string(e.to_string())
+    PostScript(e) => Show::output(e, f)
+    ToPath(e) => Show::output(e, f)
+    Read(e) => Show::output(e, f)
     HarfBuzzHintingUnsupported =>
       f.write_string(
         "HarfBuzz style paths with hinting is not (yet?) supported",

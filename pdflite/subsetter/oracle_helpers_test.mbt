@@ -61,7 +61,7 @@ fn check_subset(
   try run() catch {
     e =>
       match error {
-        Some(error) => assert_eq(e.to_string(), error)
+        Some(error) => assert_eq(Show::to_string(e), error)
         None => fail("unexpected error \{e}")
       }
   } noraise {

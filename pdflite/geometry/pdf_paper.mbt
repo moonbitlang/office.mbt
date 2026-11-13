@@ -3,11 +3,12 @@
 ///
 /// Width and height are stored as given; conversion to PDF points happens at
 /// page-construction boundaries.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PaperSize {
   unit : PdfUnit
   width : Double
   height : Double
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Creates a paper size from a unit, width, and height.

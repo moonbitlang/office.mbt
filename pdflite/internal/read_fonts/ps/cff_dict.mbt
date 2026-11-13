@@ -2,6 +2,7 @@
 
 ///|
 /// PostScript DICT operator.
+#derive(Eq, Debug)
 pub(all) enum DictOperator {
   Version
   Notice
@@ -58,7 +59,7 @@ pub(all) enum DictOperator {
   StemSnapV
   ForceBold
   InitialRandomSeed
-} derive(Eq, Debug)
+}
 
 ///|
 fn DictOperator::from_opcode(opcode : Int32) -> DictOperator? {
@@ -176,6 +177,7 @@ fn parse_token(cursor : Cursor) -> Token raise PsError {
 ///
 /// Offsets are kept as the raw (possibly negative) 32-bit operand values;
 /// Rust converts them with `as usize`.
+#derive(Eq, Debug)
 pub(all) enum Entry {
   Version(Sid)
   Notice(Sid)
@@ -232,7 +234,7 @@ pub(all) enum Entry {
   StemSnapV(StemSnaps)
   ForceBold(Bool)
   InitialRandomSeed(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// Given a byte slice containing DICT data, returns all operators with their

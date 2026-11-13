@@ -5,10 +5,11 @@
 ///
 /// Same flatten-at-the-boundary convention as `OpcError::ZipFailure`,
 /// `ThemeError::XmlFailure`, and `SlideMasterError::XmlFailure`.
+#derive(Eq, Debug)
 pub(all) suberror SlideError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideError with @debug.Debug::{to_repr}

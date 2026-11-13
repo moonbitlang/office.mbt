@@ -24,9 +24,10 @@ pub fn sanitize_utf16_lossy(String) -> (String, Int32)
 pub fn style_css(@xlsx.Style, workbook? : @xlsx.Workbook) -> String
 
 // Errors
+#derive(@debug.Debug)
 pub suberror RenderError {
   SheetNotFound(name~ : String)
-} derive(@debug.Debug)
+}
 #deprecated
 pub fn RenderError::output(Self, &Logger) -> Unit
 #deprecated

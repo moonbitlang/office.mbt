@@ -7,12 +7,13 @@ pub const NESTING_DEPTH_LIMIT : Int32 = 10
 
 ///|
 /// The type of a PostScript charstring.
+#derive(Eq, Debug)
 pub(all) enum CharstringKind {
   /// Type1 charstring.
   Type1
   /// Type2 charstring.
   Type2
-} derive(Eq, Debug)
+}
 
 ///|
 /// Trait that provides context for charstring evaluation.
@@ -158,13 +159,14 @@ pub fn evaluate(
 
 ///|
 /// Specifies how the seac operation was invoked.
+#derive(Eq)
 priv enum SeacMode {
   /// Through the `seac` operator.
   Explicit
   /// Implicitly with extra arguments on the stack through the
   /// `endchar` operator.
   Implicit
-} derive(Eq)
+}
 
 ///|
 /// Transient state for evaluating a charstring and handling recursive
@@ -970,6 +972,7 @@ priv enum PointMode {
 
 ///|
 /// PostScript charstring operator.
+#derive(Eq)
 priv enum CsOperator {
   HStem
   VStem
@@ -1010,7 +1013,7 @@ priv enum CsOperator {
   Flex
   HFlex1
   Flex1
-} derive(Eq)
+}
 
 ///|
 fn CsOperator::read(cursor : Cursor, b0 : Int32) -> CsOperator raise PsError {

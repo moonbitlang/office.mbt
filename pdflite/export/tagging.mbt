@@ -4,6 +4,7 @@
 
 ///|
 /// The type of an artifact.
+#derive(Eq, Debug)
 pub(all) enum ArtifactType {
   Header
   Footer
@@ -17,7 +18,7 @@ pub(all) enum ArtifactType {
   Page
   Background
   Other
-} derive(Eq, Debug)
+}
 
 ///|
 fn ArtifactType::map_pdf_version(
@@ -159,6 +160,7 @@ fn ContentTag::write_properties(
 
 ///|
 /// Identifies a piece of content in the structure tree.
+#derive(Eq, Debug)
 pub(all) enum Identifier {
   /// Marked content on a page: page index and MCID.
   PageContent(Int32, Int32)
@@ -169,7 +171,7 @@ pub(all) enum Identifier {
   StreamContent(Int32, Int32, Int32)
   /// Content that is not part of the structure tree.
   Dummy
-} derive(Eq, Debug)
+}
 
 ///|
 priv struct AnnotationIdentifier {
@@ -179,6 +181,7 @@ priv struct AnnotationIdentifier {
 
 ///|
 /// The kind of a structure element.
+#derive(Eq, Debug)
 pub(all) enum TagName {
   Part
   Article
@@ -219,10 +222,11 @@ pub(all) enum TagName {
   Title
   Strong
   Em
-} derive(Eq, Debug)
+}
 
 ///|
 /// The numbering of a list.
+#derive(Eq, Debug)
 pub(all) enum ListNumbering {
   NoNumbering
   Disc
@@ -233,7 +237,7 @@ pub(all) enum ListNumbering {
   UpperRoman
   LowerAlpha
   UpperAlpha
-} derive(Eq, Debug)
+}
 
 ///|
 fn ListNumbering::name(self : ListNumbering) -> String {
@@ -252,24 +256,27 @@ fn ListNumbering::name(self : ListNumbering) -> String {
 
 ///|
 /// The scope of a table header cell.
+#derive(Eq, Debug)
 pub(all) enum TableHeaderScope {
   Row
   Column
   Both
-} derive(Eq, Debug)
+}
 
 ///|
 /// The placement of a structure element.
+#derive(Eq, Debug)
 pub(all) enum Placement {
   Block
   Inline
   Before
   Start
   End
-} derive(Eq, Debug)
+}
 
 ///|
 /// A border style.
+#derive(Eq, Debug)
 pub(all) enum BorderStyle {
   NoBorder
   Hidden
@@ -281,7 +288,7 @@ pub(all) enum BorderStyle {
   Ridge
   Inset
   Outset
-} derive(Eq, Debug)
+}
 
 ///|
 fn BorderStyle::name(self : BorderStyle) -> String {
@@ -301,29 +308,32 @@ fn BorderStyle::name(self : BorderStyle) -> String {
 
 ///|
 /// The line height of a structure element.
+#derive(Eq, Debug)
 pub(all) enum LineHeight {
   NormalHeight
   AutoHeight
   CustomHeight(Double)
-} derive(Eq, Debug)
+}
 
 ///|
 /// A text decoration type.
+#derive(Eq, Debug)
 pub(all) enum TextDecorationType {
   NoDecoration
   Underline
   Overline
   LineThrough
-} derive(Eq, Debug)
+}
 
 ///|
 /// Values for the four sides `[before after start end]`.
+#derive(Eq, Debug)
 pub(all) struct Sides[T] {
   before : T
   after : T
   start : T
   end : T
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn[T] Sides::uniform(v : T) -> Sides[T] {
@@ -343,11 +353,12 @@ fn[T : Eq] Sides::to_obj(self : Sides[T], f : (T) -> Obj) -> Obj {
 
 ///|
 /// An RGB color with 8-bit components.
+#derive(Eq, Debug)
 pub(all) struct NaiveRgbColor {
   red : Int32
   green : Int32
   blue : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 fn NaiveRgbColor::to_obj(self : NaiveRgbColor) -> Obj {

@@ -23,6 +23,7 @@
 
 ///|
 /// Why a `FontRegistry` refused a face.
+#derive(Eq)
 pub(all) suberror FontRegistryError {
   /// The registry was already consulted, so its answers are fixed. The
   /// payload names the face (`family|bold|italic`) that came too late.
@@ -36,7 +37,7 @@ pub(all) suberror FontRegistryError {
   /// `ZapfDingbats`, whose built-in encodings are not WinAnsi. The payload
   /// is the name.
   UnsupportedStandard(String)
-} derive(Eq)
+}
 
 ///|
 pub extend FontRegistryError with Eq::{not_equal, equal}

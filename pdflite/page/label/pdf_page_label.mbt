@@ -3,6 +3,7 @@
 ///
 /// `PageLabelNoLabelPrefixOnly` means no numeric suffix is generated; only the
 /// optional prefix contributes to the visible label.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfPageLabelStyle {
   PageLabelDecimalArabic
   PageLabelUppercaseRoman
@@ -10,19 +11,20 @@ pub(all) enum PdfPageLabelStyle {
   PageLabelUppercaseLetters
   PageLabelLowercaseLetters
   PageLabelNoLabelPrefixOnly
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// One page-label range.
 ///
 /// `start_page` is 1-based. `start_value` is the numeric value shown on that
 /// page before style formatting, and `label_prefix` is stored as PDF bytes.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfPageLabel {
   label_style : PdfPageLabelStyle
   label_prefix : PdfBytes?
   start_page : Int32
   start_value : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Return a stable debug name for a page-label style.

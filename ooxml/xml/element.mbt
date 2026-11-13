@@ -16,11 +16,12 @@
 /// A single XML element captured into an ad-hoc DOM. Attributes are in
 /// source order; their values are already entity-decoded (matching what
 /// `XmlReader` emits in `StartElement`).
+#derive(Eq, Debug)
 pub(all) struct XmlElement {
   name : QName
   attributes : Array[(QName, String)]
   children : Array[XmlNode]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend XmlElement with @debug.Debug::{to_repr}
@@ -35,11 +36,12 @@ pub extend XmlElement with Show::{to_string, output}
 /// One child of an `XmlElement`. The four reader events
 /// (`StartElement`/`EndElement`/`Text`/`CData`) compress to three node
 /// kinds — `EndElement` is implicit in the parent boundary.
+#derive(Eq, Debug)
 pub(all) enum XmlNode {
   Element(XmlElement)
   Text(String)
   CData(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend XmlNode with @debug.Debug::{to_repr}

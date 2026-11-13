@@ -3,13 +3,14 @@
 ///
 /// Entries are stored newest first by the document reader. `object_stream`
 /// records compressed-object locations for xref-stream entries.
+#derive(Debug, Eq)
 pub(all) struct PdfClassicXRefEntry {
   object_number : Int32
   offset : Int32
   generation : Int32
   in_use : Bool
   object_stream : @xref_model.ObjectStreamReference?
-} derive(Debug, Eq)
+}
 
 ///|
 /// Parsed xref section and associated trailer.

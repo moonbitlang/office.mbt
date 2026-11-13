@@ -1,10 +1,11 @@
 ///|
+#derive(Debug)
 pub struct DefinedName {
   name : String
   refers_to : String
   scope : String
   comment : String
-} derive(Debug)
+}
 
 ///|
 pub fn DefinedName::new(

@@ -3,12 +3,13 @@
 ///
 /// PDF coordinates are ultimately expressed in points, but the public API keeps
 /// common paper and layout units explicit at call sites.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfUnit {
   PdfPoint
   Inch
   Centimetre
   Millimetre
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Converts a value from `unit` to PDF points.

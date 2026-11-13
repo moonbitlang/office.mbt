@@ -9,12 +9,14 @@
 
 ///|
 /// Errors parsing a fresh-authoring `docx.batch/2` script.
+#derive(@debug.Debug)
 pub suberror DocxAuthorParseError {
   DocxAuthorParseError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 /// Per-document authoring counts for the result record.
+#derive(Eq, @debug.Debug)
 pub(all) struct DocxAuthorReport {
   ops : Int32
   comments : Int32
@@ -22,7 +24,7 @@ pub(all) struct DocxAuthorReport {
   endnotes : Int32
   headers : Int32
   footers : Int32
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 /// Result of one fresh-authoring transaction.

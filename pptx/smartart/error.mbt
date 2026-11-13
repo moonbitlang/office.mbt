@@ -7,10 +7,11 @@
 /// misuse — should never happen for well-formed input); `Malformed` is the
 /// catch-all for invalid diagram input (e.g. an empty node list). Same shape
 /// as `ChartError` / `CommentsError`.
+#derive(Eq, Debug)
 pub(all) suberror SmartArtError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartArtError with @debug.Debug::{to_repr}

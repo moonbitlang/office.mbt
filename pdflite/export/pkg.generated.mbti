@@ -20,13 +20,15 @@ pub(all) suberror ExportError {
 }
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum Accessibility {
   UA1
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Action {
   Link(String)
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct Annotation {
   link : LinkAnnotation
@@ -36,6 +38,7 @@ pub(all) struct Annotation {
 }
 pub fn Annotation::new_link(LinkAnnotation, String?, location? : UInt64?) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Archival {
   A1_A
   A1_B
@@ -48,7 +51,7 @@ pub(all) enum Archival {
   A4
   A4F
   A4E
-} derive(Eq, @debug.Debug)
+}
 pub fn Archival::as_str(Self) -> String
 
 pub(all) struct Artifact {
@@ -56,6 +59,7 @@ pub(all) struct Artifact {
   bbox : Rect?
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ArtifactType {
   Header
   Footer
@@ -69,15 +73,16 @@ pub(all) enum ArtifactType {
   Page
   Background
   Other
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum AssociationKind {
   Source
   Data
   Alternative
   Supplement
   Unspecified
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) enum Attr {
   Id(Bytes)
@@ -110,6 +115,7 @@ pub(all) enum Attr {
   TextDecorationType(TextDecorationType)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum BorderStyle {
   NoBorder
   Hidden
@@ -121,12 +127,13 @@ pub(all) enum BorderStyle {
   Ridge
   Inset
   Outset
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Color {
   Regular(RegularColor)
   Separation(Int32, SeparationSpace)
-} derive(Eq, @debug.Debug)
+}
 pub fn Color::as_rgb(Self) -> (Int32, Int32, Int32)?
 pub fn Color::black() -> Self
 pub fn Color::rgb(Int32, Int32, Int32) -> Self
@@ -136,10 +143,11 @@ pub(all) struct ColorGlyphs {
   draw : (Int32, Int32, Surface) -> Bool
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Configuration {
   version : PdfVersion
   validators : Validators
-} derive(Eq, @debug.Debug)
+}
 pub fn Configuration::default() -> Self
 
 pub(all) enum ContentTag {
@@ -148,6 +156,7 @@ pub(all) enum ContentTag {
   Other
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct DateTime {
   year : Int32
   month : Int32?
@@ -157,7 +166,7 @@ pub(all) struct DateTime {
   second : Int32?
   utc_offset_hour : Int32?
   utc_offset_minute : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn DateTime::day(Self, Int32) -> Self
 pub fn DateTime::hour(Self, Int32) -> Self
 pub fn DateTime::minute(Self, Int32) -> Self
@@ -167,10 +176,11 @@ pub fn DateTime::second(Self, Int32) -> Self
 pub fn DateTime::utc_offset_hour(Self, Int32) -> Self
 pub fn DateTime::utc_offset_minute(Self, Int32) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Destination {
   Xyz(XyzDestination)
   Named(NamedDestination)
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Document {
   // private fields
@@ -185,12 +195,13 @@ pub fn Document::set_tag_tree(Self, TagTree) -> Unit
 pub fn Document::start_page_with(Self, PageSettings) -> Page
 pub fn Document::tagging_enabled(Self) -> Bool
 
+#derive(Eq, @debug.Debug)
 pub(all) enum EmbedError {
   Existence
   MissingDate
   MissingDescription
   MissingMimeType
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct EmbeddedFile {
   path : String
@@ -216,10 +227,11 @@ pub(all) struct Fill {
 }
 pub fn Fill::default() -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum FillRule {
   NonZero
   EvenOdd
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Font {
   data : Bytes
@@ -262,12 +274,13 @@ pub(all) struct Glyph {
   location : UInt64?
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Identifier {
   PageContent(Int32, Int32)
   Annotation(Int32, Int32)
   StreamContent(Int32, Int32, Int32)
   Dummy
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct Image {
   key : String
@@ -281,11 +294,12 @@ pub(all) struct Image {
 }
 pub fn Image::deflated(Self) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ImageColorspace {
   Luma
   Rgb
   Cmyk
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) enum ImageData {
   Samples(Bytes, Bytes?)
@@ -299,24 +313,28 @@ pub(all) enum Indirect {
   Stream(Array[(String, Obj)], Bytes)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum LineCap {
   Butt
   Round
   Square
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum LineHeight {
   NormalHeight
   AutoHeight
   CustomHeight(Double)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum LineJoin {
   Miter
   Round
   Bevel
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct LinearGradient {
   x1 : Double
   y1 : Double
@@ -326,7 +344,7 @@ pub(all) struct LinearGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct LinkAnnotation {
   rect : Rect
@@ -336,6 +354,7 @@ pub(all) struct LinkAnnotation {
 pub fn LinkAnnotation::new(Rect, Target) -> Self
 pub fn LinkAnnotation::new_with_quad_points(Array[Array[Point]], Target) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ListNumbering {
   NoNumbering
   Disc
@@ -346,7 +365,7 @@ pub(all) enum ListNumbering {
   UpperRoman
   LowerAlpha
   UpperAlpha
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Memo {
   // private fields
@@ -377,16 +396,18 @@ pub fn Metadata::producer(Self, String) -> Self
 pub fn Metadata::text_direction(Self, TextDirection) -> Self
 pub fn Metadata::title(Self, String) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NaiveRgbColor {
   red : Int32
   green : Int32
   blue : Int32
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct NamedDestination {
   name : String
   xyz_dest : XyzDestination
-} derive(Eq, @debug.Debug)
+}
 pub fn NamedDestination::new(String, XyzDestination) -> Self
 
 pub(all) enum Node {
@@ -394,13 +415,14 @@ pub(all) enum Node {
   Leaf(Identifier)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum NumberingStyle {
   Arabic
   LowerRoman
   UpperRoman
   LowerAlpha
   UpperAlpha
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) enum Obj {
   Null
@@ -421,12 +443,13 @@ pub(all) struct Outline {
 pub fn Outline::new() -> Self
 pub fn Outline::push_child(Self, OutlineNode) -> Unit
 
+#derive(Eq, @debug.Debug)
 pub(all) enum OutlineKind {
   Glyf
   Cff
   Cff2
   NoOutlines
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct OutlineNode {
   children : Array[OutlineNode]
@@ -445,11 +468,12 @@ pub fn Page::finish(Self) -> Unit
 pub fn Page::index(Self) -> Int32
 pub fn Page::surface(Self) -> Surface
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PageLabel {
   style : NumberingStyle?
   prefix : String?
   offset : Int32?
-} derive(Eq, @debug.Debug)
+}
 pub fn PageLabel::default() -> Self
 pub fn PageLabel::new(NumberingStyle?, String?, Int32?) -> Self
 
@@ -472,9 +496,10 @@ pub(all) enum Paint {
 }
 pub fn Paint::as_rgb(Self) -> (Int32, Int32, Int32)?
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Path {
   segments : Array[PathSegment]
-} derive(Eq, @debug.Debug)
+}
 pub fn Path::bounds(Self) -> Rect?
 pub fn Path::transform(Self, Transform) -> Self
 
@@ -491,13 +516,14 @@ pub fn PathBuilder::new() -> Self
 pub fn PathBuilder::push_rect(Self, Rect) -> Unit
 pub fn PathBuilder::quad_to(Self, Double, Double, Double, Double) -> Unit
 
+#derive(Eq, @debug.Debug)
 pub(all) enum PathSegment {
   MoveTo(Point)
   LineTo(Point)
   QuadTo(Point, Point)
   CubicTo(Point, Point, Point)
   Close
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct Pattern {
   stream : Stream
@@ -506,30 +532,34 @@ pub(all) struct Pattern {
   height : Double
 }
 
+#derive(Compare, Eq, @debug.Debug)
 pub(all) enum PdfVersion {
   Pdf14
   Pdf15
   Pdf16
   Pdf17
   Pdf20
-} derive(Compare, Eq, @debug.Debug)
+}
 pub fn PdfVersion::as_str(Self) -> String
 pub fn PdfVersion::header(Self) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Placement {
   Block
   Inline
   Before
   Start
   End
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Point {
   x : Double
   y : Double
-} derive(Eq, @debug.Debug)
+}
 pub fn Point::from_xy(Double, Double) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) struct RadialGradient {
   fx : Double
   fy : Double
@@ -541,14 +571,15 @@ pub(all) struct RadialGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Rect {
   left : Double
   top : Double
   right : Double
   bottom : Double
-} derive(Eq, @debug.Debug)
+}
 pub fn Rect::from_ltrb(Double, Double, Double, Double) -> Self?
 pub fn Rect::from_xywh(Double, Double, Double, Double) -> Self?
 pub fn Rect::height(Self) -> Double
@@ -556,22 +587,25 @@ pub fn Rect::transform(Self, Transform) -> Self
 pub fn Rect::union(Self, Self) -> Self
 pub fn Rect::width(Self) -> Double
 
+#derive(Eq, @debug.Debug)
 pub(all) enum RegularColor {
   Rgb(Int32, Int32, Int32)
   Luma(Int32)
   Cmyk(Int32, Int32, Int32, Int32)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum SeparationColorant {
   AllColorants
   NoColorant
   Custom(String)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct SeparationSpace {
   colorant : SeparationColorant
   fallback : RegularColor
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct SerializeSettings {
   pretty : Bool
@@ -586,18 +620,20 @@ pub fn SerializeSettings::default() -> Self
 pub fn SerializeSettings::pdf_version(Self) -> PdfVersion
 pub fn SerializeSettings::validators(Self) -> Validators
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Sides[T] {
   before : T
   after : T
   start : T
   end : T
-} derive(Eq, @debug.Debug)
+}
 pub fn[T] Sides::uniform(T) -> Self[T]
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Size {
   width : Double
   height : Double
-} derive(Eq, @debug.Debug)
+}
 pub fn Size::from_wh(Double, Double) -> Self?
 
 pub(all) struct SpanTag {
@@ -608,17 +644,19 @@ pub(all) struct SpanTag {
 }
 pub fn SpanTag::empty() -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum SpreadMethod {
   Pad
   Reflect
   Repeat
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Stop {
   offset : Double
   color : Color
   opacity : Double
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Stream {
   // private fields
@@ -636,10 +674,11 @@ pub(all) struct Stroke {
   dash : StrokeDash?
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct StrokeDash {
   array : Array[Double]
   offset : Double
-} derive(Eq, @debug.Debug)
+}
 
 pub struct Surface {
   // private fields
@@ -668,6 +707,7 @@ pub fn Surface::set_stroke(Self, Stroke?) -> Unit
 pub fn Surface::start_tagged(Self, ContentTag) -> Identifier
 pub fn Surface::stream_surface(Self) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) struct SweepGradient {
   cx : Double
   cy : Double
@@ -677,13 +717,14 @@ pub(all) struct SweepGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TableHeaderScope {
   Row
   Column
   Both
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct TagGroup {
   tag : TagKind
@@ -707,6 +748,7 @@ pub fn TagKind::remove_like(Self, Attr) -> Unit
 pub fn TagKind::set(Self, Attr) -> Unit
 pub fn TagKind::with_attr(Self, Attr) -> Self
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TagName {
   Part
   Article
@@ -747,7 +789,7 @@ pub(all) enum TagName {
   Title
   Strong
   Em
-} derive(Eq, @debug.Debug)
+}
 
 pub(all) struct TagTree {
   children : Array[Node]
@@ -756,23 +798,27 @@ pub(all) struct TagTree {
 pub fn TagTree::new() -> Self
 pub fn TagTree::push(Self, Node) -> Unit
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Target {
   Destination(Destination)
   Action(Action)
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TextDecorationType {
   NoDecoration
   Underline
   Overline
   LineThrough
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TextDirection {
   LeftToRight
   RightToLeft
-} derive(Eq, @debug.Debug)
+}
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Transform {
   sx : Double
   ky : Double
@@ -780,7 +826,7 @@ pub(all) struct Transform {
   sy : Double
   tx : Double
   ty : Double
-} derive(Eq, @debug.Debug)
+}
 pub fn Transform::apply(Self, Double, Double) -> Point
 pub fn Transform::from_row(Double, Double, Double, Double, Double, Double) -> Self
 pub fn Transform::from_scale(Double, Double) -> Self
@@ -822,32 +868,36 @@ pub(all) enum ValidationError {
   RequiresNewerPdfVersion(VersionedFeature, UInt64?)
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) enum Validator {
   A(Archival)
   Ua(Accessibility)
-} derive(Eq, @debug.Debug)
+}
 pub fn Validator::as_str(Self) -> String
 pub fn Validator::max(Self) -> PdfVersion
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Validators {
   a : Archival?
   ua : Accessibility?
-} derive(Eq, @debug.Debug)
+}
 pub fn Validators::empty() -> Self
 pub fn Validators::is_empty(Self) -> Bool
 pub fn Validators::to_array(Self) -> Array[Validator]
 
+#derive(Eq, @debug.Debug)
 pub(all) enum VersionedFeature {
   StructureOrderTabbing
   HeaderFooterArtifactSubtypes
   TableHeaderScope
-} derive(Eq, @debug.Debug)
+}
 pub fn VersionedFeature::minimum_pdf_version(Self) -> PdfVersion
 
+#derive(Eq, @debug.Debug)
 pub(all) struct XyzDestination {
   page_index : Int32
   point : Point
-} derive(Eq, @debug.Debug)
+}
 pub fn XyzDestination::new(Int32, Point) -> Self
 
 // Type aliases

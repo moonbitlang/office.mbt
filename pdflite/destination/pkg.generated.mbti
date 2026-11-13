@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/destination"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
   "moonbitlang/pdflite/syntax",
 }
@@ -12,6 +13,7 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfDestination {
   DestAction(@syntax.PdfObject)
   DestNull
@@ -25,26 +27,27 @@ pub(all) enum PdfDestination {
   DestFitB(PdfTargetPage)
   DestFitBH(PdfTargetPage, Double?)
   DestFitBV(PdfTargetPage, Double?)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfDestination::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDestination::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfDestination::to_json(Self) -> Json
+pub fn PdfDestination::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfDestination::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int32)
   TargetOtherDocPageNumber(Int32)
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTargetPage::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTargetPage::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTargetPage::to_json(Self) -> Json
+pub fn PdfTargetPage::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTargetPage::to_repr(Self) -> @debug.Repr
 

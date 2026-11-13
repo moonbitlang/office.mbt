@@ -15,22 +15,24 @@
 /// A font face a glyph run references, by index into `PageModel::fonts`.
 /// `family` is the resolved (post font-mapping) family name; `bold` and
 /// `italic` select the face within it.
+#derive(Eq, Debug, ToJson)
 pub(all) struct FontSpec {
   family : String
   bold : Bool
   italic : Bool
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Solid sRGB color; each channel is 0..=255 (checked by
 /// `PageModel::validate`, clamped on entry by `Color::rgb`). No alpha in
 /// v1: solid colors keep the SVG output inside svgdiff's deterministic
 /// subset and match common document text.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Color {
   r : Int32
   g : Int32
   b : Int32
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Default document text color.
@@ -67,6 +69,7 @@ pub fn Color::to_hex(self : Color) -> String {
 /// A run of text on one baseline in one font/size/color. `advances_pt[i]`
 /// is the horizontal advance of the char at index `i` of `text` (UTF-16
 /// code units; the trailing surrogate of a pair carries advance 0).
+#derive(Eq, Debug, ToJson)
 pub(all) struct GlyphRun {
   font : Int32
   size_pt : Double
@@ -75,7 +78,7 @@ pub(all) struct GlyphRun {
   text : String
   advances_pt : Array[Double]
   color : Color
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Total advance of the run: where the next run on the same baseline starts.
@@ -90,6 +93,7 @@ pub fn GlyphRun::width_pt(self : GlyphRun) -> Double {
 ///|
 /// Axis-aligned filled and/or stroked rectangle. Doubles as underlines,
 /// table borders, and shading (thin or filled).
+#derive(Eq, Debug, ToJson)
 pub(all) struct RectItem {
   x_pt : Double
   y_pt : Double
@@ -98,7 +102,7 @@ pub(all) struct RectItem {
   fill : Color?
   stroke : Color?
   stroke_w_pt : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A placed image; `data` is the encoded file, not pixels, and `mime` its
@@ -109,6 +113,7 @@ pub(all) struct RectItem {
 /// images it cannot draw (see `@pdf.unembeddable_images`); the SVG
 /// backend embeds every image as a data URI, which for a PDF page browsers
 /// do not draw.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ImageItem {
   x_pt : Double
   y_pt : Double
@@ -116,10 +121,11 @@ pub(all) struct ImageItem {
   h_pt : Double
   data : Bytes
   mime : String
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Where a `LinkRegion` leads.
+#derive(Eq, Debug, ToJson)
 pub(all) enum LinkTarget {
   /// The `AnchorItem` of this name (a named destination in PDF). A name no
   /// anchor defines leaves a dead link.
@@ -129,7 +135,7 @@ pub(all) enum LinkTarget {
   /// rather than jumping to an anchor (Ruby asciidoctor-pdf writes
   /// `link:#name[]` this way).
   Uri(String)
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// The target a link string names by the convention `LinkRegion` targets
@@ -146,26 +152,29 @@ pub fn LinkTarget::parse(target : String) -> LinkTarget {
 /// An interactive region (hyperlink); geometry only, painted by nothing.
 /// `LinkTarget::parse` reads a link string the way `target` was read when
 /// it was one.
+#derive(Eq, Debug, ToJson)
 pub(all) struct LinkRegion {
   x_pt : Double
   y_pt : Double
   w_pt : Double
   h_pt : Double
   target : LinkTarget
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A named position on a page that `Named(name)` links and outlines jump to;
 /// `(x_pt, y_pt)` is the point a viewer brings to the top-left of the
 /// window. Non-visual.
+#derive(Eq, Debug, ToJson)
 pub(all) struct AnchorItem {
   name : String
   x_pt : Double
   y_pt : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One positioned item on a page, in painter's order.
+#derive(Eq, Debug, ToJson)
 pub(all) enum PageItem {
   Text(GlyphRun)
   Rect(RectItem)
@@ -174,22 +183,24 @@ pub(all) enum PageItem {
   Anchor(AnchorItem)
   /// Vector graphics: paths, clips and transformations (see `GraphicItem`).
   Graphic(GraphicItem)
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A single laid-out page: physical size plus its positioned items.
+#derive(Eq, Debug, ToJson)
 pub(all) struct Page {
   width_pt : Double
   height_pt : Double
   items : Array[PageItem]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// The layout engine's complete output: interned fonts plus pages.
+#derive(Eq, Debug, ToJson)
 pub(all) struct PageModel {
   fonts : Array[FontSpec]
   pages : Array[Page]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Intern `spec`, returning its index for `GlyphRun::font`.

@@ -4,10 +4,11 @@
 
 ///|
 /// A destination pointing to a point on a page (top-left origin).
+#derive(Eq, Debug)
 pub(all) struct XyzDestination {
   page_index : Int32
   point : Point
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn XyzDestination::new(page_index : Int32, point : Point) -> XyzDestination {
@@ -16,10 +17,11 @@ pub fn XyzDestination::new(page_index : Int32, point : Point) -> XyzDestination 
 
 ///|
 /// A named destination.
+#derive(Eq, Debug)
 pub(all) struct NamedDestination {
   name : String
   xyz_dest : XyzDestination
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn NamedDestination::new(
@@ -31,10 +33,11 @@ pub fn NamedDestination::new(
 
 ///|
 /// A destination.
+#derive(Eq, Debug)
 pub(all) enum Destination {
   Xyz(XyzDestination)
   Named(NamedDestination)
-} derive(Eq, Debug)
+}
 
 ///|
 fn Destination::to_obj(
@@ -54,17 +57,19 @@ fn Destination::to_obj(
 
 ///|
 /// An action.
+#derive(Eq, Debug)
 pub(all) enum Action {
   /// A link to a URI.
   Link(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The target of a link.
+#derive(Eq, Debug)
 pub(all) enum Target {
   Destination(Destination)
   Action(Action)
-} derive(Eq, Debug)
+}
 
 ///|
 /// A link annotation.
@@ -262,21 +267,23 @@ fn SerializeContext::serialize_outline_nodes(
 
 ///|
 /// The numbering style of a page label.
+#derive(Eq, Debug)
 pub(all) enum NumberingStyle {
   Arabic
   LowerRoman
   UpperRoman
   LowerAlpha
   UpperAlpha
-} derive(Eq, Debug)
+}
 
 ///|
 /// A page label.
+#derive(Eq, Debug)
 pub(all) struct PageLabel {
   style : NumberingStyle?
   prefix : String?
   offset : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn PageLabel::new(
@@ -326,13 +333,15 @@ fn PageLabel::to_obj(self : PageLabel) -> Obj {
 
 ///|
 /// The text direction of the document.
+#derive(Eq, Debug)
 pub(all) enum TextDirection {
   LeftToRight
   RightToLeft
-} derive(Eq, Debug)
+}
 
 ///|
 /// A date and time.
+#derive(Eq, Debug)
 pub(all) struct DateTime {
   year : Int32
   month : Int32?
@@ -342,7 +351,7 @@ pub(all) struct DateTime {
   second : Int32?
   utc_offset_hour : Int32?
   utc_offset_minute : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn DateTime::new(year : Int32) -> DateTime {
@@ -588,13 +597,14 @@ fn join(items : Array[String], sep : String) -> String {
 
 ///|
 /// The relationship of an embedded file to the document.
+#derive(Eq, Debug)
 pub(all) enum AssociationKind {
   Source
   Data
   Alternative
   Supplement
   Unspecified
-} derive(Eq, Debug)
+}
 
 ///|
 /// An embedded file.

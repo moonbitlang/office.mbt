@@ -1,10 +1,11 @@
 ///|
 /// A parsed indirect object with object number, generation, and payload.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfParsedIndirectObject {
   number : Int32
   generation : Int32
   object : PdfObject
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_parse_indirect_object_at(

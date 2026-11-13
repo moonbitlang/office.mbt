@@ -27,6 +27,7 @@ pub fn read_style_mapping(String) -> StyleMapping?
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum DocumentMatcher {
   ParagraphMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?, numbering~ : @document.Numbering?)
   RunMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
@@ -35,7 +36,7 @@ pub(all) enum DocumentMatcher {
   TableMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   BreakMatcher(@document.BreakType)
   CommentReferenceMatcher
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocumentMatcher::equal(Self, Self) -> Bool
 pub fn DocumentMatcher::matches(Self, @document.DocumentElement) -> Bool
@@ -44,12 +45,13 @@ pub fn DocumentMatcher::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn DocumentMatcher::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct HtmlPathElement {
   tag : String
   attributes : Map[String, String]
   fresh : Bool
   separator : String?
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn HtmlPathElement::equal(Self, Self) -> Bool
 #deprecated
@@ -57,10 +59,11 @@ pub fn HtmlPathElement::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn HtmlPathElement::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct StyleMapParseResult {
   mappings : Array[StyleMapping]
   messages : Array[@core.Message]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn StyleMapParseResult::equal(Self, Self) -> Bool
 #deprecated
@@ -68,10 +71,11 @@ pub fn StyleMapParseResult::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn StyleMapParseResult::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct StyleMapping {
   from : DocumentMatcher
   to : Array[HtmlPathElement]
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn StyleMapping::equal(Self, Self) -> Bool
 #deprecated
@@ -79,10 +83,11 @@ pub fn StyleMapping::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn StyleMapping::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum StyleNameMatcher {
   ExactStyleName(String)
   PrefixStyleName(String)
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn StyleNameMatcher::equal(Self, Self) -> Bool
 #deprecated

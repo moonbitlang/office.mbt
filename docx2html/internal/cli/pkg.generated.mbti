@@ -11,9 +11,10 @@ pub fn parse_output_format(String) -> CliOutputFormat raise CliError
 pub async fn run_conversion(CliOptions, program? : String) -> Unit
 
 // Errors
+#derive(Eq)
 pub(all) suberror CliError {
   CliError(String)
-} derive(Eq)
+}
 #deprecated
 pub fn CliError::equal(Self, Self) -> Bool
 #deprecated
@@ -25,6 +26,7 @@ pub fn CliError::to_string(Self) -> String
 pub impl Show for CliError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct CliOptions {
   input_path : String
   output_path : String?
@@ -32,7 +34,7 @@ pub(all) struct CliOptions {
   style_map_path : String?
   output_format : CliOutputFormat
   pretty_print : Bool
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn CliOptions::equal(Self, Self) -> Bool
 #deprecated
@@ -40,10 +42,11 @@ pub fn CliOptions::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn CliOptions::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum CliOutputFormat {
   Html
   Markdown
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn CliOutputFormat::equal(Self, Self) -> Bool
 #deprecated

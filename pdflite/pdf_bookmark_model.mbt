@@ -125,9 +125,10 @@ fn PdfDocument::pdf_bookmark_catalog(
 }
 
 ///|
+#derive(Debug, Eq, ToJson)
 struct PdfBookmarkNode {
   number : Int32
   object : @syntax.PdfObject
   children : Array[PdfBookmarkNode]
   is_open : Bool
-} derive(Debug, Eq, ToJson)
+}

@@ -10,10 +10,11 @@ import {
 // Values
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror ThemeError {
   XmlFailure(String, String)
   MalformedTheme(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn ThemeError::equal(Self, Self) -> Bool
 pub fn ThemeError::not_equal(Self, Self) -> Bool
 pub fn ThemeError::output(Self, &Logger) -> Unit
@@ -22,6 +23,7 @@ pub fn ThemeError::to_string(Self) -> String
 pub impl Show for ThemeError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct ColorScheme {
   name : String
   dk1 : @oxml.Color
@@ -37,38 +39,41 @@ pub(all) struct ColorScheme {
   hlink : @oxml.Color
   fol_hlink : @oxml.Color
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn ColorScheme::equal(Self, Self) -> Bool
 pub fn ColorScheme::not_equal(Self, Self) -> Bool
 pub fn ColorScheme::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct FontCollection {
   latin : String
   ea : String
   cs : String
   scripts : Array[ScriptFont]
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn FontCollection::equal(Self, Self) -> Bool
 pub fn FontCollection::not_equal(Self, Self) -> Bool
 pub fn FontCollection::to_repr(Self) -> @debug.Repr
 pub fn FontCollection::typeface_for_script(Self, String) -> String
 
+#derive(Eq, @debug.Debug)
 pub(all) struct FontScheme {
   name : String
   major_font : FontCollection
   minor_font : FontCollection
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn FontScheme::equal(Self, Self) -> Bool
 pub fn FontScheme::not_equal(Self, Self) -> Bool
 pub fn FontScheme::resolve_typeface(Self, String) -> String
 pub fn FontScheme::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct ScriptFont {
   script : String
   typeface : String
-} derive(Eq, @debug.Debug)
+}
 pub fn ScriptFont::equal(Self, Self) -> Bool
 pub fn ScriptFont::not_equal(Self, Self) -> Bool
 pub fn ScriptFont::output(Self, &Logger) -> Unit
@@ -76,28 +81,31 @@ pub fn ScriptFont::to_repr(Self) -> @debug.Repr
 pub fn ScriptFont::to_string(Self) -> String
 pub impl Show for ScriptFont
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ScriptSlot {
   LatinSlot
   EastAsianSlot
   ComplexScriptSlot
-} derive(Eq, @debug.Debug)
+}
 pub fn ScriptSlot::equal(Self, Self) -> Bool
 pub fn ScriptSlot::not_equal(Self, Self) -> Bool
 pub fn ScriptSlot::of_script(String) -> Self
 pub fn ScriptSlot::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct Theme {
   name : String
   color_scheme : ColorScheme
   font_scheme : FontScheme
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn Theme::equal(Self, Self) -> Bool
 pub fn Theme::not_equal(Self, Self) -> Bool
 pub fn Theme::parse(FixedArray[Byte]) -> Self raise ThemeError
 pub fn Theme::serialize(Self) -> FixedArray[Byte] raise ThemeError
 pub fn Theme::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum ThemeFontRef {
   MajorLatin
   MajorEastAsian
@@ -105,7 +113,7 @@ pub(all) enum ThemeFontRef {
   MinorLatin
   MinorEastAsian
   MinorComplexScript
-} derive(Eq, @debug.Debug)
+}
 pub fn ThemeFontRef::equal(Self, Self) -> Bool
 pub fn ThemeFontRef::from_xml(String) -> Self?
 pub fn ThemeFontRef::not_equal(Self, Self) -> Bool

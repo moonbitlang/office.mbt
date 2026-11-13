@@ -11,10 +11,11 @@
 ///|
 /// Whether a media picture is a video or an audio clip — selects
 /// `<a:videoFile>` vs `<a:audioFile>`.
+#derive(Eq, Debug)
 pub(all) enum MediaKind {
   Video
   Audio
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaKind with @debug.Debug::{to_repr}
@@ -30,11 +31,12 @@ pub extend MediaKind with Eq::{not_equal, equal}
 /// - `embed_id` — `r:embed` on `<p14:media>` — the same media part via the
 ///   Office 2007+ `media` relationship (marks the clip as embedded, not
 ///   linked).
+#derive(Eq, Debug)
 pub(all) struct MediaInfo {
   kind : MediaKind
   link_id : String
   embed_id : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaInfo with @debug.Debug::{to_repr}

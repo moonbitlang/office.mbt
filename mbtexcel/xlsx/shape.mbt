@@ -1,8 +1,9 @@
 ///|
+#derive(Debug)
 pub struct ShapeLine {
   mut color : String?
   mut width : Double?
-} derive(Debug)
+}
 
 ///|
 fn ShapeLine::new() -> ShapeLine {
@@ -24,10 +25,11 @@ pub fn ShapeLine::with_values(color? : String, width? : Double) -> ShapeLine {
 }
 
 ///|
+#derive(Debug)
 pub struct ShapeFill {
   mut color : String?
   mut transparency : Int32?
-} derive(Debug)
+}
 
 ///|
 fn ShapeFill::new() -> ShapeFill {
@@ -57,6 +59,7 @@ pub fn ShapeFill::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct Shape {
   reference : String
   cell : String
@@ -86,7 +89,7 @@ pub struct Shape {
   priv drawing_width_emu : Int32?
   priv drawing_height_emu : Int32?
   priv drawing_order : Int32?
-} derive(Debug)
+}
 
 ///|
 let default_shape_size = 160

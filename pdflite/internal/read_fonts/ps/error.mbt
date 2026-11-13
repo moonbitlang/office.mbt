@@ -75,7 +75,7 @@ pub impl Show for PsError with fn output(self, f) {
     MissingCharset =>
       f.write_string("CFF table does not contain a valid charset")
     InvalidSeacCode(code) => f.write_string("seac code \{code} is not valid")
-    Read(err) => f.write_string(err.to_string())
+    Read(err) => Show::output(err, f)
   }
 }
 

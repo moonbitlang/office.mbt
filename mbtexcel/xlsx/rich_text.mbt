@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub(all) struct RichTextFont {
   bold : Bool
   italic : Bool
@@ -18,13 +19,14 @@ pub(all) struct RichTextFont {
   scheme : String?
   vert_align : String?
   family : String?
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub(all) struct RichTextRun {
   text : String
   font : RichTextFont?
-} derive(Debug)
+}
 
 ///|
 let max_cell_chars = 32767

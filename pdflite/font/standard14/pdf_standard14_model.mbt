@@ -3,6 +3,7 @@ pub using @afm {type PdfAfmData, type PdfBytes}
 
 ///|
 /// The built-in PDF standard 14 font faces.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
   PdfTimesBold
@@ -18,7 +19,7 @@ pub(all) enum PdfStandardFont {
   PdfCourierBoldOblique
   PdfSymbol
   PdfZapfDingbats
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Return the canonical standard-font name without the leading PDF slash.

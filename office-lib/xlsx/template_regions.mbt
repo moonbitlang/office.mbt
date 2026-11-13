@@ -15,6 +15,7 @@
 
 ///|
 /// The published outcome of one region after a successful merge.
+#derive(Eq, @debug.Debug)
 pub(all) struct XlsxRegionOutcome {
   name : String
   /// The region as addressed: canonical sheet + source template row.
@@ -26,7 +27,7 @@ pub(all) struct XlsxRegionOutcome {
   records : Int32
   replaced : Int32
   escapes_applied : Int32
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend XlsxRegionOutcome with Eq::{not_equal, equal}

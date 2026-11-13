@@ -7,11 +7,12 @@
 ///|
 /// 24-bit RGB color. Each channel is 0–255 (unchecked at construction;
 /// values outside that range round-trip but render undefined behaviour).
+#derive(Eq, Debug)
 pub struct RgbColor {
   r : Int32
   g : Int32
   b : Int32
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RgbColor with @debug.Debug::{to_repr}

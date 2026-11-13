@@ -9,10 +9,11 @@ import {
 // Values
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror SmartArtError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn SmartArtError::equal(Self, Self) -> Bool
 pub fn SmartArtError::not_equal(Self, Self) -> Bool
 pub fn SmartArtError::output(Self, &Logger) -> Unit
@@ -21,11 +22,12 @@ pub fn SmartArtError::to_string(Self) -> String
 pub impl Show for SmartArtError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub struct Node {
   text : String
   children : Array[Node]
   style : NodeStyle?
-} derive(Eq, @debug.Debug)
+}
 pub fn Node::equal(Self, Self) -> Bool
 pub fn Node::leaf(String) -> Self
 pub fn Node::new(String, Array[Self]) -> Self
@@ -35,20 +37,22 @@ pub fn Node::with_fill(Self, @units.RgbColor) -> Self
 pub fn Node::with_line(Self, @units.RgbColor) -> Self
 pub fn Node::with_text_color(Self, @units.RgbColor) -> Self
 
+#derive(Eq, @debug.Debug)
 pub struct NodeStyle {
   fill : @units.RgbColor?
   line : @units.RgbColor?
   text_color : @units.RgbColor?
-} derive(Eq, @debug.Debug)
+}
 pub fn NodeStyle::equal(Self, Self) -> Bool
 pub fn NodeStyle::new(fill? : @units.RgbColor, line? : @units.RgbColor, text_color? : @units.RgbColor) -> Self
 pub fn NodeStyle::not_equal(Self, Self) -> Bool
 pub fn NodeStyle::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub struct SmartArt {
   kind : SmartArtKind
   nodes : Array[Node]
-} derive(Eq, @debug.Debug)
+}
 pub fn SmartArt::colors_xml(Self) -> FixedArray[Byte]
 pub fn SmartArt::cycle(Array[String]) -> Self
 pub fn SmartArt::data_xml(Self, String) -> FixedArray[Byte] raise SmartArtError
@@ -67,6 +71,7 @@ pub fn SmartArt::quick_style_xml(Self) -> FixedArray[Byte]
 pub fn SmartArt::relationship(Node, Array[Node]) -> Self
 pub fn SmartArt::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum SmartArtKind {
   List
   Process
@@ -76,7 +81,7 @@ pub(all) enum SmartArtKind {
   Hierarchy
   Matrix
   Relationship
-} derive(Eq, @debug.Debug)
+}
 pub fn SmartArtKind::equal(Self, Self) -> Bool
 pub fn SmartArtKind::not_equal(Self, Self) -> Bool
 pub fn SmartArtKind::to_repr(Self) -> @debug.Repr

@@ -395,6 +395,7 @@ pub fn WriteLimits::max_total_uncompressed_bytes(self : WriteLimits) -> Int32 {
 }
 
 ///|
+#derive(Debug)
 pub struct Options {
   max_calc_iterations : UInt32
   password : String
@@ -404,7 +405,7 @@ pub struct Options {
   long_date_pattern : String
   long_time_pattern : String
   culture_info : String
-} derive(Debug)
+}
 
 ///|
 pub fn Options::new() -> Options {

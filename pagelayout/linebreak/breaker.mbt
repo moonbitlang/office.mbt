@@ -10,11 +10,12 @@
 /// partition the text exactly, except that a `'\n'` separator belongs to
 /// no line; spaces hanging at a soft break stay in their line's range but
 /// are excluded from `width_pt` (they hang past the margin, per Word).
+#derive(Eq, Debug, ToJson)
 pub(all) struct LineRange {
   start : Int32
   end : Int32
   width_pt : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 fn is_trail_surrogate(unit : Int32) -> Bool {

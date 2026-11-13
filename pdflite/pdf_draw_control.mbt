@@ -9,10 +9,11 @@ let pdf_draw_control_push_frame = "_PUSH"
 
 ///|
 /// Named frame of draw operations used by `PdfDrawControl` while nesting.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawControlFrame {
   name : String
   ops : Array[PdfDrawOp]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Stateful builder for cpdf draw-control operations.
@@ -21,6 +22,7 @@ pub(all) struct PdfDrawControlFrame {
 /// operations are appended to the current frame; text sections, pushed graphics
 /// groups, and form XObjects collect nested operations and collapse them into
 /// `TextSection`, `Qq`, and `FormXObject` operations when closed.
+#derive(Debug, Eq, ToJson)
 pub struct PdfDrawControl {
   frames : Array[PdfDrawControlFrame]
   mut xobject_bbox : @geometry.PdfCoordRectangle
@@ -31,7 +33,7 @@ pub struct PdfDrawControl {
   mut paragraph_indent : Double?
   mut role_map : String
   mut auto_artifacts : Bool
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_draw_control_default_bbox() -> @geometry.PdfCoordRectangle {

@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/font/truetype"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -10,19 +11,21 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfTrueTypeCMapGlyph {
   codepoint : Int32
   glyph_index : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeCMapGlyph::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeCMapGlyph::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTrueTypeCMapGlyph::to_json(Self) -> Json
+pub fn PdfTrueTypeCMapGlyph::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTrueTypeCMapGlyph::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfTrueTypeDescriptorMetrics {
   ascent : Int32
   descent : Int32
@@ -32,30 +35,32 @@ pub(all) struct PdfTrueTypeDescriptorMetrics {
   italicangle : Int32
   nonsymbolic_flags : Int32
   symbolic_flags : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeDescriptorMetrics::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeDescriptorMetrics::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTrueTypeDescriptorMetrics::to_json(Self) -> Json
+pub fn PdfTrueTypeDescriptorMetrics::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTrueTypeDescriptorMetrics::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfTrueTypeGlyphByteRange {
   glyph_index : Int32
   start_offset : Int32
   end_offset : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeGlyphByteRange::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeGlyphByteRange::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTrueTypeGlyphByteRange::to_json(Self) -> Json
+pub fn PdfTrueTypeGlyphByteRange::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTrueTypeGlyphByteRange::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfTrueTypeMetrics {
   units_per_em : Int32
   minx : Int32
@@ -67,16 +72,17 @@ pub(all) struct PdfTrueTypeMetrics {
   num_of_long_hor_metrics : Int32
   advance_widths : Array[Int32]
   max_width : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeMetrics::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeMetrics::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTrueTypeMetrics::to_json(Self) -> Json
+pub fn PdfTrueTypeMetrics::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTrueTypeMetrics::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfTrueTypeParsedSubset {
   flags : Int32
   minx : Int32
@@ -97,7 +103,7 @@ pub(all) struct PdfTrueTypeParsedSubset {
   subset_fontfile : Bytes
   subset : Array[Int32]
   tounicode : Array[(Int32, Bytes)]?
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeParsedSubset::equal(Self, Self) -> Bool
 #deprecated
@@ -105,23 +111,25 @@ pub fn PdfTrueTypeParsedSubset::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeParsedSubset::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfTrueTypeSubsetPartition {
   main_subset : Array[Int32]
   higher_subsets : Array[Array[Int32]]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeSubsetPartition::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeSubsetPartition::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTrueTypeSubsetPartition::to_json(Self) -> Json
+pub fn PdfTrueTypeSubsetPartition::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTrueTypeSubsetPartition::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfTrueTypeSubsetTable {
   length : Int32
   bytes : Bytes
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeSubsetTable::equal(Self, Self) -> Bool
 #deprecated
@@ -129,18 +137,19 @@ pub fn PdfTrueTypeSubsetTable::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeSubsetTable::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfTrueTypeTableRecord {
   tag : String
   checksum : UInt32
   offset : Int32
   length : Int32
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfTrueTypeTableRecord::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfTrueTypeTableRecord::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfTrueTypeTableRecord::to_json(Self) -> Json
+pub fn PdfTrueTypeTableRecord::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfTrueTypeTableRecord::to_repr(Self) -> @debug.Repr
 

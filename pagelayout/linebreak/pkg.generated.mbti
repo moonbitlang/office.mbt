@@ -3,6 +3,7 @@ package "moonbitlang/pagelayout/linebreak"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pagelayout/fonts",
 }
 
@@ -18,30 +19,32 @@ pub fn measure(String, @fonts.FaceMetrics, Double, fallback_face? : @fonts.FaceM
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct LineRange {
   start : Int32
   end : Int32
   width_pt : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn LineRange::equal(Self, Self) -> Bool
 #deprecated
 pub fn LineRange::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn LineRange::to_json(Self) -> Json
+pub fn LineRange::to_json(Self) -> @json.Json
 #deprecated
 pub fn LineRange::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct Measured {
   advances_pt : Array[Double]
   fallback : Array[Bool]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn Measured::equal(Self, Self) -> Bool
 #deprecated
 pub fn Measured::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn Measured::to_json(Self) -> Json
+pub fn Measured::to_json(Self) -> @json.Json
 #deprecated
 pub fn Measured::to_repr(Self) -> @debug.Repr
 

@@ -7,13 +7,15 @@
 
 ///|
 /// Output format for document conversion.
+#derive(Debug, Eq)
 pub(all) enum CliOutputFormat {
   Html
   Markdown
-} derive(Debug, Eq)
+}
 
 ///|
 /// Command-line options for document conversion.
+#derive(Debug, Eq)
 pub(all) struct CliOptions {
   input_path : String
   output_path : String?
@@ -21,13 +23,14 @@ pub(all) struct CliOptions {
   style_map_path : String?
   output_format : CliOutputFormat
   pretty_print : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 /// Errors from the CLI document converter.
+#derive(Eq)
 pub(all) suberror CliError {
   CliError(String)
-} derive(Eq)
+}
 
 ///|
 /// Its `Show` writes exactly the message, so the runtime's uncaught-error

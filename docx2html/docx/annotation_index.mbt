@@ -135,12 +135,13 @@ fn AnnotationWarningCollector::finish(
 /// Where a marker sits relative to its rendered projection node — the
 /// plan's boundary distinction, preserved so "before p[3]" and "after
 /// p[2]" do not collapse into the same position.
+#derive(Eq)
 pub enum AnnotationBoundary {
   Before
   InsideStart
   InsideEnd
   After
-} derive(Eq)
+}
 
 ///|
 pub extend AnnotationBoundary with Eq::{not_equal, equal}

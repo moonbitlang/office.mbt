@@ -39,6 +39,7 @@ priv struct ParagraphTextEdit {
 /// whole list by name. `PartialBudgetExceeded` is the one class nothing
 /// constructs yet, so the diagnostic is disabled for this declaration rather
 /// than the class being deleted and re-added when a budget lands.
+#derive(Debug)
 #warnings("-unused_constructor")
 priv enum PartialSurgeryRefusal {
   InvalidParagraph
@@ -67,7 +68,7 @@ priv enum PartialSurgeryRefusal {
   InvalidReplacement
   PartialBudgetExceeded
   InternalPlanConflict
-} derive(Debug)
+}
 
 ///|
 fn partial_surgery_refusal_reason(kind : PartialSurgeryRefusal) -> String {

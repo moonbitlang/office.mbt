@@ -4,23 +4,25 @@
 /// Classic writes a traditional xref table and trailer. XRefStream writes an
 /// uncompressed xref stream, and CompressedXRefStream wraps that stream in
 /// Flate compression.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfWriteMode {
   PdfWriteClassic
   PdfWriteXRefStream
   PdfWriteCompressedXRefStream
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Encryption options for `pdf_write_document_options`.
 ///
 /// Passwords are stored as owned PDF bytes so callers can pass borrowed
 /// `BytesView` values safely.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfWriteEncryption {
   encryption_method : PdfEncryptionMethod
   user_password : PdfBytes
   owner_password : PdfBytes
   denied_permissions : Array[PdfPermission]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Build owned encryption options for the writer options API.

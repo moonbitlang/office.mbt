@@ -8,7 +8,8 @@
 /// and stored in the document object table, so it lives in its own low-level
 /// package that both `reader` and the document core can depend on without a
 /// cycle.
+#derive(Debug, Eq)
 pub(all) struct ObjectStreamReference {
   object_stream_number : Int32
   index : Int32
-} derive(Debug, Eq)
+}

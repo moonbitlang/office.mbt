@@ -13,10 +13,11 @@ fn pdf_toc_type_font_id(font_index : Int32) -> String {
 ///
 /// This ports the non-embedding cpdftoc font-source dispatch. TrueType
 /// `EmbedInfo` remains a separate embedding slice.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfTocFontSource {
   PdfTocPreMadeFontPack(PdfFontPack)
   PdfTocExistingNamedFont
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Add a table of contents using an already prepared font pack.

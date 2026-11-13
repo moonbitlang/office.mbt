@@ -1,10 +1,11 @@
 ///|
 /// Colour value used by cpdf-style content colour rewrite operations.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfContentColour {
   PdfContentGrey(Double)
   PdfContentRGB(Double, Double, Double)
   PdfContentCMYK(Double, Double, Double, Double)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// The default black content colour.

@@ -41,12 +41,13 @@
 ///|
 /// Direction for a directional effect — the argument of a `filter` like
 /// `wipe(up)`. `to_filter` yields the lower-case filter word.
+#derive(Eq, Debug)
 pub(all) enum AnimDirection {
   Up
   Down
   Left
   Right
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimDirection with @debug.Debug::{to_repr}
@@ -68,10 +69,11 @@ pub fn AnimDirection::to_filter(self : AnimDirection) -> String {
 ///|
 /// Orientation for blinds / random-bars effects — the `filter` argument word
 /// (`blinds(horizontal)`).
+#derive(Eq, Debug)
 pub(all) enum AnimOrientation {
   Horizontal
   Vertical
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimOrientation with @debug.Debug::{to_repr}
@@ -107,6 +109,7 @@ pub fn AnimOrientation::to_filter(self : AnimOrientation) -> String {
 /// - `Dissolve` — Dissolve (`filter="dissolve"`).
 /// - `Wedge` — Wedge / clock sweep (`filter="wedge"`).
 /// - `Wheel` — Wheel with N spokes (`filter="wheel(N)"`).
+#derive(Eq, Debug)
 pub(all) enum VisualEffect {
   Appear
   FlyIn(AnimDirection)
@@ -117,7 +120,7 @@ pub(all) enum VisualEffect {
   Dissolve
   Wedge
   Wheel(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend VisualEffect with @debug.Debug::{to_repr}
@@ -188,11 +191,12 @@ pub fn VisualEffect::fly_direction(self : VisualEffect) -> AnimDirection? {
 ///   half, 50 halves it.
 /// - `ChangeFillColor` — Animate the fill colour to `color` (`<p:animClr
 ///   clrSpc="rgb">`).
+#derive(Eq, Debug)
 pub(all) enum EmphasisEffect {
   Spin(Int32)
   GrowShrink(Int32)
   ChangeFillColor(@units.RgbColor)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend EmphasisEffect with @debug.Debug::{to_repr}
@@ -217,10 +221,11 @@ pub fn EmphasisEffect::preset_id(self : EmphasisEffect) -> Int32 {
 /// relative edit mode the coordinates are offsets from the shape's start
 /// position, so `(0, 0)` is "no movement" and `(0.25, 0)` travels a quarter of
 /// the slide to the right.
+#derive(Eq, Debug)
 pub(all) struct MotionPoint {
   x : Double
   y : Double
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MotionPoint with @debug.Debug::{to_repr}
@@ -232,12 +237,13 @@ pub extend MotionPoint with Eq::{not_equal, equal}
 /// One command of a motion path — the `<p:animMotion path="…">` mini-language
 /// (`M` move, `L` line, `C` cubic curve, `Z` close). Coordinates are
 /// slide-fraction `MotionPoint`s.
+#derive(Eq, Debug)
 pub(all) enum MotionCommand {
   MoveTo(MotionPoint)
   LineTo(MotionPoint)
   CurveTo(MotionPoint, MotionPoint, MotionPoint)
   Close
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MotionCommand with @debug.Debug::{to_repr}
@@ -259,9 +265,10 @@ pub extend MotionCommand with Eq::{not_equal, equal}
 /// space), whereas `<p:animMotion>` uses `0..1` slide fractions — a different
 /// coordinate space. A dedicated fractional `MotionPath` keeps each model in
 /// its own units rather than overloading one type across two meanings.
+#derive(Eq, Debug)
 pub struct MotionPath {
   commands : Array[MotionCommand]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MotionPath with @debug.Debug::{to_repr}
@@ -367,12 +374,13 @@ pub fn MotionPath::to_path_string(self : MotionPath) -> String {
 /// `VisualEffect` (the writer plays its filter `in`/`out` and toggles
 /// `style.visibility`); `Emphasis` wraps an `EmphasisEffect` (a transform /
 /// colour behaviour); `Motion` wraps a `MotionPath` (an `<p:animMotion>`).
+#derive(Eq, Debug)
 pub(all) enum AnimEffect {
   Entrance(VisualEffect)
   Exit(VisualEffect)
   Emphasis(EmphasisEffect)
   Motion(MotionPath)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimEffect with @debug.Debug::{to_repr}
@@ -389,11 +397,12 @@ pub extend AnimEffect with Eq::{not_equal, equal}
 ///   current group).
 /// - `AfterPrevious` — Starts when the previous effect ends — a new
 ///   auto-advancing group.
+#derive(Eq, Debug)
 pub(all) enum AnimStart {
   OnClick
   WithPrevious
   AfterPrevious
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimStart with @debug.Debug::{to_repr}
@@ -408,13 +417,14 @@ pub extend AnimStart with Eq::{not_equal, equal}
 /// the shape's `i`-th text paragraph (0-based) rather than the whole shape — the
 /// shape is then built by paragraph (`<p:bldP build="p">`), so a multi-bullet
 /// body can reveal one line per click.
+#derive(Eq, Debug)
 pub struct AnimStep {
   effect : AnimEffect
   target_shape_id : Int32
   start : AnimStart
   duration_ms : Int32
   paragraph : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AnimStep with @debug.Debug::{to_repr}
@@ -434,9 +444,10 @@ pub extend AnimStep with Eq::{not_equal, equal}
 ///   .with_previous(Entrance(Appear), logo_id)
 /// let slide = slide.with_animations(tl)
 /// ```
+#derive(Eq, Debug)
 pub struct Timeline {
   steps : Array[AnimStep]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Timeline with @debug.Debug::{to_repr}

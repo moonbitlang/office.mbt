@@ -3,10 +3,11 @@
 // with `cmd/docx` via `internal/cli` and must stay behavior-identical.
 
 ///|
+#derive(Debug, Eq)
 enum CliCommand {
   Run(@cli.CliOptions)
   Help
-} derive(Debug, Eq)
+}
 
 ///|
 async fn main {

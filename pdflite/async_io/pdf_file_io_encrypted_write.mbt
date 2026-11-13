@@ -30,11 +30,12 @@ pub async fn pdf_write_encrypted_40bit_document_to_file(
 ///
 /// `filename` is both the path read from disk and the source name used for the
 /// generated portfolio entry.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfPortfolioFileEntry {
   filename : String
   relationship : String?
   description : String?
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Encrypt with 128-bit ARC4 revision 3, serialize, and write to a file.

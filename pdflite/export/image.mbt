@@ -4,11 +4,12 @@
 
 ///|
 /// The color space of image samples.
+#derive(Eq, Debug)
 pub(all) enum ImageColorspace {
   Luma
   Rgb
   Cmyk
-} derive(Eq, Debug)
+}
 
 ///|
 fn ImageColorspace::components(self : ImageColorspace) -> Int32 {

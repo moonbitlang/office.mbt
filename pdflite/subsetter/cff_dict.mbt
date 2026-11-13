@@ -7,7 +7,8 @@ const TWO_BYTE_OPERATOR_MARK : Int32 = 12
 ///|
 /// An operator: one byte, or `12` followed by a second byte (encoded as
 /// `12 << 8 | b`).
-priv struct Operator(Int32) derive(Eq)
+#derive(Eq)
+priv struct Operator(Int32)
 
 ///|
 fn Operator::from_one_byte(b : Int32) -> Operator {

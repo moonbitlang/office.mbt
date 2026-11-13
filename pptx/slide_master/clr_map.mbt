@@ -16,6 +16,7 @@
 
 ///|
 /// Slide → theme color resolution table.
+#derive(Eq, Debug)
 pub(all) struct ColorMapping {
   bg1 : @units.ThemeColor
   tx1 : @units.ThemeColor
@@ -29,7 +30,7 @@ pub(all) struct ColorMapping {
   accent6 : @units.ThemeColor
   hlink : @units.ThemeColor
   fol_hlink : @units.ThemeColor
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ColorMapping with @debug.Debug::{to_repr}

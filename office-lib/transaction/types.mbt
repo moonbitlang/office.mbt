@@ -799,11 +799,12 @@ pub fn transaction_reuse_original_with_manifest(
 }
 
 ///|
+#derive(Debug, Eq)
 pub(all) enum TransactionMode {
   InPlace
   Output
   Create
-} derive(Debug, Eq)
+}
 
 ///|
 pub fn TransactionMode::name(self : TransactionMode) -> String {

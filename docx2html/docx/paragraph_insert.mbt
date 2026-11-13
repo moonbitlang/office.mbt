@@ -9,21 +9,23 @@
 /// One resource-free run of insertion content: text with direct
 /// formatting only. Hyperlinks, images, notes, and list bullets are
 /// v1 refusals — they need relationship, media, or numbering surgery.
+#derive(Debug, Eq)
 pub(all) struct DocxInsertRun {
   text : String
   bold : Bool
   italic : Bool
   underline : Bool
-} derive(Debug, Eq)
+}
 
 ///|
 /// The dedicated `docx.paragraph/1` content payload: an optional
 /// paragraph style reference (verified against the TARGET's styles
 /// part) and resource-free runs.
+#derive(Debug, Eq)
 pub(all) struct DocxInsertContent {
   style : String?
   runs : Array[DocxInsertRun]
-} derive(Debug, Eq)
+}
 
 ///|
 /// What one planned insertion did: the minted id (canonical uppercase,

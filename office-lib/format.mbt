@@ -1,10 +1,11 @@
 ///|
 /// The document formats supported by the `office` facade.
+#derive(Debug, Eq)
 pub(all) enum DocumentFormat {
   Xlsx
   Docx
   Pptx
-} derive(Debug, Eq)
+}
 
 ///|
 /// A deterministic, lowercase name suitable for CLI and JSON output.
@@ -23,13 +24,14 @@ pub impl Show for DocumentFormat with fn output(self, logger) {
 
 ///|
 /// Errors produced while identifying a supported Office package.
+#derive(Debug, Eq)
 pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
   InvalidPackage(String)
   FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
   ResourceLimit(kind~ : String, limit~ : Int32, actual~ : Int32)
   Cancelled
-} derive(Debug, Eq)
+}
 
 ///|
 pub impl Show for OfficeError with fn output(self, logger) {

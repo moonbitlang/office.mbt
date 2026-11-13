@@ -1,21 +1,23 @@
 ///|
+#derive(Eq, Debug)
 enum CellValueType {
   String
   Number
   Bool
   Error
-} derive(Eq, Debug)
+}
 
 ///|
 pub type CellType = CellValueType
 
 ///|
+#derive(Debug)
 pub(all) enum CellValue {
   String(String)
   Numeric(Double)
   Bool(Bool)
   Error(String)
-} derive(Debug)
+}
 
 ///|
 fn cell_value_type(value : CellValue) -> CellValueType {

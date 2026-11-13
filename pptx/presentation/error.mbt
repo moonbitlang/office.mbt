@@ -8,6 +8,7 @@
 // single error type without losing which subsystem reported it.
 
 ///|
+#derive(Eq, Debug)
 pub(all) suberror PptxError {
   /// `Package::open` / `Package::to_bytes` raised.
   OpcFailure(String)
@@ -32,7 +33,7 @@ pub(all) suberror PptxError {
   /// `presentation.xml` part, or the required main-document
   /// relationship is missing.
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PptxError with @debug.Debug::{to_repr}

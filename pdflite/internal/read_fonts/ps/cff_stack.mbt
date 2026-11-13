@@ -18,10 +18,11 @@ pub struct Stack {
 
 ///|
 /// Either a signed 32-bit integer or a 16.16 fixed point number.
+#derive(Eq, Debug)
 pub(all) enum Number {
   I32(Int32)
   Fixed(@font_types.Fixed)
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Stack::new() -> Stack {

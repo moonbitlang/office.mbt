@@ -35,6 +35,7 @@
 ///   effect. Captured.
 /// - `tx_pr` — `<c:txPr>` (CT_TextBody) — default text run styling for the
 ///   title. Captured.
+#derive(Eq, Debug)
 pub(all) struct ChartTitle {
   tx : @xml.XmlElement?
   layout : Layout?
@@ -42,7 +43,7 @@ pub(all) struct ChartTitle {
   sp_pr : @xml.XmlElement?
   tx_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartTitle with @debug.Debug::{to_repr}

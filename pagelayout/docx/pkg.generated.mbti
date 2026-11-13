@@ -3,6 +3,7 @@ package "moonbitlang/pagelayout/docx"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/docx2html/xml",
   "moonbitlang/pagelayout",
   "moonbitlang/pagelayout/numbering",
@@ -51,6 +52,7 @@ pub(all) struct DocxDocument {
   unsupported : Array[String]
 }
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct FurnitureRefs {
   header_default : String?
   footer_default : String?
@@ -60,31 +62,33 @@ pub(all) struct FurnitureRefs {
   footer_even : String?
   title_page : Bool
   even_and_odd : Bool
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn FurnitureRefs::empty() -> Self
 #deprecated
 pub fn FurnitureRefs::equal(Self, Self) -> Bool
 #deprecated
 pub fn FurnitureRefs::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn FurnitureRefs::to_json(Self) -> Json
+pub fn FurnitureRefs::to_json(Self) -> @json.Json
 #deprecated
 pub fn FurnitureRefs::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ImageRef {
   width : @pagelayout.Emu
   height : @pagelayout.Emu
   relationship : String
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn ImageRef::equal(Self, Self) -> Bool
 #deprecated
 pub fn ImageRef::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn ImageRef::to_json(Self) -> Json
+pub fn ImageRef::to_json(Self) -> @json.Json
 #deprecated
 pub fn ImageRef::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ParaProps {
   align : @paragraph.Alignment?
   indent_left : @pagelayout.Twips?
@@ -100,7 +104,7 @@ pub(all) struct ParaProps {
   num_id : Int32?
   num_level : Int32?
   tabs : Array[@paragraph.TabStop]?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ParaProps::empty() -> Self
 #deprecated
 pub fn ParaProps::equal(Self, Self) -> Bool
@@ -109,7 +113,7 @@ pub fn ParaProps::merge(Self, Self) -> Self
 pub fn ParaProps::not_equal(Self, Self) -> Bool
 pub fn ParaProps::resolve(Self, default_tab_pt? : Double) -> @paragraph.ParagraphStyle
 #deprecated
-pub fn ParaProps::to_json(Self) -> Json
+pub fn ParaProps::to_json(Self) -> @json.Json
 #deprecated
 pub fn ParaProps::to_repr(Self) -> @debug.Repr
 
@@ -121,13 +125,14 @@ pub fn Relationships::empty() -> Self
 pub fn Relationships::first_of_type(Self, String, String) -> String?
 pub fn Relationships::part(Self, String, String) -> String?
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct RunProps {
   family : String?
   size : @pagelayout.HalfPoints?
   bold : Bool?
   italic : Bool?
   color : @pagelayout.Color?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn RunProps::empty() -> Self
 #deprecated
 pub fn RunProps::equal(Self, Self) -> Bool
@@ -136,7 +141,7 @@ pub fn RunProps::merge(Self, Self) -> Self
 pub fn RunProps::not_equal(Self, Self) -> Bool
 pub fn RunProps::resolve(Self) -> @paragraph.RunStyle
 #deprecated
-pub fn RunProps::to_json(Self) -> Json
+pub fn RunProps::to_json(Self) -> @json.Json
 #deprecated
 pub fn RunProps::to_repr(Self) -> @debug.Repr
 
@@ -156,10 +161,11 @@ pub fn StyleSheet::for_table(Self, String?) -> Self
 pub fn StyleSheet::resolve_para(Self, String?, ParaProps) -> ParaProps
 pub fn StyleSheet::resolve_run(Self, String?, String?, RunProps) -> RunProps
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct ThemeFonts {
   major : String?
   minor : String?
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn ThemeFonts::empty() -> Self
 #deprecated
 pub fn ThemeFonts::equal(Self, Self) -> Bool
@@ -167,7 +173,7 @@ pub fn ThemeFonts::equal(Self, Self) -> Bool
 pub fn ThemeFonts::not_equal(Self, Self) -> Bool
 pub fn ThemeFonts::resolve(Self, String) -> String?
 #deprecated
-pub fn ThemeFonts::to_json(Self) -> Json
+pub fn ThemeFonts::to_json(Self) -> @json.Json
 #deprecated
 pub fn ThemeFonts::to_repr(Self) -> @debug.Repr
 

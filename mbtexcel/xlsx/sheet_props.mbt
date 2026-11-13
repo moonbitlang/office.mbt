@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub struct PageLayoutMarginsOptions {
   mut top : Double?
   mut bottom : Double?
@@ -8,7 +9,7 @@ pub struct PageLayoutMarginsOptions {
   mut footer : Double?
   mut horizontally : Bool?
   mut vertically : Bool?
-} derive(Debug)
+}
 
 ///|
 fn PageLayoutMarginsOptions::new() -> PageLayoutMarginsOptions {
@@ -72,6 +73,7 @@ pub fn PageLayoutMarginsOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct PageLayoutOptions {
   mut size : Int32?
   mut orientation : String?
@@ -81,7 +83,7 @@ pub struct PageLayoutOptions {
   mut fit_to_width : Int32?
   mut black_and_white : Bool?
   mut page_order : String?
-} derive(Debug)
+}
 
 ///|
 fn PageLayoutOptions::new() -> PageLayoutOptions {
@@ -145,6 +147,7 @@ pub fn PageLayoutOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct SheetPropsOptions {
   mut code_name : String?
   mut enable_format_conditions_calculation : Bool?
@@ -164,7 +167,7 @@ pub struct SheetPropsOptions {
   mut zero_height : Bool?
   mut thick_top : Bool?
   mut thick_bottom : Bool?
-} derive(Debug)
+}
 
 ///|
 fn SheetPropsOptions::new() -> SheetPropsOptions {
@@ -288,6 +291,7 @@ pub fn SheetPropsOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct HeaderFooterOptions {
   mut align_with_margins : Bool?
   mut different_first : Bool
@@ -299,7 +303,7 @@ pub struct HeaderFooterOptions {
   mut even_footer : String
   mut first_header : String
   mut first_footer : String
-} derive(Debug)
+}
 
 ///|
 fn HeaderFooterOptions::new() -> HeaderFooterOptions {
@@ -375,6 +379,7 @@ pub fn HeaderFooterOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct SheetProtectionOptions {
   mut algorithm_name : String
   mut password : String
@@ -393,7 +398,7 @@ pub struct SheetProtectionOptions {
   mut select_locked_cells : Bool
   mut select_unlocked_cells : Bool
   mut sort : Bool
-} derive(Debug)
+}
 
 ///|
 pub fn SheetProtectionOptions::new() -> SheetProtectionOptions {
@@ -511,6 +516,7 @@ pub fn SheetProtectionOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct SheetProtection {
   mut algorithm_name : String
   mut password : String
@@ -533,22 +539,24 @@ pub struct SheetProtection {
   auto_filter : Bool
   pivot_tables : Bool
   select_unlocked_cells : Bool
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct SheetBackground {
   data : Bytes
   extension : String
   content_type : String
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct PageBreak {
   id : Int32
   min : Int32
   max : Int32
   manual : Bool
-} derive(Debug)
+}
 
 ///|
 /// Excel's built-in "Normal" page margins, in inches.

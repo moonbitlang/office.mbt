@@ -29,11 +29,12 @@ pub fn write_markdown(Array[HtmlNode]) -> String
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) enum HtmlNode {
   Element(tag~ : String, attributes~ : Map[String, String], children~ : Array[HtmlNode], fresh~ : Bool, separator~ : String?)
   TextNode(String)
   ForceWrite
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn HtmlNode::equal(Self, Self) -> Bool
 #deprecated

@@ -3,11 +3,12 @@
 ///
 /// Bits are packed most-significant first in each output byte. The final byte
 /// is zero-padded when `align` or `to_bytes` flushes a partially filled byte.
+#derive(Debug, Eq, ToJson)
 pub struct BitWriter {
   mut current_byte : Int32
   mut bit_index : Int32
   bytes : Array[Byte]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Creates an empty bit writer.

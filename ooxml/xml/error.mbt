@@ -6,6 +6,7 @@
 /// The reader produces `Malformed*` variants; the writer produces
 /// `WriterMisuse` for API-contract violations (e.g. `attribute()` after the
 /// element body has started).
+#derive(Eq, Debug)
 pub(all) suberror XmlError {
   /// The reader encountered a syntactic error. Payload is a human-readable
   /// description of the problem.
@@ -19,7 +20,7 @@ pub(all) suberror XmlError {
   /// The writer was called in an invalid order (e.g. `attribute()` after the
   /// element body has started). Payload is a description of the misuse.
   WriterMisuse(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend XmlError with @debug.Debug::{to_repr}

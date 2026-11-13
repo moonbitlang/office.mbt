@@ -4,6 +4,7 @@ package "moonbitlang/office-lib"
 import {
   "moonbit-community/flate/zip",
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -83,7 +84,7 @@ pub const XLSX_TRANSACTION_MAX_ROW_COLUMN_LINES : Int32 = 32_768
 
 pub const XLSX_TRANSACTION_MAX_XML_MARKUP_TOKENS : Int32 = 262_144
 
-pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> Json
+pub fn capabilities_data(format? : DocumentFormat, operation? : String) -> @json.Json
 
 pub fn capability_commands() -> Array[CapabilityCommand]
 
@@ -91,7 +92,7 @@ pub fn capability_fingerprint() -> String
 
 pub fn capability_formats() -> Array[CapabilityFormat]
 
-pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[Json]
+pub fn capability_records(format? : DocumentFormat, operation? : String) -> Array[@json.Json]
 
 pub fn detect_archive_format(StringView, @zip.Archive, max_xml_part_bytes? : Int32, max_xml_total_units? : Int32, cancelled? : () -> Bool) -> DocumentFormat raise OfficeError
 
@@ -99,13 +100,13 @@ pub fn detect_format(StringView, BytesView, max_package_bytes? : Int32, max_arch
 
 pub fn find_capability_command(StringView) -> CapabilityCommand?
 
-pub fn output_failure(ProtocolError, warnings? : Array[ProtocolWarning]) -> Json
+pub fn output_failure(ProtocolError, warnings? : Array[ProtocolWarning]) -> @json.Json
 
-pub fn output_success(Json, warnings? : Array[ProtocolWarning]) -> Json
+pub fn output_success(@json.Json, warnings? : Array[ProtocolWarning]) -> @json.Json
 
 pub fn parse_selector(String) -> OfficeSelector raise SelectorError
 
-pub fn protocol_error(String, String, details? : Json) -> ProtocolError
+pub fn protocol_error(String, String, details? : @json.Json) -> ProtocolError
 
 pub fn protocol_warning(String, String) -> ProtocolWarning
 
@@ -124,13 +125,14 @@ pub fn selector_from_docx_projection_path(String) -> OfficeSelector raise Select
 pub fn sha256_hex(BytesView) -> String
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror OfficeError {
   UnsupportedFileExtension(String)
   InvalidPackage(String)
   FormatMismatch(expected~ : DocumentFormat, actual~ : DocumentFormat)
   ResourceLimit(kind~ : String, limit~ : Int32, actual~ : Int32)
   Cancelled
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn OfficeError::equal(Self, Self) -> Bool
 #deprecated
@@ -198,7 +200,7 @@ pub(all) struct CapabilityVariant {
   name : String
   usage : String
   result_schema : String
-  registry : Json?
+  registry : @json.Json?
   inputs : Array[CapabilityField]
   outputs : Array[CapabilityField]
   constraints : Array[String]
@@ -214,11 +216,12 @@ pub fn CellAddress::column(Self) -> Int32
 pub fn CellAddress::render(Self) -> String
 pub fn CellAddress::row(Self) -> Int32
 
+#derive(Eq, @debug.Debug)
 pub(all) enum DocumentFormat {
   Xlsx
   Docx
   Pptx
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocumentFormat::equal(Self, Self) -> Bool
 pub fn DocumentFormat::name(Self) -> String
@@ -247,7 +250,7 @@ pub fn OfficeSelector::stability(Self) -> SelectorStability
 pub(all) struct ProtocolError {
   code : String
   message : String
-  details : Json?
+  details : @json.Json?
 }
 
 pub(all) struct ProtocolWarning {

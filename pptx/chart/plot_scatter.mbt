@@ -17,6 +17,7 @@
 /// Body of `<c:scatterChart>` (CT_ScatterChart). Scatter charts
 /// use two value axes (`<c:valAx>` × 2) instead of the category +
 /// value pair every other 2-D chart uses.
+#derive(Eq, Debug)
 pub(all) struct ScatterChartBody {
   scatter_style : ScatterStyle
   vary_colors : Bool?
@@ -24,7 +25,7 @@ pub(all) struct ScatterChartBody {
   d_lbls : DLbls?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScatterChartBody with @debug.Debug::{to_repr}
@@ -51,6 +52,7 @@ pub impl Show for ScatterChartBody with fn output(self, logger) {
 /// - `None_` (`val="none"`) — neither lines nor markers (rare).
 /// - `Smooth` (`val="smooth"`) — smoothed connecting lines.
 /// - `SmoothMarker` (`val="smoothMarker"`) — smoothed lines plus markers.
+#derive(Eq, Debug)
 pub(all) enum ScatterStyle {
   Line
   LineMarker
@@ -58,7 +60,7 @@ pub(all) enum ScatterStyle {
   None_
   Smooth
   SmoothMarker
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScatterStyle with @debug.Debug::{to_repr}

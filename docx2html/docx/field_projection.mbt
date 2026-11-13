@@ -15,20 +15,22 @@ priv struct ReaderFieldCarrierEvent {
 }
 
 ///|
+#derive(Debug, Eq)
 #warnings("-unused_value")
 priv enum ReaderFieldRegion {
   OutsideField
   FieldInstruction
   FieldResult
   MalformedField
-} derive(Debug, Eq)
+}
 
 ///|
+#derive(Debug, Eq)
 #warnings("-unused_value")
 priv enum ReaderFieldBoundarySide {
   BeforeCarrier
   AfterCarrier
-} derive(Debug, Eq)
+}
 
 ///|
 #warnings("-unused_field")
@@ -63,6 +65,7 @@ priv struct ReaderField {
 }
 
 ///|
+#derive(Debug, Eq)
 #warnings("-unused_value")
 priv enum ReaderFieldRefusalKind {
   AmbiguousCarrier
@@ -73,7 +76,7 @@ priv enum ReaderFieldRefusalKind {
   RepeatedMarker
   RepeatedInstruction
   TruncatedField
-} derive(Debug, Eq)
+}
 
 ///|
 #warnings("-unused_field")

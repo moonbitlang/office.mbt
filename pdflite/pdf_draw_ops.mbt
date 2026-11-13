@@ -5,6 +5,7 @@
 /// slice converts path, graphics-state, colour, matrix, and paint operations to
 /// `@content.PdfContentOp`; structure and page-level operations are represented here
 /// and will be rendered by later cpdfdraw slices.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfDrawOp {
   PdfDrawRect(Double, Double, Double, Double)
   PdfDrawBezier(Double, Double, Double, Double, Double, Double)
@@ -59,4 +60,4 @@ pub(all) enum PdfDrawOp {
   PdfDrawEltInfo(String, @syntax.PdfObject)
   PdfDrawEndEltInfo(String)
   PdfDrawAutoTag(Bool)
-} derive(Debug, Eq, ToJson)
+}

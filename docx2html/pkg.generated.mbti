@@ -183,6 +183,7 @@ pub fn xml_text(String) -> @xml.XmlNode
 pub fn zip_archive(Map[String, BytesView]) -> @zip.ZipArchive raise DocxError
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror DocxError {
   InvalidZip(message~ : String)
   InvalidXml(message~ : String)
@@ -190,7 +191,7 @@ pub(all) suberror DocxError {
   Unsupported(message~ : String)
   ResourceLimit(limit~ : @core.DocxXmlResourceLimit, message~ : String)
   WriteResourceLimit(kind~ : String, limit~ : Int64, actual~ : Int64, message~ : String)
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn DocxError::equal(Self, Self) -> Bool
 #deprecated

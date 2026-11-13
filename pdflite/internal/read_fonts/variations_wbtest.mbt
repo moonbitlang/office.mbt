@@ -21,7 +21,7 @@ test "variation region lists with huge counts read as empty" {
   let result = try
     ivs.compute_delta({ outer: 0, inner: 0, }, [F2Dot14::from_bits(0x2000)])
   catch {
-    e => e.to_string()
+    e => Show::to_string(e)
   } noraise {
     v => v.to_string()
   }

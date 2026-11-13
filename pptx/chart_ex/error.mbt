@@ -6,10 +6,11 @@
 /// `XmlFailure` flattens `@xml.XmlError` at the package boundary;
 /// `Malformed` is the catch-all for schema violations (e.g. the
 /// root element is not `<cx:chartSpace>`).
+#derive(Eq, Debug)
 pub(all) suberror ChartExError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartExError with @debug.Debug::{to_repr}

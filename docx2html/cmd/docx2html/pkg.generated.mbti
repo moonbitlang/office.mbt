@@ -10,7 +10,8 @@ import {
 // Errors
 
 // Types and methods
-type CliCommand derive(Eq, @debug.Debug)
+#derive(Eq, @debug.Debug)
+type CliCommand
 #deprecated
 pub fn CliCommand::equal(Self, Self) -> Bool
 #deprecated

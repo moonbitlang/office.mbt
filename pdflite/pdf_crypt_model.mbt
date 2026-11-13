@@ -4,10 +4,11 @@
 /// `document` is a decrypted copy with encryption removed from the trailer and
 /// saved encryption state attached. `denied_permissions` is decoded from the
 /// original `/P` permission mask.
+#derive(Debug, Eq)
 pub(all) struct PdfDecryptionResult {
   document : PdfDocument
   denied_permissions : Array[@crypt_core.PdfPermission]
-} derive(Debug, Eq)
+}
 
 ///|
 fn pdf_crypt_name(text : String) -> @core.PdfName {

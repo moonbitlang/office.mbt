@@ -14,11 +14,12 @@
 
 ///|
 /// The typefaces a run actually renders with, one per script slot.
+#derive(Eq, Debug)
 pub struct ResolvedFonts {
   latin : String
   east_asian : String
   complex_script : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ResolvedFonts with @debug.Debug::{to_repr}

@@ -8,11 +8,12 @@
 /// `<p:notes>`). `SlideFailure` re-wraps a `@slide.SlideError` raised by the
 /// shared `Slide::parse_with_root` body — keeping the suberror chain
 /// transparent so callers see exactly where parsing went wrong.
+#derive(Eq, Debug)
 pub(all) suberror NotesError {
   XmlFailure(String, String)
   Malformed(String)
   SlideFailure(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NotesError with @debug.Debug::{to_repr}

@@ -8,16 +8,18 @@
 /// Character formatting of one input run. `family` is the document's
 /// authored family name; resolution to a bundled face happens inside the
 /// paragraph layout via `@fonts.resolve_family`.
+#derive(Eq, Debug, ToJson)
 pub(all) struct RunStyle {
   family : String
   size_pt : Double
   bold : Bool
   italic : Bool
   color : @pagelayout.Color
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One run of paragraph text in one style.
+#derive(Eq, Debug, ToJson)
 pub(all) struct RunInput {
   text : String
   style : RunStyle
@@ -25,7 +27,7 @@ pub(all) struct RunInput {
   /// value cached when the document was saved; `evaluate` replaces it
   /// with the real one once the layout knows the page.
   field : FieldKind
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A plain (non-field) run.
@@ -35,27 +37,30 @@ pub fn RunInput::plain(text : String, style : RunStyle) -> RunInput {
 
 ///|
 /// Horizontal paragraph alignment.
+#derive(Eq, Debug, ToJson)
 pub(all) enum Alignment {
   AlignLeft
   AlignCenter
   AlignRight
   AlignJustify
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Word's line-spacing rules: `Single` uses the tallest font's natural
 /// line height; `Multiple` scales it; `Exact` forces a height; `AtLeast`
 /// takes the larger of the natural height and the given floor.
+#derive(Eq, Debug, ToJson)
 pub(all) enum LineSpacing {
   Single
   Multiple(Double)
   Exact(Double)
   AtLeast(Double)
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Paragraph formatting. `indent_first_pt` is the extra first-line indent
 /// relative to `indent_left_pt` (negative for a hanging indent).
+#derive(Eq, Debug, ToJson)
 pub(all) struct ParagraphStyle {
   align : Alignment
   indent_left_pt : Double
@@ -66,7 +71,7 @@ pub(all) struct ParagraphStyle {
   line_spacing : LineSpacing
   /// Where tabs in this paragraph advance to.
   tabs : TabRuler
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// The style with a hanging indent's implicit tab stop in its ruler.
@@ -119,7 +124,8 @@ pub fn ParagraphStyle::default() -> ParagraphStyle {
 
 ///|
 /// One paragraph of engine input: runs plus paragraph formatting.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ParagraphInput {
   runs : Array[RunInput]
   style : ParagraphStyle
-} derive(Eq, Debug, ToJson)
+}

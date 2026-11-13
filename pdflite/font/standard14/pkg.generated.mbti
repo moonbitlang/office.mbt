@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/font/standard14"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/font/afm",
 }
 
@@ -26,6 +27,7 @@ pub fn pdf_string_of_standard_font(PdfStandardFont) -> String
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfStandardFont {
   PdfTimesRoman
   PdfTimesBold
@@ -41,7 +43,7 @@ pub(all) enum PdfStandardFont {
   PdfCourierBoldOblique
   PdfSymbol
   PdfZapfDingbats
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfStandardFont::afm_data(Self) -> @afm.PdfAfmData
 pub fn PdfStandardFont::baseline_adjustment(Self) -> Int32
 #deprecated
@@ -53,7 +55,7 @@ pub fn PdfStandardFont::name(Self) -> String
 pub fn PdfStandardFont::not_equal(Self, Self) -> Bool
 pub fn PdfStandardFont::stemv(Self) -> Int32
 #deprecated
-pub fn PdfStandardFont::to_json(Self) -> Json
+pub fn PdfStandardFont::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfStandardFont::to_repr(Self) -> @debug.Repr
 

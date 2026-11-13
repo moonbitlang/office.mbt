@@ -23,9 +23,10 @@ pub fn root_container(@document.DocumentElement, ParsedPath, String, Array[@docu
 pub fn segment_kind(@document.DocumentElement) -> String?
 
 // Errors
+#derive(Eq)
 pub(all) suberror PathError {
   PathError(String)
-} derive(Eq)
+}
 #deprecated
 pub fn PathError::equal(Self, Self) -> Bool
 #deprecated

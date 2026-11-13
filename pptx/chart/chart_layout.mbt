@@ -32,10 +32,11 @@
 /// `<c:manualLayout>` with explicit positioning.
 ///
 /// - `manual_layout` (`<c:manualLayout>`) — explicit positioning override.
+#derive(Eq, Debug)
 pub(all) struct Layout {
   manual_layout : ManualLayout?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Layout with @debug.Debug::{to_repr}
@@ -67,6 +68,7 @@ pub impl Show for Layout with fn output(self, logger) {
 /// - `y` (`<c:y val="…"/>`) — top position.
 /// - `w` (`<c:w val="…"/>`) — width.
 /// - `h` (`<c:h val="…"/>`) — height.
+#derive(Eq, Debug)
 pub(all) struct ManualLayout {
   layout_target : LayoutTarget?
   x_mode : LayoutMode?
@@ -78,7 +80,7 @@ pub(all) struct ManualLayout {
   w : String?
   h : String?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ManualLayout with @debug.Debug::{to_repr}
@@ -102,10 +104,11 @@ pub impl Show for ManualLayout with fn output(self, logger) {
 ///   area.
 /// - `LayoutOuter` (`val="outer"`) — coordinates are relative to the chart
 ///   area (default).
+#derive(Eq, Debug)
 pub(all) enum LayoutTarget {
   LayoutInner
   LayoutOuter
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayoutTarget with @debug.Debug::{to_repr}
@@ -152,10 +155,11 @@ pub fn LayoutTarget::to_xml(self : LayoutTarget) -> String {
 ///   position.
 /// - `LayoutFactor` (`val="factor"`) — the coordinate is a fraction of the
 ///   chart-area dimension (default).
+#derive(Eq, Debug)
 pub(all) enum LayoutMode {
   LayoutEdge
   LayoutFactor
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LayoutMode with @debug.Debug::{to_repr}

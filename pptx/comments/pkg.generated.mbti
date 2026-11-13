@@ -10,10 +10,11 @@ import {
 // Values
 
 // Errors
+#derive(Eq, @debug.Debug)
 pub(all) suberror CommentsError {
   XmlFailure(String, String)
   Malformed(String)
-} derive(Eq, @debug.Debug)
+}
 pub fn CommentsError::equal(Self, Self) -> Bool
 pub fn CommentsError::not_equal(Self, Self) -> Bool
 pub fn CommentsError::output(Self, &Logger) -> Unit
@@ -22,6 +23,7 @@ pub fn CommentsError::to_string(Self) -> String
 pub impl Show for CommentsError
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct Comment {
   author_id : Int32
   dt : String?
@@ -29,11 +31,12 @@ pub(all) struct Comment {
   pos : CommentPos
   text : String
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn Comment::equal(Self, Self) -> Bool
 pub fn Comment::not_equal(Self, Self) -> Bool
 pub fn Comment::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct CommentAuthor {
   id : Int32
   name : String
@@ -41,35 +44,38 @@ pub(all) struct CommentAuthor {
   last_idx : Int32
   clr_idx : Int32
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn CommentAuthor::equal(Self, Self) -> Bool
 pub fn CommentAuthor::not_equal(Self, Self) -> Bool
 pub fn CommentAuthor::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct CommentAuthorList {
   authors : Array[CommentAuthor]
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn CommentAuthorList::equal(Self, Self) -> Bool
 pub fn CommentAuthorList::not_equal(Self, Self) -> Bool
 pub fn CommentAuthorList::parse(FixedArray[Byte]) -> Self raise CommentsError
 pub fn CommentAuthorList::serialize(Self) -> FixedArray[Byte] raise CommentsError
 pub fn CommentAuthorList::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct CommentList {
   comments : Array[Comment]
   extension : Array[@xml.XmlElement]
-} derive(Eq, @debug.Debug)
+}
 pub fn CommentList::equal(Self, Self) -> Bool
 pub fn CommentList::not_equal(Self, Self) -> Bool
 pub fn CommentList::parse(FixedArray[Byte]) -> Self raise CommentsError
 pub fn CommentList::serialize(Self) -> FixedArray[Byte] raise CommentsError
 pub fn CommentList::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct CommentPos {
   x : @units.Emu
   y : @units.Emu
-} derive(Eq, @debug.Debug)
+}
 pub fn CommentPos::equal(Self, Self) -> Bool
 pub fn CommentPos::not_equal(Self, Self) -> Bool
 pub fn CommentPos::to_repr(Self) -> @debug.Repr

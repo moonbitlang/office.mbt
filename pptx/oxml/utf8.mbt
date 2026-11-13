@@ -12,11 +12,12 @@
 ///|
 /// Errors raised by `bytes_to_string`. UTF-8 errors retain their byte
 /// offsets; malformed UTF-16 is reported separately.
+#derive(Eq, Debug)
 pub(all) suberror Utf8Error {
   InvalidUtf16
   StrayContinuation(Int32)
   TruncatedSequence(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Utf8Error with @debug.Debug::{to_repr}

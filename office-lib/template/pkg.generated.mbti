@@ -36,87 +36,98 @@ pub fn scan_placeholders(Array[String], @ref.Ref[Int32]) -> TemplateScan raise T
 pub fn template_key_ok(String) -> Bool
 
 // Errors
+#derive(@debug.Debug)
 pub suberror TemplateDataError {
   TemplateDataError(String)
-} derive(@debug.Debug)
+}
 pub fn TemplateDataError::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub suberror TemplateScanError {
   TemplateScanBudgetExceeded(String)
-} derive(@debug.Debug)
+}
 pub fn TemplateScanError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+#derive(Eq, @debug.Debug)
 pub(all) struct MalformedPlaceholder {
   span : TemplateSpan
   reason : String
-} derive(Eq, @debug.Debug)
+}
 pub fn MalformedPlaceholder::equal(Self, Self) -> Bool
 pub fn MalformedPlaceholder::not_equal(Self, Self) -> Bool
 pub fn MalformedPlaceholder::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PlaceholderMatch {
   key : String
   span : TemplateSpan
-} derive(Eq, @debug.Debug)
+}
 pub fn PlaceholderMatch::equal(Self, Self) -> Bool
 pub fn PlaceholderMatch::not_equal(Self, Self) -> Bool
 pub fn PlaceholderMatch::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) struct TemplateData {
   values : Map[String, TemplateValue]
   regions : Array[TemplateRegion]
-} derive(@debug.Debug)
+}
 pub fn TemplateData::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
 pub(all) struct TemplateRegion {
   name : String
   address : TemplateRegionAddress
   records : Array[Map[String, TemplateValue]]
-} derive(@debug.Debug)
+}
 pub fn TemplateRegion::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TemplateRegionAddress {
   SheetRow(sheet~ : String, row~ : Int32)
   TableRow(story~ : TemplateStory, table~ : Int32, row~ : Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn TemplateRegionAddress::equal(Self, Self) -> Bool
 pub fn TemplateRegionAddress::not_equal(Self, Self) -> Bool
 pub fn TemplateRegionAddress::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct TemplateScan {
   matches : Array[PlaceholderMatch]
   escapes : Array[TemplateSpan]
   malformed : Array[MalformedPlaceholder]
-} derive(Eq, @debug.Debug)
+}
 pub fn TemplateScan::equal(Self, Self) -> Bool
 pub fn TemplateScan::not_equal(Self, Self) -> Bool
 pub fn TemplateScan::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct TemplateSpan {
   start_segment : Int32
   start_offset : Int32
   end_segment : Int32
   end_offset : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn TemplateSpan::equal(Self, Self) -> Bool
 pub fn TemplateSpan::not_equal(Self, Self) -> Bool
 pub fn TemplateSpan::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TemplateStory {
   BodyStory
   HeaderStory(Int32)
   FooterStory(Int32)
-} derive(Eq, @debug.Debug)
+}
 pub fn TemplateStory::equal(Self, Self) -> Bool
 pub fn TemplateStory::not_equal(Self, Self) -> Bool
 pub fn TemplateStory::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) enum TemplateValue {
   TextValue(String)
   NumberValue(Double)
   BoolValue(Bool)
-} derive(Eq, @debug.Debug)
+}
 pub fn TemplateValue::equal(Self, Self) -> Bool
 pub fn TemplateValue::not_equal(Self, Self) -> Bool
 pub fn TemplateValue::render(Self) -> String

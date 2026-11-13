@@ -4,6 +4,7 @@
 /// AES entries carry the effective `EncryptMetadata` flag. The
 /// `PdfEncryptionAlreadyEncrypted` value is used by writer paths that preserve
 /// existing encrypted object data rather than decrypting and re-encrypting it.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfEncryptionMethod {
   PdfEncryption40Bit
   PdfEncryption128Bit
@@ -11,7 +12,7 @@ pub(all) enum PdfEncryptionMethod {
   PdfEncryptionAES256(Bool)
   PdfEncryptionAES256ISO(Bool)
   PdfEncryptionAlreadyEncrypted
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Random material requested while constructing PDF 2.0 AESV3 encryption data.
@@ -19,6 +20,7 @@ pub(all) enum PdfEncryptionMethod {
 /// Provider callbacks receive this field tag and a byte length, allowing tests
 /// and reproducible builds to supply deterministic file keys, salts, and
 /// permissions padding.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfAesV3RandomField {
   PdfAesV3FileKey
   PdfAesV3UserValidationSalt
@@ -26,4 +28,4 @@ pub(all) enum PdfAesV3RandomField {
   PdfAesV3OwnerValidationSalt
   PdfAesV3OwnerKeySalt
   PdfAesV3PermissionsPadding
-} derive(Debug, Eq, ToJson)
+}

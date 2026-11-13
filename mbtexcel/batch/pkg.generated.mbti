@@ -3,6 +3,7 @@ package "moonbitlang/mbtexcel/batch"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/mbtexcel/xlsx",
 }
 
@@ -29,20 +30,21 @@ pub fn apply_op(@xlsx.Workbook, BatchOp) -> Unit raise
 
 pub fn build_style(bold~ : Bool, italic~ : Bool, number_format~ : String, fill~ : String, font_color~ : String, align~ : String) -> @xlsx.Style
 
-pub fn capabilities() -> Json
+pub fn capabilities() -> @json.Json
 
 pub fn chart_type_of(String) -> @xlsx.ChartType raise BatchError
 
-pub fn parse_script(Json) -> Array[BatchOp] raise BatchError
+pub fn parse_script(@json.Json) -> Array[BatchOp] raise BatchError
 
 pub fn parse_script_bytes(BytesView) -> BatchPlan raise BatchError
 
 pub fn qualify_range(String, String) -> String
 
 // Errors
+#derive(@debug.Debug)
 pub suberror BatchError {
   BatchError(String)
-} derive(@debug.Debug)
+}
 #deprecated
 pub fn BatchError::output(Self, &Logger) -> Unit
 #deprecated

@@ -44,11 +44,12 @@ pub struct FaceMetrics {
 
 ///|
 /// Why `FaceMetrics::new` refused its arguments.
+#derive(Eq)
 pub(all) suberror FaceMetricsError {
   /// The metrics break an invariant every face keeps (see
   /// `FaceMetrics::new`). The payload names the family and the fault.
   InvalidFaceMetrics(String)
-} derive(Eq)
+}
 
 ///|
 pub extend FaceMetricsError with Eq::{not_equal, equal}

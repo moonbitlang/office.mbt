@@ -1,5 +1,6 @@
 ///|
 /// Border style used by an annotation border dictionary.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfAnnotationStyle {
   AnnotationNoStyle
   AnnotationSolid
@@ -7,7 +8,7 @@ pub(all) enum PdfAnnotationStyle {
   AnnotationBeveled
   AnnotationInset
   AnnotationUnderlineStyle
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Parsed annotation border information.
@@ -15,29 +16,32 @@ pub(all) enum PdfAnnotationStyle {
 /// `vertical_radius` and `horizontal_radius` come from the legacy `/Border`
 /// array form. `style` and `dash_array` represent `/BS` dictionary entries when
 /// present.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfAnnotationBorder {
   width : Double
   vertical_radius : Double
   horizontal_radius : Double
   style : PdfAnnotationStyle
   dash_array : Array[Int32]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// RGB annotation colour from the `/C` entry.
 ///
 /// Components are stored as integer channel values after parsing PDF numbers.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfAnnotationColour {
   red : Int32
   green : Int32
   blue : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Supported annotation subtype.
 ///
 /// Popup annotations embed their resolved parent annotation when available.
 /// Unknown subtype names are preserved as `AnnotationUnknown`.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfAnnotationSubtype {
   AnnotationText
   AnnotationLink
@@ -65,7 +69,7 @@ pub(all) enum PdfAnnotationSubtype {
   AnnotationWatermark
   AnnotationThreeDee
   AnnotationUnknown(PdfName)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Parsed PDF annotation dictionary.
@@ -73,6 +77,7 @@ pub(all) enum PdfAnnotationSubtype {
 /// `contents` and `subject` are raw PDF string bytes. `rectangle` is required
 /// when reading from a PDF. `rest` preserves dictionary entries not modeled by
 /// the typed fields so they can be written back.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfAnnotation {
   subtype : PdfAnnotationSubtype
   contents : PdfBytes?
@@ -81,7 +86,7 @@ pub(all) struct PdfAnnotation {
   border : PdfAnnotationBorder
   colour : PdfAnnotationColour?
   rest : PdfObject
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_annotation_default_border() -> PdfAnnotationBorder {

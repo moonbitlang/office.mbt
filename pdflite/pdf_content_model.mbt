@@ -1,16 +1,18 @@
 ///|
+#derive(Debug, Eq, ToJson)
 enum PdfContentLexeme {
   ContentOperand(@syntax.PdfObject)
   ContentOperator(BytesView)
   ContentComment
   ContentEnd
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
+#derive(Debug, Eq)
 enum PdfContentInlineTextFilter {
   PdfContentInlineAsciiHex
   PdfContentInlineAscii85
-} derive(Debug, Eq)
+}
 
 ///|
 type PdfContentColourSpaceComponents = (@syntax.PdfObject) -> Int32 raise @core.PdfError

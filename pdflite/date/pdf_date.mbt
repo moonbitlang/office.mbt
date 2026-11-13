@@ -3,6 +3,7 @@
 ///
 /// The fields mirror PDF's `D:YYYYMMDDHHmmSSOHH'mm'` representation. Month and
 /// day default to `1` when omitted during parsing; time fields default to zero.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDate {
   year : Int32
   month : Int32
@@ -12,7 +13,7 @@ pub(all) struct PdfDate {
   second : Int32
   hour_offset : Int32
   minute_offset : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_date_check(date : PdfDate) -> Unit raise @core.PdfError {

@@ -3,11 +3,12 @@
 /// names. Generations make that reset O(1): older `ProcessContent` entries stay
 /// reference-counted until their XML scope ends, but only the current
 /// generation participates in element selection.
+#derive(Eq, Hash)
 priv struct MceProcessKey {
   namespace_id : Int32
   generation : Int32
   local_name : String
-} derive(Eq, Hash)
+}
 
 ///|
 priv struct MceProcessGenerationReset {

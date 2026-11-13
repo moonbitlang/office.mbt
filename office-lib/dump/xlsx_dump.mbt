@@ -2,11 +2,12 @@
 /// Errors raised while producing a dump. Self-check failures mean the dump
 /// engine produced an op its own batch parser refuses — a dump bug, never
 /// silently emitted.
+#derive(@debug.Debug)
 pub suberror DumpError {
   DumpCancelled
   DumpUnsupported(String)
   DumpSelfCheckFailed(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend DumpError with @moonbitlang/core/debug.Debug::{to_repr}

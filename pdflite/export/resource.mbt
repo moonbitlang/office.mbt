@@ -3,6 +3,7 @@
 
 ///|
 /// The kind of a resource.
+#derive(Eq)
 priv enum ResourceKind {
   ExtGState
   ColorSpace
@@ -10,7 +11,7 @@ priv enum ResourceKind {
   Shading
   XObject
   Font
-} derive(Eq)
+}
 
 ///|
 fn ResourceKind::prefix(self : ResourceKind) -> String {
@@ -88,12 +89,13 @@ fn ResourceDictionary::to_pdf(self : ResourceDictionary) -> Obj {
 
 ///|
 /// An external graphics state.
+#derive(Eq, Debug)
 priv struct ExtGState {
   non_stroking_alpha : Double?
   stroking_alpha : Double?
   blend_mode : String?
   mask : Int32?
-} derive(Eq, Debug)
+}
 
 ///|
 fn ExtGState::new() -> ExtGState {

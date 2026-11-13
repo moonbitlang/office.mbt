@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/font/afm"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -18,18 +19,19 @@ pub fn pdf_read_afm_kern_pairs(BytesView) -> Array[(Bytes, Bytes, Int32)] raise 
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfAfmData {
   headers : Array[(Bytes, Bytes)]
   char_metrics : Array[(Int32, Int32)]
   kerns : Array[(Int32, Int32, Int32)]
   char_name_widths : Array[(Bytes, Int32)]
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAfmData::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAfmData::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAfmData::to_json(Self) -> Json
+pub fn PdfAfmData::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAfmData::to_repr(Self) -> @debug.Repr
 

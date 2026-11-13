@@ -16,6 +16,7 @@
 ///   by the slide-level mappings.
 /// * `Accent1`..`Accent6`, `Hlink`, `FolHlink` are direct theme references.
 /// * `PhClr` is the placeholder color used inside style reference resolution.
+#derive(Eq, Debug)
 pub(all) enum ThemeColor {
   Bg1
   Bg2
@@ -34,7 +35,7 @@ pub(all) enum ThemeColor {
   Hlink
   FolHlink
   PhClr
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ThemeColor with @debug.Debug::{to_repr}
@@ -113,13 +114,14 @@ pub impl Show for ThemeColor with fn output(self, logger) {
 ///   sat to 75%.
 /// - `LumMod` — Modulate (multiply) the luminance.
 /// - `Alpha` — Set the opacity. `Percentage(50.0)` is half-transparent.
+#derive(Eq, Debug)
 pub(all) enum ColorTransform {
   Tint(Percentage)
   Shade(Percentage)
   SatMod(Percentage)
   LumMod(Percentage)
   Alpha(Percentage)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ColorTransform with @debug.Debug::{to_repr}
@@ -143,10 +145,11 @@ pub impl Show for ColorTransform with fn output(self, logger) {
 
 ///|
 /// A reference to a theme color with an ordered list of transforms.
+#derive(Debug)
 pub struct SchemeColor {
   base : ThemeColor
   transforms : Array[ColorTransform]
-} derive(Debug)
+}
 
 ///|
 pub extend SchemeColor with @debug.Debug::{to_repr}

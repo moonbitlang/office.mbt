@@ -41,10 +41,11 @@ pub struct Workbook {
 }
 
 ///|
+#derive(Debug)
 enum SheetEntry {
   Worksheet(Int32)
   ChartSheet(Int32)
-} derive(Debug)
+}
 
 ///|
 let max_sheet_name_length = 31

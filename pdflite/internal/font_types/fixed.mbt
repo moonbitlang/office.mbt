@@ -2,17 +2,20 @@
 
 ///|
 /// 32-bit signed fixed point number with 16 bits of fraction.
-pub(all) struct Fixed(Int32) derive(Eq, Compare, Hash, Debug)
+#derive(Eq, Compare, Hash, Debug)
+pub(all) struct Fixed(Int32)
 
 ///|
 /// 32-bit signed fixed point number with 6 bits of fraction.
-pub(all) struct F26Dot6(Int32) derive(Eq, Compare, Hash, Debug)
+#derive(Eq, Compare, Hash, Debug)
+pub(all) struct F26Dot6(Int32)
 
 ///|
 /// 16-bit signed fixed point number with 14 bits of fraction.
 ///
 /// The raw value is stored sign-extended in an `Int`.
-pub(all) struct F2Dot14(Int32) derive(Eq, Compare, Hash, Debug)
+#derive(Eq, Compare, Hash, Debug)
+pub(all) struct F2Dot14(Int32)
 
 // ---------------------------------------------------------------------------
 // Fixed (16.16)

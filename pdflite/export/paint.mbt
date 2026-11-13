@@ -3,34 +3,38 @@
 
 ///|
 /// A regular (process) color with 8-bit components.
+#derive(Eq, Debug)
 pub(all) enum RegularColor {
   Rgb(Int32, Int32, Int32)
   Luma(Int32)
   Cmyk(Int32, Int32, Int32, Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 /// The colorant of a separation color space.
+#derive(Eq, Debug)
 pub(all) enum SeparationColorant {
   AllColorants
   NoColorant
   Custom(String)
-} derive(Eq, Debug)
+}
 
 ///|
 /// A separation color space: a colorant with a fallback color.
+#derive(Eq, Debug)
 pub(all) struct SeparationSpace {
   colorant : SeparationColorant
   fallback : RegularColor
-} derive(Eq, Debug)
+}
 
 ///|
 /// A color.
+#derive(Eq, Debug)
 pub(all) enum Color {
   Regular(RegularColor)
   /// A separation (spot) color with an 8-bit tint.
   Separation(Int32, SeparationSpace)
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Color::rgb(r : Int32, g : Int32, b : Int32) -> Color {
@@ -72,23 +76,26 @@ pub fn Color::as_rgb(self : Color) -> (Int32, Int32, Int32)? {
 
 ///|
 /// A gradient stop.
+#derive(Eq, Debug)
 pub(all) struct Stop {
   /// The offset of the stop (between 0 and 1).
   offset : Double
   color : Color
   /// The opacity of the stop (between 0 and 1).
   opacity : Double
-} derive(Eq, Debug)
+}
 
 ///|
 /// How to extend a gradient beyond its stops.
+#derive(Eq, Debug)
 pub(all) enum SpreadMethod {
   Pad
   Reflect
   Repeat
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct LinearGradient {
   x1 : Double
   y1 : Double
@@ -98,9 +105,10 @@ pub(all) struct LinearGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct RadialGradient {
   fx : Double
   fy : Double
@@ -112,9 +120,10 @@ pub(all) struct RadialGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) struct SweepGradient {
   cx : Double
   cy : Double
@@ -124,7 +133,7 @@ pub(all) struct SweepGradient {
   spread_method : SpreadMethod
   stops : Array[Stop]
   anti_alias : Bool
-} derive(Eq, Debug)
+}
 
 ///|
 /// A tiling pattern.
@@ -156,10 +165,11 @@ pub fn Paint::as_rgb(self : Paint) -> (Int32, Int32, Int32)? {
 
 ///|
 /// The fill rule.
+#derive(Eq, Debug)
 pub(all) enum FillRule {
   NonZero
   EvenOdd
-} derive(Eq, Debug)
+}
 
 ///|
 /// A fill.
@@ -176,25 +186,28 @@ pub fn Fill::default() -> Fill {
 }
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum LineCap {
   Butt
   Round
   Square
-} derive(Eq, Debug)
+}
 
 ///|
+#derive(Eq, Debug)
 pub(all) enum LineJoin {
   Miter
   Round
   Bevel
-} derive(Eq, Debug)
+}
 
 ///|
 /// A dash pattern.
+#derive(Eq, Debug)
 pub(all) struct StrokeDash {
   array : Array[Double]
   offset : Double
-} derive(Eq, Debug)
+}
 
 ///|
 /// A stroke.

@@ -56,6 +56,7 @@
 ///   `<c:dPt>`, `<c:errBars>`, `<c:marker>`, `<c:smooth>`, `<c:explosion>`,
 ///   `<c:invertIfNegative>`, `<c:pictureOptions>`, `<c:shape>`, `<c:extLst>`,
 ///   foreign-namespace siblings).
+#derive(Eq, Debug)
 pub(all) struct ChartSeriesCore {
   idx : Int32
   order : Int32
@@ -65,7 +66,7 @@ pub(all) struct ChartSeriesCore {
   cat : @xml.XmlElement?
   val : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartSeriesCore with @debug.Debug::{to_repr}
@@ -90,6 +91,7 @@ pub impl Show for ChartSeriesCore with fn output(self, logger) {
 /// - `trendlines` — `<c:trendline>` fitted-curve overlays in source order.
 /// - `x_val` (`<c:xVal>`) — X-axis numeric data source.
 /// - `y_val` (`<c:yVal>`) — Y-axis numeric data source.
+#derive(Eq, Debug)
 pub(all) struct ScatterSeriesCore {
   idx : Int32
   order : Int32
@@ -99,7 +101,7 @@ pub(all) struct ScatterSeriesCore {
   x_val : @xml.XmlElement?
   y_val : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ScatterSeriesCore with @debug.Debug::{to_repr}
@@ -125,6 +127,7 @@ pub impl Show for ScatterSeriesCore with fn output(self, logger) {
 /// - `trendlines` — `<c:trendline>` fitted-curve overlays in source order.
 /// - `bubble_size` (`<c:bubbleSize>`) — third numeric data source mapping
 ///   bubble area / width.
+#derive(Eq, Debug)
 pub(all) struct BubbleSeriesCore {
   idx : Int32
   order : Int32
@@ -135,7 +138,7 @@ pub(all) struct BubbleSeriesCore {
   y_val : @xml.XmlElement?
   bubble_size : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BubbleSeriesCore with @debug.Debug::{to_repr}

@@ -18,12 +18,13 @@
 /// twins (`w:bCs`/`w:iCs`) as an office.mbt guarantee. Fields are
 /// private: the ONLY constructor is `docx_direct_format`, so an
 /// unvalidated color can never reach a planner.
+#derive(Debug, Eq)
 pub struct DocxDirectFormat {
   priv bold : Bool?
   priv italic : Bool?
   priv underline : Bool?
   priv color : String?
-} derive(Debug, Eq)
+}
 
 ///|
 /// The requested bold state: `Some(true)`/`Some(false)` forces it,

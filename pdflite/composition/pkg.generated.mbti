@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/composition"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -15,16 +16,17 @@ pub fn pdf_composition_text_of_entries(ArrayView[PdfCompositionEntry]) -> Bytes
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfCompositionEntry {
   label : String
   bytes : Int32
   percent : Double
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfCompositionEntry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfCompositionEntry::not_equal(Self, Self) -> Bool
-pub fn PdfCompositionEntry::to_json(Self) -> Json
+pub fn PdfCompositionEntry::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfCompositionEntry::to_repr(Self) -> @debug.Repr
 

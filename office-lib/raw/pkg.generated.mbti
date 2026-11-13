@@ -3,6 +3,7 @@ package "moonbitlang/office-lib/raw"
 
 import {
   "moonbit-community/flate/zip",
+  "moonbitlang/core/json",
   "moonbitlang/office-lib",
 }
 
@@ -31,7 +32,7 @@ pub fn resolve_raw_action(StringView) -> RawAction?
 
 // Errors
 pub(all) suberror RawError {
-  RawError(code~ : String, message~ : String, details~ : Json?)
+  RawError(code~ : String, message~ : String, details~ : @json.Json?)
 }
 #deprecated
 pub fn RawError::output(Self, &Logger) -> Unit
@@ -69,7 +70,7 @@ pub struct RawInventory {
 }
 pub fn RawInventory::document_format(Self) -> @office-lib.DocumentFormat
 pub fn RawInventory::part_records(Self) -> ReadOnlyArray[RawPartInfo]
-pub fn RawInventory::to_json(Self) -> Json
+pub fn RawInventory::to_json(Self) -> @json.Json
 
 pub struct RawMutation {
   // private fields
@@ -79,7 +80,7 @@ pub fn RawMutation::part_name(Self) -> String
 pub fn RawMutation::result_bytes(Self, Bytes) -> Bytes
 pub fn RawMutation::reuses_original(Self) -> Bool
 pub fn RawMutation::selected_count(Self) -> Int32
-pub fn RawMutation::to_json(Self) -> Json
+pub fn RawMutation::to_json(Self) -> @json.Json
 
 type RawPackageResult
 
@@ -105,7 +106,7 @@ pub fn RawPartInfo::is_xml(Self) -> Bool
 pub fn RawPartInfo::media_type(Self) -> String
 pub fn RawPartInfo::part_name(Self) -> String
 pub fn RawPartInfo::semantic_aliases(Self) -> ReadOnlyArray[String]
-pub fn RawPartInfo::to_json(Self) -> Json
+pub fn RawPartInfo::to_json(Self) -> @json.Json
 
 // Type aliases
 

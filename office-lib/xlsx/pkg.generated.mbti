@@ -22,9 +22,10 @@ pub async fn transact_template(@transaction.TransactionOptions, Map[String, @tem
 pub async fn transact_template_document(@transaction.TransactionOptions, @template.TemplateData, allow_missing~ : Bool) -> XlsxTemplateDocumentResult
 
 // Errors
+#derive(@debug.Debug)
 pub suberror XlsxTemplateRefused {
   XlsxTemplateRefused(XlsxTemplateReport)
-} derive(@debug.Debug)
+}
 pub fn XlsxTemplateRefused::to_repr(Self) -> @debug.Repr
 
 // Types and methods
@@ -38,6 +39,7 @@ pub struct XlsxCreateResult {
   transaction : @transaction.TransactionReport
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct XlsxRegionOutcome {
   name : String
   source_location : String
@@ -46,7 +48,7 @@ pub(all) struct XlsxRegionOutcome {
   records : Int32
   replaced : Int32
   escapes_applied : Int32
-} derive(Eq, @debug.Debug)
+}
 pub fn XlsxRegionOutcome::equal(Self, Self) -> Bool
 pub fn XlsxRegionOutcome::not_equal(Self, Self) -> Bool
 pub fn XlsxRegionOutcome::to_repr(Self) -> @debug.Repr
@@ -58,14 +60,16 @@ pub struct XlsxTemplateDocumentResult {
   transaction : @transaction.TransactionReport
 }
 
+#derive(Eq, @debug.Debug)
 pub(all) struct XlsxTemplateFinding {
   location : String
   detail : String
-} derive(Eq, @debug.Debug)
+}
 pub fn XlsxTemplateFinding::equal(Self, Self) -> Bool
 pub fn XlsxTemplateFinding::not_equal(Self, Self) -> Bool
 pub fn XlsxTemplateFinding::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct XlsxTemplateReport {
   mut placeholders_found : Int32
   mut replaced : Int32
@@ -82,7 +86,7 @@ pub(all) struct XlsxTemplateReport {
   mut unsupported_total : Int32
   mut unused_total : Int32
   mut changed : Bool
-} derive(Eq, @debug.Debug)
+}
 pub fn XlsxTemplateReport::equal(Self, Self) -> Bool
 pub fn XlsxTemplateReport::not_equal(Self, Self) -> Bool
 pub fn XlsxTemplateReport::to_repr(Self) -> @debug.Repr

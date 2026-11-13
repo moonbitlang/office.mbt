@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/font"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/syntax",
 }
 
@@ -11,6 +12,7 @@ import {
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfFontListEntry {
   page : Int32
   name : String
@@ -18,45 +20,47 @@ pub(all) struct PdfFontListEntry {
   basefont : String
   encoding : String
   font : @syntax.PdfObject
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfFontListEntry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfFontListEntry::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfFontListEntry::to_json(Self) -> Json
+pub fn PdfFontListEntry::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfFontListEntry::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfFontTableEntry {
   code : Int32
   unicode : String
   utf8 : String
   unicode_name : String
   glyphnames : String
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfFontTableEntry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfFontTableEntry::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfFontTableEntry::to_json(Self) -> Json
+pub fn PdfFontTableEntry::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfFontTableEntry::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfMissingFontEntry {
   page : Int32
   name : String
   subtype : String
   basefont : String
   encoding : String
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfMissingFontEntry::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfMissingFontEntry::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfMissingFontEntry::to_json(Self) -> Json
+pub fn PdfMissingFontEntry::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfMissingFontEntry::to_repr(Self) -> @debug.Repr
 

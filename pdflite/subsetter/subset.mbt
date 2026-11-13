@@ -14,6 +14,7 @@
 
 ///|
 /// Parsing failed because the font face is malformed.
+#derive(Eq)
 pub(all) suberror SubsetError {
   /// The file contains an unknown kind of font.
   UnknownKind
@@ -30,7 +31,7 @@ pub(all) suberror SubsetError {
   OverflowError
   /// An error occurred while processing the CFF table.
   CFFError
-} derive(Eq)
+}
 
 ///|
 /// Upstream's `Display` messages.
@@ -353,6 +354,7 @@ fn checksum(data : BytesView) -> UInt32 {
 
 ///|
 /// The flavor of outlines used by the font.
+#derive(Eq)
 priv enum FontFlavor {
   /// TrueType fonts using the `glyf` table.
   TrueType
@@ -360,7 +362,7 @@ priv enum FontFlavor {
   Cff
   /// CFF2 fonts using the `CFF2` table.
   Cff2
-} derive(Eq)
+}
 
 ///|
 fn FontFlavor::magic(self : FontFlavor) -> UInt32 {
@@ -492,12 +494,13 @@ fn[T] binary_search_by(xs : Array[T], f : (T) -> Int32) -> Result[Int32, Int32] 
 
 ///|
 /// Whether the font is a font collection or a single font.
+#derive(Eq)
 priv enum FontKind {
   /// A font collection.
   Collection
   /// A single font.
   Single
-} derive(Eq)
+}
 
 ///|
 fn read_font_kind(r : Reader) -> FontKind? {
@@ -514,9 +517,10 @@ fn read_font_kind(r : Reader) -> FontKind? {
 
 ///|
 /// A 4-byte OpenType tag.
+#derive(Eq, Hash)
 pub struct Tag {
   priv bytes : Bytes
-} derive(Eq, Hash)
+}
 
 ///|
 /// Create a tag from its four bytes (`None` for another length).

@@ -11,10 +11,11 @@ priv struct XmlMceName {
 }
 
 ///|
+#derive(Eq, Hash)
 priv struct XmlMceExtensionName {
   namespace_uri : String
   local_name : String
-} derive(Eq, Hash)
+}
 
 ///|
 priv struct XmlMceScopeDelta {

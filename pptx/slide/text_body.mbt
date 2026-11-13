@@ -26,6 +26,7 @@
 /// (underline excluding spaces), and the 12 line styles. Less common
 /// fixed-pixel variants are mapped onto these on read; widen later if
 /// real-world files surface fidelity gaps.
+#derive(Eq, Debug)
 pub(all) enum UnderlineKind {
   UlNone // "none"
   UlWords // "words"
@@ -45,7 +46,7 @@ pub(all) enum UnderlineKind {
   UlWavy // "wavy"
   UlWavyHeavy // "wavyHeavy"
   UlWavyDouble // "wavyDbl"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend UnderlineKind with @debug.Debug::{to_repr}
@@ -55,11 +56,12 @@ pub extend UnderlineKind with Eq::{not_equal, equal}
 
 ///|
 /// Strikethrough style (`ST_TextStrikeType`, §20.1.10.78).
+#derive(Eq, Debug)
 pub(all) enum StrikeKind {
   StNoStrike // "noStrike"
   StSingle // "sngStrike"
   StDouble // "dblStrike"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StrikeKind with @debug.Debug::{to_repr}
@@ -69,11 +71,12 @@ pub extend StrikeKind with Eq::{not_equal, equal}
 
 ///|
 /// Capitalisation style (`ST_TextCapsType`, §20.1.10.7).
+#derive(Eq, Debug)
 pub(all) enum CapsKind {
   CapsNone // "none"
   CapsSmall // "small"
   CapsAll // "all"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CapsKind with @debug.Debug::{to_repr}
@@ -124,6 +127,7 @@ pub extend CapsKind with Eq::{not_equal, equal}
 /// `hyperlink_tooltip` is independent of both so it survives resolution.
 /// Direct attribute mappings: `bold`→`b`, `italic`→`i`, `underline`→`u`,
 /// `strikethrough`→`strike`.
+#derive(Eq, Debug)
 pub(all) struct RunProperties {
   lang : String
   font_size : @units.Pt?
@@ -147,7 +151,7 @@ pub(all) struct RunProperties {
   hyperlink_action : String?
   hyperlink_target : HyperlinkTarget?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend RunProperties with @debug.Debug::{to_repr}
@@ -166,10 +170,11 @@ pub extend RunProperties with Eq::{not_equal, equal}
 /// - `InternalSlide` — Internal jump to slide `slide_idx` (zero-based, as in
 ///   `Presentation::slides()`). Emitted with `TargetMode::Internal` and
 ///   relationship type `rt_slide` pointing at the target slide part.
+#derive(Eq, Debug)
 pub(all) enum HyperlinkTarget {
   ExternalUrl(String)
   InternalSlide(Int32)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend HyperlinkTarget with @debug.Debug::{to_repr}
@@ -280,6 +285,7 @@ pub fn CapsKind::from_xml(s : String) -> CapsKind? {
 
 ///|
 /// Paragraph alignment (`ST_TextAlignType`, ECMA-376 §20.1.10.59).
+#derive(Eq, Debug)
 pub(all) enum TextAlignment {
   AlignLeft // "l"
   AlignCenter // "ctr"
@@ -288,7 +294,7 @@ pub(all) enum TextAlignment {
   AlignJustifyLow // "justLow"
   AlignDistributed // "dist"
   AlignThaiDistributed // "thaiDist"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TextAlignment with @debug.Debug::{to_repr}
@@ -319,6 +325,7 @@ pub fn TextAlignment::from_xml(s : String) -> TextAlignment? {
 /// Variants are grouped: arabic, arabic (DBNum / regional), roman upper and
 /// lower, alpha upper and lower, circled numerals, then the East-Asian /
 /// Hindi / Thai / Hebrew schemes that are legal but rarely emitted.
+#derive(Eq, Debug)
 pub(all) enum AutoNumType {
   ArabicPeriod // "arabicPeriod" — "1."
   ArabicParenR // "arabicParenR" — "1)"
@@ -359,7 +366,7 @@ pub(all) enum AutoNumType {
   HindiNumPeriod // "hindiNumPeriod"
   HindiNumParenR // "hindiNumParenR"
   HindiAlpha1Period // "hindiAlpha1Period"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutoNumType with @debug.Debug::{to_repr}
@@ -428,12 +435,13 @@ pub fn AutoNumType::from_xml(s : String) -> AutoNumType? {
 ///   is `1` when the attribute is absent (the spec default).
 /// - `Picture` (`<a:buBlip><a:blip r:embed="rIdN"/></a:buBlip>`) — image
 ///   bullet. Payload is the relationship id.
+#derive(Eq, Debug)
 pub(all) enum Bullet {
   BulNone
   Char(String)
   AutoNum(AutoNumType, Int32)
   Picture(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Bullet with @debug.Debug::{to_repr}
@@ -459,6 +467,7 @@ pub extend Bullet with Eq::{not_equal, equal}
 ///   style".
 /// - `rtl` — right-to-left paragraph direction. `None` inherits from the list
 ///   style / master rather than meaning left-to-right.
+#derive(Eq, Debug)
 pub(all) struct ParagraphProperties {
   level : Int32
   alignment : TextAlignment?
@@ -470,7 +479,7 @@ pub(all) struct ParagraphProperties {
   bullet : Bullet?
   rtl : Bool?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ParagraphProperties with @debug.Debug::{to_repr}
@@ -487,10 +496,11 @@ pub extend ParagraphProperties with Eq::{not_equal, equal}
 /// - `Percent` (`<a:spcPct val="…"/>`) — e.g. `Percent(Percentage(120.0))` is
 ///   120 % line height.
 /// - `Points` (`<a:spcPts val="…"/>`) — absolute spacing in points.
+#derive(Eq, Debug)
 pub(all) enum TextSpacing {
   Percent(@units.Percentage)
   Points(@units.Pt)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TextSpacing with @debug.Debug::{to_repr}
@@ -525,11 +535,12 @@ pub fn ParagraphProperties::default() -> ParagraphProperties {
 /// - `extension` — unmodelled `<a:r>` siblings of `<a:rPr>` and `<a:t>`. The
 ///   spec only defines those two children, but some tools emit `<a:extLst>`
 ///   or foreign-namespace decorations.
+#derive(Eq, Debug)
 pub(all) struct Run {
   properties : RunProperties
   text : String
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Run with @debug.Debug::{to_repr}
@@ -543,13 +554,14 @@ pub extend Run with Eq::{not_equal, equal}
 /// `field_type` is the spec's `ST_TextFieldType` value (`slidenum`,
 /// `datetime1`, `datetime2`, …, or `unknown` if absent).
 ///
+#derive(Eq, Debug)
 pub(all) struct Field {
   id : String
   field_type : String
   properties : RunProperties
   text : String
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Field with @debug.Debug::{to_repr}
@@ -564,11 +576,12 @@ pub extend Field with Eq::{not_equal, equal}
 /// - `Break` — Soft line break inside a paragraph. Carries the rPr of the
 ///   break element (which controls the break's font metrics) for
 ///   completeness.
+#derive(Eq, Debug)
 pub(all) enum ParagraphContent {
   RunContent(Run)
   Break(RunProperties)
   FieldContent(Field)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ParagraphContent with @debug.Debug::{to_repr}
@@ -583,12 +596,13 @@ pub extend ParagraphContent with Eq::{not_equal, equal}
 ///   *next* character typed at the end of this paragraph inherits, and what
 ///   an empty paragraph is styled by. PowerPoint writes it on nearly every
 ///   paragraph it saves; `None` means the element was absent.
+#derive(Eq, Debug)
 pub(all) struct Paragraph {
   properties : ParagraphProperties
   content : Array[ParagraphContent]
   end_run_properties : RunProperties?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Paragraph with @debug.Debug::{to_repr}
@@ -614,13 +628,14 @@ pub fn Paragraph::plain_text(self : Paragraph) -> String {
 ///|
 /// Vertical anchor inside the text frame (`ST_TextAnchoringType`,
 /// ECMA-376 §20.1.10.59).
+#derive(Eq, Debug)
 pub(all) enum Anchor {
   AnchorTop // "t"
   AnchorCenter // "ctr"
   AnchorBottom // "b"
   AnchorJustify // "just"
   AnchorDistributed // "dist"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Anchor with @debug.Debug::{to_repr}
@@ -644,10 +659,11 @@ pub fn Anchor::from_xml(s : String) -> Anchor? {
 
 ///|
 /// Text wrapping mode (`ST_TextWrappingType`, §20.1.10.85).
+#derive(Eq, Debug)
 pub(all) enum WrapKind {
   WrapNone // "none"
   WrapSquare // "square"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend WrapKind with @debug.Debug::{to_repr}
@@ -668,6 +684,7 @@ pub fn WrapKind::from_xml(s : String) -> WrapKind? {
 
 ///|
 /// Text vertical-orientation (`ST_TextVerticalType`, §20.1.10.83).
+#derive(Eq, Debug)
 pub(all) enum VerticalText {
   VertHorz // "horz"
   VertVert // "vert"
@@ -676,7 +693,7 @@ pub(all) enum VerticalText {
   VertEaVert // "eaVert"
   VertMongolianVert // "mongolianVert"
   VertWordArtVertRtl // "wordArtVertRtl"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend VerticalText with @debug.Debug::{to_repr}
@@ -704,11 +721,12 @@ pub fn VerticalText::from_xml(s : String) -> VerticalText? {
 /// Auto-fit behaviour (`<a:noAutofit>` / `<a:normAutofit>` /
 /// `<a:spAutoFit>`). `NormAutoFit` carries `(fontScale, lnSpcReduction)`
 /// both in 1/1000 of a percent per spec.
+#derive(Eq, Debug)
 pub(all) enum AutoFit {
   NoAutoFit
   NormAutoFit(@units.Percentage, @units.Percentage)
   SpAutoFit
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AutoFit with @debug.Debug::{to_repr}
@@ -723,6 +741,7 @@ pub extend AutoFit with Eq::{not_equal, equal}
 /// defaults". The 3d4 slice covers the practical surface; warp text,
 /// flatTx, and rich/RTL column attributes are deferred.
 ///
+#derive(Eq, Debug)
 pub struct BodyProperties {
   rotation : @units.Angle?
   vertical_text : VerticalText?
@@ -734,7 +753,7 @@ pub struct BodyProperties {
   bottom_inset : @units.Emu?
   auto_fit : AutoFit?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BodyProperties with @debug.Debug::{to_repr}
@@ -766,11 +785,12 @@ pub fn BodyProperties::default() -> BodyProperties {
 /// corresponds to `<a:lvl{i+1}pPr>` for `i ∈ 0..9` — the spec defines
 /// nine levels (`lvl1pPr` … `lvl9pPr`). Missing slots are `None`.
 ///
+#derive(Eq, Debug)
 pub struct ListStyle {
   default_props : ParagraphProperties?
   level_props : Array[ParagraphProperties?]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ListStyle with @debug.Debug::{to_repr}
@@ -806,12 +826,13 @@ pub fn ListStyle::empty() -> ListStyle {
 ///   decorations). The three modelled children `<a:bodyPr>`, `<a:lstStyle>`,
 ///   `<a:p>` are the only DrawingML children defined, but extension-aware
 ///   tools (Office variants, add-ins) may emit more.
+#derive(Eq, Debug)
 pub(all) struct TextBody {
   body_properties : BodyProperties?
   list_style : ListStyle?
   paragraphs : Array[Paragraph]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend TextBody with @debug.Debug::{to_repr}

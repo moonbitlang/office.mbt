@@ -8,6 +8,7 @@
 ///|
 /// One positioned run fragment on a line. `font` is the resolved,
 /// renderable face (post family-mapping and CJK fallback).
+#derive(Eq, Debug, ToJson)
 pub(all) struct PlacedRun {
   font : @pagelayout.FontSpec
   size_pt : Double
@@ -15,23 +16,25 @@ pub(all) struct PlacedRun {
   text : String
   advances_pt : Array[Double]
   color : @pagelayout.Color
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One laid-out line: `baseline_pt` and `height_pt` are relative to the
 /// paragraph's top edge (which includes `space_before_pt`).
+#derive(Eq, Debug, ToJson)
 pub(all) struct LineBox {
   baseline_pt : Double
   height_pt : Double
   runs : Array[PlacedRun]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A fully laid-out paragraph. `height_pt` includes space before/after.
+#derive(Eq, Debug, ToJson)
 pub(all) struct ParagraphLayout {
   height_pt : Double
   lines : Array[LineBox]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 priv struct FlatRun {

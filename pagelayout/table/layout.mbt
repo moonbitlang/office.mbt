@@ -6,6 +6,7 @@
 
 ///|
 /// One laid-out cell: where it sits in the table and the lines inside it.
+#derive(Eq, Debug, ToJson)
 pub(all) struct PlacedCell {
   x_pt : Double
   width_pt : Double
@@ -18,26 +19,28 @@ pub(all) struct PlacedCell {
   /// Grid columns this cell covers, for border and merge geometry.
   column : Int32
   grid_span : Int32
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One laid-out row, positioned from the table's top edge.
+#derive(Eq, Debug, ToJson)
 pub(all) struct PlacedRow {
   y_pt : Double
   height_pt : Double
   cells : Array[PlacedCell]
   header : Bool
   cant_split : Bool
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A fully laid-out table, table-relative.
+#derive(Eq, Debug, ToJson)
 pub(all) struct TableLayoutResult {
   width_pt : Double
   height_pt : Double
   columns : Array[Double]
   rows : Array[PlacedRow]
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Lay a cell's paragraphs out at `inner_width`, stacking them, and

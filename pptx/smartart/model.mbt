@@ -29,6 +29,7 @@
 /// - `Matrix` — Items arranged in a roughly-square grid (built-in `matrix1`).
 /// - `Relationship` — A central hub with related items around it (built-in
 ///   `radial1`).
+#derive(Eq, Debug)
 pub(all) enum SmartArtKind {
   List
   Process
@@ -38,7 +39,7 @@ pub(all) enum SmartArtKind {
   Hierarchy
   Matrix
   Relationship
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartArtKind with @debug.Debug::{to_repr}
@@ -56,11 +57,12 @@ pub extend SmartArtKind with Eq::{not_equal, equal}
 /// - `fill` — Box fill colour.
 /// - `line` — Box outline colour.
 /// - `text_color` — Text colour.
+#derive(Eq, Debug)
 pub struct NodeStyle {
   fill : @units.RgbColor?
   line : @units.RgbColor?
   text_color : @units.RgbColor?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NodeStyle with @debug.Debug::{to_repr}
@@ -86,11 +88,12 @@ pub fn NodeStyle::new(
 ///
 /// - `style` — Colour overrides for this node's box, or `None` for the
 ///   quick-style defaults.
+#derive(Eq, Debug)
 pub struct Node {
   text : String
   children : Array[Node]
   style : NodeStyle?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Node with @debug.Debug::{to_repr}
@@ -133,10 +136,11 @@ pub fn Node::with_text_color(self : Node, rgb : @units.RgbColor) -> Node {
 
 ///|
 /// A complete SmartArt diagram — a `kind` plus its top-level `nodes`.
+#derive(Eq, Debug)
 pub struct SmartArt {
   kind : SmartArtKind
   nodes : Array[Node]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SmartArt with @debug.Debug::{to_repr}

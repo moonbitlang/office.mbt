@@ -6,6 +6,7 @@ pub const SCHEMA_DUMP : String = "office.dump/1"
 /// One machine-readable record of source content the dump could not express
 /// as replayable ops. Records are ordered like the features they describe so
 /// they participate in the fixpoint comparison.
+#derive(Eq, ToJson)
 pub(all) struct DumpResidual {
   code : String
   severity : String
@@ -13,7 +14,7 @@ pub(all) struct DumpResidual {
   location : Json
   asset : String?
   detail : String
-} derive(Eq, ToJson)
+}
 
 ///|
 pub extend DumpResidual with Eq::{not_equal, equal}
@@ -23,10 +24,11 @@ pub extend DumpResidual with ToJson::{to_json}
 
 ///|
 /// One non-fatal dump diagnostic.
+#derive(Eq, ToJson)
 pub(all) struct DumpWarning {
   code : String
   message : String
-} derive(Eq, ToJson)
+}
 
 ///|
 pub extend DumpWarning with Eq::{not_equal, equal}
@@ -38,11 +40,12 @@ pub extend DumpWarning with ToJson::{to_json}
 /// One captured binary asset, content-addressed by its SHA-256 digest.
 /// Assets are referenced from residual records (no batch op consumes
 /// them); replay does not reconstruct them.
+#derive(Eq, ToJson)
 pub(all) struct DumpAsset {
   content_type : String
   size : Int32
   data : String
-} derive(Eq, ToJson)
+}
 
 ///|
 pub extend DumpAsset with Eq::{not_equal, equal}

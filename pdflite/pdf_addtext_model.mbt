@@ -3,7 +3,8 @@
 ///
 /// This ports the source-level non-embedding `Cpdfembed.cpdffont` variants.
 /// TrueType `EmbedInfo` remains a separate embedding slice.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfAddTextFontSource {
   PdfAddTextPreMadeFontPack(PdfFontPack)
   PdfAddTextExistingNamedFont
-} derive(Debug, Eq, ToJson)
+}

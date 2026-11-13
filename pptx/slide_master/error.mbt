@@ -7,6 +7,7 @@
 /// `ThemeError::XmlFailure`: the underlying `xml::XmlError` is reduced to
 /// `(variant_name, message)` so callers can match on `SlideMasterError`
 /// alone without dragging the XML error type in.
+#derive(Eq, Debug)
 pub(all) suberror SlideMasterError {
   /// The underlying `xml::XmlError` from a reader call. Payload is
   /// `(variant_name, descriptive_message)`.
@@ -15,7 +16,7 @@ pub(all) suberror SlideMasterError {
   /// (unexpected element, missing required attribute, wrong namespace,
   /// unknown enum value, …).
   Malformed(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideMasterError with @debug.Debug::{to_repr}

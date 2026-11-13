@@ -14,6 +14,7 @@
 ///   0..360.
 /// - `hole_size` (`<c:holeSize val="…"/>`) — integer percentage 10..90 in
 ///   practice (schema says 1..90).
+#derive(Eq, Debug)
 pub(all) struct DoughnutChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
@@ -21,7 +22,7 @@ pub(all) struct DoughnutChartBody {
   first_slice_ang : Int32?
   hole_size : Int32?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DoughnutChartBody with @debug.Debug::{to_repr}

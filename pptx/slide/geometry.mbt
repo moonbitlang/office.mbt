@@ -21,10 +21,11 @@
 ///|
 /// One `<a:gd name="…" fmla="…"/>` adjustment formula. Stored verbatim;
 /// later phases will lift `fmla` into a typed formula AST.
+#derive(Eq, Debug)
 pub(all) struct ShapeAdjustValue {
   name : String
   fmla : String
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ShapeAdjustValue with @debug.Debug::{to_repr}
@@ -38,10 +39,11 @@ pub extend ShapeAdjustValue with Eq::{not_equal, equal}
 /// `<a:custGeom>` body (`avLst`, `gdLst`, `cxnLst`, `rect`, `pathLst`)
 /// — see `CustomGeometry` for the field-by-field breakdown. Adjust
 /// handles (`<a:ahLst>`) round-trip via `CustomGeometry.extension`.
+#derive(Eq, Debug)
 pub(all) enum Geometry {
   Preset(PresetShape, Array[ShapeAdjustValue])
   Custom(CustomGeometry)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Geometry with @debug.Debug::{to_repr}
@@ -57,6 +59,7 @@ pub extend Geometry with Eq::{not_equal, equal}
 /// connectors, callouts, ribbons, misc, flowchart, action buttons, math,
 /// Office 2013+ additions. All 187 values are present so any real-world
 /// PPTX round-trips.
+#derive(Eq, Debug)
 pub(all) enum PresetShape {
   Line
   LineInv
@@ -245,7 +248,7 @@ pub(all) enum PresetShape {
   ChartX
   ChartStar
   ChartPlus
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PresetShape with @debug.Debug::{to_repr}

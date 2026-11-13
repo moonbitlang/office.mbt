@@ -1,9 +1,10 @@
 ///|
+#derive(Debug)
 pub struct Selection {
   mut sqref : String
   mut active_cell : String
   mut pane : String
-} derive(Debug)
+}
 
 ///|
 fn Selection::new() -> Selection {
@@ -33,6 +34,7 @@ pub fn Selection::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct Panes {
   mut freeze : Bool
   mut split : Bool
@@ -41,7 +43,7 @@ pub struct Panes {
   mut top_left_cell : String
   mut active_pane : String
   mut selection : Array[Selection]
-} derive(Debug)
+}
 
 ///|
 pub fn Panes::new() -> Panes {
@@ -99,6 +101,7 @@ pub fn Panes::with_values(
 }
 
 ///|
+#derive(Debug)
 pub struct SheetViewOptions {
   mut default_grid_color : Bool?
   mut right_to_left : Bool?
@@ -110,7 +113,7 @@ pub struct SheetViewOptions {
   mut top_left_cell : String?
   mut view : String?
   mut zoom_scale : Double?
-} derive(Debug)
+}
 
 ///|
 pub type ViewOptions = SheetViewOptions
@@ -189,15 +192,17 @@ pub fn SheetViewOptions::with_values(
 }
 
 ///|
+#derive(Debug)
 struct SheetPane {
   mut active_pane : String
   mut state : String
   mut top_left_cell : String
   mut x_split : Double
   mut y_split : Double
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 struct SheetView {
   mut default_grid_color : Bool?
   mut right_to_left : Bool?
@@ -213,7 +218,7 @@ struct SheetView {
   mut workbook_view_id : Int32
   mut pane : SheetPane?
   selection : Array[Selection]
-} derive(Debug)
+}
 
 ///|
 let supported_sheet_view_modes : Array[String] = [

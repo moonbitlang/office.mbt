@@ -10,10 +10,11 @@
 ///|
 /// One bounded finding list entry: a canonical `Sheet1!B2` location plus
 /// the key or reason it concerns.
+#derive(Eq, @debug.Debug)
 pub(all) struct XlsxTemplateFinding {
   location : String
   detail : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend XlsxTemplateFinding with Eq::{not_equal, equal}
@@ -23,6 +24,7 @@ pub extend XlsxTemplateFinding with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// The complete merge outcome for one workbook.
+#derive(Eq, @debug.Debug)
 pub(all) struct XlsxTemplateReport {
   mut placeholders_found : Int32
   mut replaced : Int32
@@ -41,7 +43,7 @@ pub(all) struct XlsxTemplateReport {
   mut unsupported_total : Int32
   mut unused_total : Int32
   mut changed : Bool
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend XlsxTemplateReport with Eq::{not_equal, equal}
@@ -52,9 +54,10 @@ pub extend XlsxTemplateReport with @moonbitlang/core/debug.Debug::{to_repr}
 ///|
 /// Raised when strict findings refuse publication; the report carries
 /// every bounded finding for the caller's failure envelope.
+#derive(@debug.Debug)
 pub suberror XlsxTemplateRefused {
   XlsxTemplateRefused(XlsxTemplateReport)
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend XlsxTemplateRefused with @moonbitlang/core/debug.Debug::{to_repr}

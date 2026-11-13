@@ -3,16 +3,18 @@
 ///
 /// PDF destination arrays may refer either to a page object or to a page number
 /// in another document.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfTargetPage {
   TargetPageObject(Int32)
   TargetOtherDocPageNumber(Int32)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// A normalized PDF destination.
 ///
 /// The variants cover action dictionaries, named/string destinations, null
 /// destinations, and all standard page-view destination array forms.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfDestination {
   DestAction(@syntax.PdfObject)
   DestNull
@@ -26,4 +28,4 @@ pub(all) enum PdfDestination {
   DestFitB(PdfTargetPage)
   DestFitBH(PdfTargetPage, Double?)
   DestFitBV(PdfTargetPage, Double?)
-} derive(Debug, Eq, ToJson)
+}

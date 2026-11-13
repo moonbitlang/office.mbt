@@ -57,6 +57,7 @@ let pdf_filter_ccitt_fax_short_name : @core.PdfName = pdf_filter_name("/CCF")
 ///
 /// CCITT variants carry image columns and rows because those values are needed
 /// in `/DecodeParms` when writing fax-compressed image streams.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfStreamEncoding {
   PdfStreamASCIIHex
   PdfStreamASCII85
@@ -64,12 +65,13 @@ pub(all) enum PdfStreamEncoding {
   PdfStreamFlate
   PdfStreamCCITT(Int32, Int32)
   PdfStreamCCITTG4(Int32, Int32)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// PNG/TIFF predictor requested when encoding stream data.
 ///
 /// Predictor values correspond to PDF `/Predictor` numbers.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfStreamPredictor {
   PdfStreamPredictorTIFF2
   PdfStreamPredictorPNGNone
@@ -78,7 +80,7 @@ pub(all) enum PdfStreamPredictor {
   PdfStreamPredictorPNGAverage
   PdfStreamPredictorPNGPaeth
   PdfStreamPredictorPNGOptimum
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Return the PDF filter name for this stream encoding.

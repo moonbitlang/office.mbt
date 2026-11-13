@@ -11,6 +11,7 @@
 
 ///|
 /// Body of `<c:areaChart>` (CT_AreaChart).
+#derive(Eq, Debug)
 pub(all) struct AreaChartBody {
   grouping : Grouping?
   vary_colors : Bool?
@@ -19,7 +20,7 @@ pub(all) struct AreaChartBody {
   drop_lines : @xml.XmlElement?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend AreaChartBody with @debug.Debug::{to_repr}
@@ -43,6 +44,7 @@ pub impl Show for AreaChartBody with fn output(self, logger) {
 ///
 /// - `gap_depth` (`<c:gapDepth val="…"/>`) — depth of the gap between data
 ///   series along the depth axis as a percentage of bar width.
+#derive(Eq, Debug)
 pub(all) struct Area3DChartBody {
   grouping : Grouping?
   vary_colors : Bool?
@@ -52,7 +54,7 @@ pub(all) struct Area3DChartBody {
   gap_depth : Int32?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Area3DChartBody with @debug.Debug::{to_repr}

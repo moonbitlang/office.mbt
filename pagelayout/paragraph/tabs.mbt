@@ -12,6 +12,7 @@
 
 ///|
 /// `w:tab w:val` — how text sits against the stop.
+#derive(Eq, Debug, ToJson)
 pub(all) enum TabAlign {
   TabLeft
   TabCenter
@@ -19,24 +20,26 @@ pub(all) enum TabAlign {
   TabDecimal
   /// `w:val="bar"` draws a vertical rule and does not stop text.
   TabBar
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// One `w:tab` from a paragraph's `w:tabs`.
+#derive(Eq, Debug, ToJson)
 pub(all) struct TabStop {
   position_pt : Double
   align : TabAlign
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// A paragraph's tab stops plus the document default interval
 /// (`w:defaultTabStop`, 720 twips = 36pt unless the document says
 /// otherwise). Word falls back to multiples of the default beyond the
 /// last explicit stop.
+#derive(Eq, Debug, ToJson)
 pub(all) struct TabRuler {
   stops : Array[TabStop]
   default_interval_pt : Double
-} derive(Eq, Debug, ToJson)
+}
 
 ///|
 /// Word's default ruler: no explicit stops, every 36pt.

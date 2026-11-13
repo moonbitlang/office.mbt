@@ -25,8 +25,9 @@
 /// table, assigned in opening-tag order.
 // `Eq` is production-used (`reader_projection_adapter.mbt`); `Debug` only by
 // whitebox snapshots, which the library build does not compile.
+#derive(Debug, Eq)
 #warnings("-unused_value")
-priv struct SourceElementId(Int32) derive(Debug, Eq)
+priv struct SourceElementId(Int32)
 
 ///|
 /// A joined story: the reader-input tree whose every node carries its

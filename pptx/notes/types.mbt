@@ -28,12 +28,13 @@
 /// - `clr_map_override` — Per ECMA-376, `<p:notes>` may carry a
 ///   `<p:clrMapOvr>` exactly like `<p:sld>` and `<p:sldLayout>` do. Re-uses
 ///   the same enum so the inheritance resolver works uniformly.
+#derive(Eq, Debug)
 pub(all) struct NotesSlide {
   name : String
   shapes : Array[@slide.Shape]
   clr_map_override : @slide_master.ClrMapOverride
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend NotesSlide with @debug.Debug::{to_repr}

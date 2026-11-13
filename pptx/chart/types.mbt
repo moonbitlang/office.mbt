@@ -37,6 +37,7 @@
 /// - `style` (`<c:style>`) — preset style index (1..48 in practice). `None`
 ///   when absent.
 /// - `chart` (`<c:chart>`) — REQUIRED chart definition body.
+#derive(Eq, Debug)
 pub(all) struct Chart {
   date1904 : Bool?
   lang : String?
@@ -44,7 +45,7 @@ pub(all) struct Chart {
   style : Int32?
   chart : ChartBody
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Chart with @debug.Debug::{to_repr}
@@ -96,6 +97,7 @@ pub impl Show for Chart with fn output(self, logger) {
 ///   labels past chart scale max.
 /// - `extension` (`<c:chart>`) — level unmodelled children (`<c:extLst>`,
 ///   foreign-namespace).
+#derive(Eq, Debug)
 pub(all) struct ChartBody {
   title : ChartTitle?
   auto_title_deleted : Bool?
@@ -110,7 +112,7 @@ pub(all) struct ChartBody {
   disp_blanks_as : DisplayBlanksAs?
   show_d_lbls_over_max : Bool?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ChartBody with @debug.Debug::{to_repr}
@@ -134,11 +136,12 @@ pub impl Show for ChartBody with fn output(self, logger) {
 /// - `Span` (`val="span"`) — interpolate across the gap.
 /// - `Gap` (`val="gap"`) — leave the gap visible (default).
 /// - `Zero` (`val="zero"`) — treat blank as zero.
+#derive(Eq, Debug)
 pub(all) enum DisplayBlanksAs {
   Span
   Gap
   Zero
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DisplayBlanksAs with @debug.Debug::{to_repr}
@@ -216,6 +219,7 @@ pub fn DisplayBlanksAs::to_xml(self : DisplayBlanksAs) -> String {
 /// - `sp_pr` — `<c:spPr>` shape-properties for the plot-area background.
 ///   Captured verbatim — typed later when the plot-area styling builder
 ///   lands.
+#derive(Eq, Debug)
 pub(all) struct PlotArea {
   layout : Layout?
   plots : Array[Plot]
@@ -223,7 +227,7 @@ pub(all) struct PlotArea {
   data_table : @xml.XmlElement?
   sp_pr : @xml.XmlElement?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PlotArea with @debug.Debug::{to_repr}
@@ -263,6 +267,7 @@ pub impl Show for PlotArea with fn output(self, logger) {
 /// - `SurfaceChart` (`<c:surfaceChart>`) — typed body.
 /// - `Surface3DChart` (`<c:surface3DChart>`) — typed body.
 /// - `BubbleChart` (`<c:bubbleChart>`) — typed body.
+#derive(Eq, Debug)
 pub(all) enum Plot {
   AreaChart(AreaChartBody)
   Area3DChart(Area3DChartBody)
@@ -280,7 +285,7 @@ pub(all) enum Plot {
   SurfaceChart(SurfaceChartBody)
   Surface3DChart(Surface3DChartBody)
   BubbleChart(BubbleChartBody)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Plot with @debug.Debug::{to_repr}
@@ -332,12 +337,13 @@ pub fn Plot::local_name(self : Plot) -> String {
 /// - `CatAx` — `<c:catAx>` (CT_CatAx) — category axis.
 /// - `DateAx` — `<c:dateAx>` (CT_DateAx) — date axis.
 /// - `SerAx` — `<c:serAx>` (CT_SerAx) — series axis.
+#derive(Eq, Debug)
 pub(all) enum Axis {
   ValAx(AxisCore)
   CatAx(AxisCore)
   DateAx(AxisCore)
   SerAx(AxisCore)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Axis with @debug.Debug::{to_repr}

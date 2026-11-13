@@ -31,6 +31,7 @@
 /// - `Banner` — 8" × 1" — banner. ST_SlideSizeType `banner`.
 /// - `Custom` — Arbitrary EMU dimensions (cx, cy). Stored with
 ///   ST_SlideSizeType `custom`.
+#derive(Eq, Debug)
 pub(all) enum SlideSizeKind {
   ScreenFourByThree
   ScreenSixteenByNine
@@ -41,7 +42,7 @@ pub(all) enum SlideSizeKind {
   ThirtyFiveMm
   Banner
   Custom(@units.Emu, @units.Emu)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SlideSizeKind with @debug.Debug::{to_repr}

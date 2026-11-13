@@ -3,13 +3,14 @@ package "moonbitlang/pdflite/shape"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/geometry",
 }
 
 // Values
 pub fn pdf_circle(Double, Double, Double) -> PdfPath
 
-pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> Json
+pub fn pdf_drawn_path_content_json(PdfDrawnPath) -> @json.Json
 
 pub let pdf_kappa : Double
 
@@ -17,11 +18,11 @@ pub fn pdf_path_bounds(PdfPath) -> @geometry.PdfRectangle
 
 pub fn pdf_path_segment_bounds(PdfPathSegment) -> @geometry.PdfRectangle
 
-pub fn pdf_path_segment_content_json(PdfPathSegment) -> Json
+pub fn pdf_path_segment_content_json(PdfPathSegment) -> @json.Json
 
 pub fn pdf_path_segment_transform(PdfPathSegment, @geometry.TransformMatrix) -> PdfPathSegment
 
-pub fn pdf_path_subpath_content_json(PdfPathSubpath) -> Json
+pub fn pdf_path_subpath_content_json(PdfPathSubpath) -> @json.Json
 
 pub fn pdf_path_transform(PdfPath, @geometry.TransformMatrix) -> PdfPath
 
@@ -38,25 +39,27 @@ pub fn pdf_shape_rectangle(Double, Double, Double, Double) -> PdfPath
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfDrawnPath {
   stroked : Bool
   filled : Bool
   path : PdfPath
-} derive(Eq, ToJson, @debug.Debug)
-pub fn PdfDrawnPath::content_json(Self) -> Json
+}
+pub fn PdfDrawnPath::content_json(Self) -> @json.Json
 #deprecated
 pub fn PdfDrawnPath::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfDrawnPath::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfDrawnPath::to_json(Self) -> Json
+pub fn PdfDrawnPath::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfDrawnPath::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfPath {
   winding_rule : PdfPathWindingRule
   subpaths : Array[PdfPathSubpath]
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfPath::bounds(Self) -> @geometry.PdfRectangle
 #deprecated
 pub fn PdfPath::equal(Self, Self) -> Bool
@@ -64,78 +67,83 @@ pub fn PdfPath::equal(Self, Self) -> Bool
 pub fn PdfPath::not_equal(Self, Self) -> Bool
 pub fn PdfPath::pdf_path_bounds_optional(Self) -> @geometry.PdfRectangle?
 #deprecated
-pub fn PdfPath::to_json(Self) -> Json
+pub fn PdfPath::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPath::to_repr(Self) -> @debug.Repr
 pub fn PdfPath::transform(Self, @geometry.TransformMatrix) -> Self
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfPathClosure {
   PdfPathClosed
   PdfPathOpen
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfPathClosure::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathClosure::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPathClosure::to_json(Self) -> Json
+pub fn PdfPathClosure::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathClosure::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfPathHole {
   PdfPathHole
   PdfPathNotHole
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfPathHole::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathHole::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPathHole::to_json(Self) -> Json
+pub fn PdfPathHole::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathHole::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfPathSegment {
   PdfPathStraight(@geometry.Point2, @geometry.Point2)
   PdfPathBezier(@geometry.Point2, @geometry.Point2, @geometry.Point2, @geometry.Point2)
-} derive(Eq, ToJson, @debug.Debug)
+}
 pub fn PdfPathSegment::bounds(Self) -> @geometry.PdfRectangle
-pub fn PdfPathSegment::content_json(Self) -> Json
+pub fn PdfPathSegment::content_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathSegment::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathSegment::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPathSegment::to_json(Self) -> Json
+pub fn PdfPathSegment::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathSegment::to_repr(Self) -> @debug.Repr
 pub fn PdfPathSegment::transform(Self, @geometry.TransformMatrix) -> Self
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) struct PdfPathSubpath {
   hole : PdfPathHole
   closure : PdfPathClosure
   segments : Array[PdfPathSegment]
-} derive(Eq, ToJson, @debug.Debug)
-pub fn PdfPathSubpath::content_json(Self) -> Json
+}
+pub fn PdfPathSubpath::content_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathSubpath::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathSubpath::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPathSubpath::to_json(Self) -> Json
+pub fn PdfPathSubpath::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathSubpath::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfPathWindingRule {
   PdfPathEvenOdd
   PdfPathNonZero
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfPathWindingRule::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPathWindingRule::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPathWindingRule::to_json(Self) -> Json
+pub fn PdfPathWindingRule::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPathWindingRule::to_repr(Self) -> @debug.Repr
 

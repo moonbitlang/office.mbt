@@ -29,6 +29,7 @@ priv struct ParagraphFormatSpan {
 /// `FormatBudgetExceeded` is declared for taxonomy stability before any
 /// budget constructs it, the same arrangement N0c2 records for its own
 /// budget class.
+#derive(Debug)
 #warnings("-unused_constructor")
 priv enum FormatSurgeryRefusal {
   FormatInvalidParagraph
@@ -59,7 +60,7 @@ priv enum FormatSurgeryRefusal {
   UnsupportedRpr
   FormatBudgetExceeded
   FormatInternalPlanConflict
-} derive(Debug)
+}
 
 ///|
 fn format_surgery_refusal_reason(kind : FormatSurgeryRefusal) -> String {
@@ -180,12 +181,13 @@ fn format_surgery_map_rpr_refusal(
 
 ///|
 /// How one touched run was realized.
+#derive(Debug)
 #warnings("-unused_value")
 priv enum FormatRunAction {
   FormattedInPlace
   SplitIntoSegments(Int32)
   AlreadySatisfied
-} derive(Debug)
+}
 
 ///|
 #warnings("-unused_field")

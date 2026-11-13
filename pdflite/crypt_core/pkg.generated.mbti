@@ -3,6 +3,7 @@ package "moonbitlang/pdflite/crypt_core"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
   "moonbitlang/pdflite/core",
 }
 
@@ -70,6 +71,7 @@ pub fn pdf_user_password_from_owner_password(Int32, BytesView, BytesView, Int32)
 // Errors
 
 // Types and methods
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfAesV3RandomField {
   PdfAesV3FileKey
   PdfAesV3UserValidationSalt
@@ -77,16 +79,17 @@ pub(all) enum PdfAesV3RandomField {
   PdfAesV3OwnerValidationSalt
   PdfAesV3OwnerKeySalt
   PdfAesV3PermissionsPadding
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfAesV3RandomField::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfAesV3RandomField::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfAesV3RandomField::to_json(Self) -> Json
+pub fn PdfAesV3RandomField::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfAesV3RandomField::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfEncryptionMethod {
   PdfEncryption40Bit
   PdfEncryption128Bit
@@ -94,16 +97,17 @@ pub(all) enum PdfEncryptionMethod {
   PdfEncryptionAES256(Bool)
   PdfEncryptionAES256ISO(Bool)
   PdfEncryptionAlreadyEncrypted
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfEncryptionMethod::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfEncryptionMethod::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfEncryptionMethod::to_json(Self) -> Json
+pub fn PdfEncryptionMethod::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfEncryptionMethod::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfEncryptionValues {
   crypt_type : @core.PdfCryptType
   user_entry : Bytes
@@ -114,7 +118,7 @@ pub(all) struct PdfEncryptionValues {
   permissions_entry : Bytes?
   user_encryption_key : Bytes?
   owner_encryption_key : Bytes?
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn PdfEncryptionValues::equal(Self, Self) -> Bool
 #deprecated
@@ -122,6 +126,7 @@ pub fn PdfEncryptionValues::not_equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfEncryptionValues::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug, @json.ToJson)
 pub(all) enum PdfPermission {
   PdfNoEdit
   PdfNoPrint
@@ -131,19 +136,20 @@ pub(all) enum PdfPermission {
   PdfNoExtract
   PdfNoAssemble
   PdfNoHqPrint
-} derive(Eq, ToJson, @debug.Debug)
+}
 #deprecated
 pub fn PdfPermission::equal(Self, Self) -> Bool
 #deprecated
 pub fn PdfPermission::not_equal(Self, Self) -> Bool
 #deprecated
-pub fn PdfPermission::to_json(Self) -> Json
+pub fn PdfPermission::to_json(Self) -> @json.Json
 #deprecated
 pub fn PdfPermission::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
 pub(all) struct PdfSavedEncryption {
   values : PdfEncryptionValues
-} derive(Eq, @debug.Debug)
+}
 #deprecated
 pub fn PdfSavedEncryption::equal(Self, Self) -> Bool
 #deprecated

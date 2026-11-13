@@ -5,19 +5,21 @@
 
 ///|
 /// One header or footer part: a block-level story like the body.
+#derive(Debug, Eq)
 pub(all) struct HeaderFooterPart {
   body : Array[DocumentElement]
-} derive(Debug, Eq)
+}
 
 ///|
 /// A section's reference to a header/footer part. `variant` is the OOXML
 /// reference type (`default`, `first`, or `even`); `part` is a 0-based index
 /// into the package's `headers` or `footers` array (parts are shared —
 /// several sections may reference the same part).
+#derive(Debug, Eq)
 pub(all) struct SectionRef {
   variant : String
   part : Int32
-} derive(Debug, Eq)
+}
 
 ///|
 /// One document section. `ends_after_paragraph` is the 1-based index of the
@@ -31,8 +33,9 @@ pub(all) struct SectionRef {
 /// and an explicit-but-unreadable reference blocks inheritance for that
 /// variant. Ordering is deterministic: explicit references in XML order,
 /// then inherited entries in the previous section's effective order.
+#derive(Debug, Eq)
 pub(all) struct DocumentSection {
   ends_after_paragraph : Int32?
   headers : Array[SectionRef]
   footers : Array[SectionRef]
-} derive(Debug, Eq)
+}

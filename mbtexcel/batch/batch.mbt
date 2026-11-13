@@ -68,9 +68,10 @@ pub const MAX_TOTAL_ROW_COLUMN_LINES : Int64 = 1_000_000
 ///|
 /// A batch script or op that failed validation or application. The
 /// message names the 0-based op index where one is involved.
+#derive(@debug.Debug)
 pub suberror BatchError {
   BatchError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub impl Show for BatchError with fn output(self, logger) {

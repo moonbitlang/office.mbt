@@ -13,11 +13,12 @@
 
 ///|
 /// Line end cap (`ST_LineCap`, §20.1.10.30).
+#derive(Eq, Debug)
 pub(all) enum LineCap {
   CapFlat // "flat"
   CapSquare // "sq"
   CapRound // "rnd"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LineCap with @debug.Debug::{to_repr}
@@ -39,13 +40,14 @@ pub fn LineCap::from_xml(s : String) -> LineCap? {
 
 ///|
 /// Compound line type (`ST_CompoundLine`, §20.1.10.15).
+#derive(Eq, Debug)
 pub(all) enum CompoundLine {
   CmpdSingle // "sng"
   CmpdDouble // "dbl"
   CmpdThickThin // "thickThin"
   CmpdThinThick // "thinThick"
   CmpdTriple // "tri"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend CompoundLine with @debug.Debug::{to_repr}
@@ -70,10 +72,11 @@ pub fn CompoundLine::from_xml(s : String) -> CompoundLine? {
 ///|
 /// Pen alignment (`ST_PenAlignment`, §20.1.10.46). `AlignCenter` is the
 /// spec default for the missing-attribute case.
+#derive(Eq, Debug)
 pub(all) enum PenAlignment {
   AlignPenCenter // "ctr"
   AlignPenInset // "in"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend PenAlignment with @debug.Debug::{to_repr}
@@ -96,6 +99,7 @@ pub fn PenAlignment::from_xml(s : String) -> PenAlignment? {
 /// Preset dash style (`ST_PresetLineDashVal`, §20.1.10.49). Covers
 /// every value the spec enumerates; rare custom dashes (`<a:custDash>`)
 /// are skipped by the parser for now.
+#derive(Eq, Debug)
 pub(all) enum DashStyle {
   DashSolid // "solid"
   DashDot // "dot"
@@ -108,7 +112,7 @@ pub(all) enum DashStyle {
   DashSysDot // "sysDot"
   DashSysDashDot // "sysDashDot"
   DashSysDashDotDot // "sysDashDotDot"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend DashStyle with @debug.Debug::{to_repr}
@@ -140,11 +144,12 @@ pub fn DashStyle::from_xml(s : String) -> DashStyle? {
 /// Line join style (`<a:round/>` / `<a:bevel/>` / `<a:miter lim="…"/>`).
 /// The miter variant carries the optional limit attribute as a
 /// `Percentage` (1/1000-percent OOXML units).
+#derive(Eq, Debug)
 pub(all) enum LineJoin {
   JoinRound
   JoinBevel
   JoinMiter(@units.Percentage?)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend LineJoin with @debug.Debug::{to_repr}
@@ -154,6 +159,7 @@ pub extend LineJoin with Eq::{not_equal, equal}
 
 ///|
 /// Arrowhead shape (`ST_LineEndType`, §20.1.10.27).
+#derive(Eq, Debug)
 pub(all) enum ArrowType {
   ArrowNone // "none"
   ArrowTriangle // "triangle"
@@ -161,7 +167,7 @@ pub(all) enum ArrowType {
   ArrowDiamond // "diamond"
   ArrowOval // "oval"
   ArrowArrow // "arrow"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ArrowType with @debug.Debug::{to_repr}
@@ -187,11 +193,12 @@ pub fn ArrowType::from_xml(s : String) -> ArrowType? {
 ///|
 /// Arrow size category (`ST_LineEndWidth` / `ST_LineEndLength`,
 /// §20.1.10.26 / §20.1.10.25). Both axes use the same enum.
+#derive(Eq, Debug)
 pub(all) enum ArrowSize {
   SizeSmall // "sm"
   SizeMedium // "med"
   SizeLarge // "lg"
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ArrowSize with @debug.Debug::{to_repr}
@@ -216,11 +223,12 @@ pub fn ArrowSize::from_xml(s : String) -> ArrowSize? {
 /// required attribute; `width` and `length` default to medium per spec
 /// (we keep them as `Option` so callers can distinguish absent from
 /// explicit-medium).
+#derive(Eq, Debug)
 pub(all) struct ArrowEnd {
   arrow_type : ArrowType
   width : ArrowSize?
   length : ArrowSize?
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend ArrowEnd with @debug.Debug::{to_repr}
@@ -248,6 +256,7 @@ pub extend ArrowEnd with Eq::{not_equal, equal}
 /// - `join` — Line-join geometry.
 /// - `head_end` (`<a:headEnd …/>`) — arrow on the start point.
 /// - `tail_end` (`<a:tailEnd …/>`) — arrow on the end point.
+#derive(Eq, Debug)
 pub(all) struct Stroke {
   width : @units.Emu?
   cap : LineCap?
@@ -259,7 +268,7 @@ pub(all) struct Stroke {
   head_end : ArrowEnd?
   tail_end : ArrowEnd?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Stroke with @debug.Debug::{to_repr}
@@ -269,10 +278,11 @@ pub extend Stroke with Eq::{not_equal, equal}
 
 ///|
 /// Errors raised by `parse_stroke`.
+#derive(Eq, Debug)
 pub(all) suberror StrokeError {
   MalformedStroke(String)
   FillFailure(String)
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend StrokeError with @debug.Debug::{to_repr}

@@ -19,10 +19,11 @@
 /// machine-readable ceiling breach (kind ∈ output_bytes / entries /
 /// entry_uncompressed_bytes / total_uncompressed_bytes) rather than being
 /// flattened into a string.
+#derive(Eq)
 pub(all) suberror PackageBuildError {
   PackageBuildError(String)
   PackageLimitExceeded(kind~ : String, limit~ : Int64, actual~ : Int64)
-} derive(Eq)
+}
 
 ///|
 pub impl Show for PackageBuildError with fn output(self, logger) {

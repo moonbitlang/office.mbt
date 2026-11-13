@@ -7,9 +7,10 @@
 ///|
 /// A malformed `query` selector. The message names what was wrong; the CLI
 /// adds its `error: ` prefix.
+#derive(@debug.Debug)
 pub suberror QueryError {
   QueryError(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub impl Show for QueryError with fn output(self, logger) {

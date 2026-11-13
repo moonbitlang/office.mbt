@@ -13,11 +13,12 @@
 /// `Package::open` populates it via the ContentTypes resolver.
 /// Read the raw payload through `bytes()` or `text()`. The part owns its
 /// storage; changing an input or returned buffer does not change the part.
+#derive(Debug)
 pub struct Part {
   name : String
   mut content_type : String
   priv bytes : FixedArray[Byte]
-} derive(Debug)
+}
 
 ///|
 pub extend Part with @debug.Debug::{to_repr}

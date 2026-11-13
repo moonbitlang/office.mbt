@@ -17,6 +17,7 @@
 ///
 /// - `shape` (`<c:shape val="…"/>`) — bar shape. Optional per schema.
 /// - `ax_ids` — Three axIds for 3D charts (category / value / series axis).
+#derive(Eq, Debug)
 pub(all) struct Bar3DChartBody {
   bar_dir : BarDir
   grouping : BarGrouping?
@@ -28,7 +29,7 @@ pub(all) struct Bar3DChartBody {
   shape : BarShape?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Bar3DChartBody with @debug.Debug::{to_repr}
@@ -48,6 +49,7 @@ pub impl Show for Bar3DChartBody with fn output(self, logger) {
 
 ///|
 /// Body of `<c:line3DChart>` (CT_Line3DChart).
+#derive(Eq, Debug)
 pub(all) struct Line3DChartBody {
   grouping : Grouping
   vary_colors : Bool?
@@ -57,7 +59,7 @@ pub(all) struct Line3DChartBody {
   gap_depth : Int32?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Line3DChartBody with @debug.Debug::{to_repr}
@@ -78,12 +80,13 @@ pub impl Show for Line3DChartBody with fn output(self, logger) {
 ///|
 /// Body of `<c:pie3DChart>` (CT_Pie3DChart). Pie 3-D charts have
 /// no axes.
+#derive(Eq, Debug)
 pub(all) struct Pie3DChartBody {
   vary_colors : Bool?
   series : Array[ChartSeriesCore]
   d_lbls : DLbls?
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend Pie3DChartBody with @debug.Debug::{to_repr}
@@ -112,6 +115,7 @@ pub impl Show for Pie3DChartBody with fn output(self, logger) {
 /// - `Cylinder` — `val="cylinder"`
 /// - `Pyramid` — `val="pyramid"`
 /// - `PyramidToMax` — `val="pyramidToMax"`
+#derive(Eq, Debug)
 pub(all) enum BarShape {
   Box
   Cone
@@ -119,7 +123,7 @@ pub(all) enum BarShape {
   Cylinder
   Pyramid
   PyramidToMax
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BarShape with @debug.Debug::{to_repr}

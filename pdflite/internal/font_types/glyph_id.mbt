@@ -3,7 +3,8 @@
 
 ///|
 /// A 32-bit glyph identifier.
-pub(all) struct GlyphId(UInt32) derive(Eq, Compare, Hash, Debug)
+#derive(Eq, Compare, Hash, Debug)
+pub(all) struct GlyphId(UInt32)
 
 ///|
 pub fn GlyphId::new(raw : UInt32) -> GlyphId {
@@ -47,10 +48,11 @@ pub impl Show for GlyphId with fn output(self, logger) {
 
 ///|
 /// Two dimensional point with fixed point coordinates.
+#derive(Eq, Debug)
 pub(all) struct Point[T] {
   x : T
   y : T
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn[T] Point::new(x : T, y : T) -> Point[T] {
@@ -64,6 +66,7 @@ pub fn[T] Point::new(x : T, y : T) -> Point[T] {
 /// | xx xy dx |
 /// | yx yy dy |
 /// ```
+#derive(Eq, Debug)
 pub(all) struct FontMatrix {
   xx : Fixed
   yx : Fixed
@@ -71,7 +74,7 @@ pub(all) struct FontMatrix {
   yy : Fixed
   dx : Fixed
   dy : Fixed
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn FontMatrix::identity() -> FontMatrix {
@@ -109,16 +112,18 @@ pub fn FontMatrix::transform(
 
 ///|
 /// Minimum and maximum extents of a rectangular region.
+#derive(Eq, Debug)
 pub(all) struct BoundingBox[T] {
   x_min : T
   y_min : T
   x_max : T
   y_max : T
-} derive(Eq, Debug)
+}
 
 ///|
 /// A 4-byte OpenType tag, stored as a big-endian `UInt`.
-pub(all) struct Tag(UInt32) derive(Eq, Compare, Hash, Debug)
+#derive(Eq, Compare, Hash, Debug)
+pub(all) struct Tag(UInt32)
 
 ///|
 /// Creates a tag from a 4 character ASCII string.

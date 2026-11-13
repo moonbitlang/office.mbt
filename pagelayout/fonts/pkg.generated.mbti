@@ -15,20 +15,22 @@ pub fn standard_fonts() -> Array[String]
 pub fn uncovered(String, String, bold? : Bool, italic? : Bool) -> Array[(Int32, Int32)]
 
 // Errors
+#derive(Eq)
 pub(all) suberror FaceMetricsError {
   InvalidFaceMetrics(String)
-} derive(Eq)
+}
 pub fn FaceMetricsError::equal(Self, Self) -> Bool
 pub fn FaceMetricsError::not_equal(Self, Self) -> Bool
 pub fn FaceMetricsError::output(Self, &Logger) -> Unit
 pub fn FaceMetricsError::to_string(Self) -> String
 pub impl Show for FaceMetricsError
 
+#derive(Eq)
 pub(all) suberror FontRegistryError {
   Sealed(String)
   Duplicate(String)
   UnsupportedStandard(String)
-} derive(Eq)
+}
 pub fn FontRegistryError::equal(Self, Self) -> Bool
 pub fn FontRegistryError::not_equal(Self, Self) -> Bool
 pub fn FontRegistryError::output(Self, &Logger) -> Unit

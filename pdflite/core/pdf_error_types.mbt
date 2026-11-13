@@ -3,11 +3,12 @@
 ///
 /// ARC4 carries key length in bits and security-handler revision. AESV3 carries
 /// whether the ISO/PDF 2.0 hash variant is in use.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfCryptType {
   PdfCryptARC4(Int32, Int32)
   PdfCryptAESV2
   PdfCryptAESV3(Bool)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Error variants raised by pdflite parsing, writing, filtering, text, and
@@ -16,6 +17,7 @@ pub(all) enum PdfCryptType {
 /// The variants intentionally stay specific enough for tests and callers to
 /// distinguish malformed input classes, while most public APIs expose them
 /// through the ordinary `raise PdfError` flow.
+#derive(Debug, Eq, ToJson)
 pub(all) suberror PdfError {
   InvalidByte(Int32)
   InvalidCursorPosition(Int32)
@@ -130,4 +132,4 @@ pub(all) suberror PdfError {
   CMapEncodingExpected
   PageLabelStyleExpected(String)
   EndOfInput
-} derive(Debug, Eq, ToJson)
+}

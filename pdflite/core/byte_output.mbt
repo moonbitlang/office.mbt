@@ -4,11 +4,12 @@
 /// `ByteOutput` tracks the current write position separately from the highest
 /// position written, so callers may seek backward to patch bytes and then
 /// obtain only the initialized prefix with `to_bytes`.
+#derive(Debug, Eq, ToJson)
 pub struct ByteOutput {
   data : Array[Byte]
   mut position : Int32
   mut written_length : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Creates an empty output buffer.

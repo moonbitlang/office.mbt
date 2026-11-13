@@ -17,9 +17,10 @@
 
 ///|
 /// Errors raised by the placeholder scanner.
+#derive(@debug.Debug)
 pub suberror TemplateScanError {
   TemplateScanBudgetExceeded(String)
-} derive(@debug.Debug)
+}
 
 ///|
 pub extend TemplateScanError with @moonbitlang/core/debug.Debug::{to_repr}
@@ -33,12 +34,13 @@ pub extend TemplateScanError with @moonbitlang/core/debug.Debug::{to_repr}
 /// callers rewriting per-segment ranges must treat an end at (i, 0) as
 /// "nothing of segment i is covered". Only a span ending at the very end
 /// of the text uses (last segment, its length).
+#derive(Eq, @debug.Debug)
 pub(all) struct TemplateSpan {
   start_segment : Int32
   start_offset : Int32
   end_segment : Int32
   end_offset : Int32
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend TemplateSpan with Eq::{not_equal, equal}
@@ -48,10 +50,11 @@ pub extend TemplateSpan with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// One well-formed placeholder occurrence.
+#derive(Eq, @debug.Debug)
 pub(all) struct PlaceholderMatch {
   key : String
   span : TemplateSpan
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend PlaceholderMatch with Eq::{not_equal, equal}
@@ -62,10 +65,11 @@ pub extend PlaceholderMatch with @moonbitlang/core/debug.Debug::{to_repr}
 ///|
 /// One `{{` that forms neither a placeholder nor an escape. The span
 /// ends AT the offending unit (or at end of text), not past it.
+#derive(Eq, @debug.Debug)
 pub(all) struct MalformedPlaceholder {
   span : TemplateSpan
   reason : String
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend MalformedPlaceholder with Eq::{not_equal, equal}
@@ -75,11 +79,12 @@ pub extend MalformedPlaceholder with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 /// The complete result of scanning one hard-break-free region.
+#derive(Eq, @debug.Debug)
 pub(all) struct TemplateScan {
   matches : Array[PlaceholderMatch]
   escapes : Array[TemplateSpan]
   malformed : Array[MalformedPlaceholder]
-} derive(Eq, @debug.Debug)
+}
 
 ///|
 pub extend TemplateScan with Eq::{not_equal, equal}

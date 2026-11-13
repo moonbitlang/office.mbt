@@ -5,6 +5,7 @@
 /// is an internal stop marker used when object lexing reaches stream/xref
 /// boundaries, and `LexNone` means no token matched at the current cursor
 /// position.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfLexeme {
   LexNull
   LexBool(Bool)
@@ -23,4 +24,4 @@ pub(all) enum PdfLexeme {
   LexComment(@core.PdfBytes)
   StopLexing
   LexNone
-} derive(Debug, Eq, ToJson)
+}

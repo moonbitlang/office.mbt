@@ -6,6 +6,7 @@
 ///|
 /// A recognised embeddable media format. Video: `Mp4` / `Mov` / `Avi` /
 /// `Wmv`. Audio: `Mp3` / `Wav` / `Aiff` / `M4a`.
+#derive(Eq, Debug)
 pub(all) enum MediaFormat {
   Mp4
   Mov
@@ -15,7 +16,7 @@ pub(all) enum MediaFormat {
   Wav
   Aiff
   M4a
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend MediaFormat with @debug.Debug::{to_repr}

@@ -1,45 +1,51 @@
 ///|
 /// Paragraph justification used by cpdf draw operations.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfDrawJustification {
   PdfDrawLeft
   PdfDrawRight
   PdfDrawCentre
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// External graphics-state resource allocated while rendering draw operations.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawExtGStateResource {
   kind : @core.PdfName
   value : Double
   name : @core.PdfName
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// XObject resource tracked while rendering draw operations.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawXObjectResource {
   source_name : String
   resource_name : @core.PdfName
   object_number : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Font resource tracked while rendering draw operations.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawFontResource {
   identifier : String
   font_index : Int32
   resource_name : @core.PdfName
   object_number : Int32
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Current font-pack binding used by draw rendering state.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawFontPackState {
   identifier : String
   fontpack : PdfFontPack
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Tagged-PDF structure-tree event emitted while rendering draw operations.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfDrawStructureData {
   PdfDrawStructureMCID(String, Int32, Int32)
   PdfDrawStructureBeginTree(String)
@@ -47,14 +53,15 @@ pub(all) enum PdfDrawStructureData {
   PdfDrawStructureNamespace(String)
   PdfDrawStructureElementInfo(String, @syntax.PdfObject)
   PdfDrawStructureEndElementInfo(String)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Page-local context used to render `PdfDrawSpecialText`.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawSpecialTextContext {
   time : @date.PdfStrftimeTime
   replacement_values : @addtext.PdfAddTextReplacementValues
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Resource allocation state for rendering cpdf draw operations.
@@ -62,6 +69,7 @@ pub(all) struct PdfDrawSpecialTextContext {
 /// This ports the resource-numbering and ExtGState cache used by
 /// `cpdfdraw.ml`'s `res`/`fresh_name`/`extgstate` helpers. Later rendering
 /// slices will extend this state with tagged-content resources.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfDrawRenderState {
   mut resource_number : Int32
   mut marked_content_id : Int32
@@ -78,7 +86,7 @@ pub(all) struct PdfDrawRenderState {
   mut structure_page_number : Int32
   structure_data : Array[PdfDrawStructureData]
   page_names : Array[@core.PdfName]
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Build a fresh draw render state with default resource caches.

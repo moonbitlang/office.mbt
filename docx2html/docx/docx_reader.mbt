@@ -293,10 +293,11 @@ priv struct ContentTypes {
 
 ///|
 /// Document tree plus diagnostics produced while reading a DOCX package.
+#derive(Debug, Eq)
 pub(all) struct DocxReadResult {
   document : DocumentElement
   messages : Array[Message]
-} derive(Debug, Eq)
+}
 
 ///|
 priv struct ExternalFileAccess {

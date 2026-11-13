@@ -186,10 +186,11 @@ fn SerializeContext::register_tiling_pattern(
 
 ///|
 /// The kind of a PostScript gradient.
+#derive(Eq)
 priv enum GradientType {
   Sweep
   Linear
-} derive(Eq)
+}
 
 ///|
 /// The properties of a gradient after resolving its spread method.

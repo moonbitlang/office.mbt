@@ -16,6 +16,7 @@ let pdf_png_max_int64 : Int64 = 2147483647L
 ///|
 /// What a PNG without an alpha channel says of its transparency, in its
 /// `tRNS` chunk.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfPNGTransparency {
   /// Greyscale and truecolour: the one colour whose pixels are fully
   /// transparent, as its samples (grey, or red, green and blue) of the
@@ -25,7 +26,7 @@ pub(all) enum PdfPNGTransparency {
   /// the entries past them are opaque. Only with an entry below 255: a
   /// `tRNS` of opaque entries declares no transparency.
   PdfPNGPaletteAlpha(@core.PdfBytes)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Parsed PNG metadata and concatenated IDAT payload.
@@ -38,6 +39,7 @@ pub(all) enum PdfPNGTransparency {
 /// colour type 3 and is `None` for every other type.
 /// `transparency` is what a `tRNS` chunk before the image data declares,
 /// `None` without one.
+#derive(Debug, Eq, ToJson)
 pub(all) struct PdfPNG {
   width : Int32
   height : Int32
@@ -46,7 +48,7 @@ pub(all) struct PdfPNG {
   idat : @core.PdfBytes
   palette : @core.PdfBytes?
   transparency : PdfPNGTransparency?
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 fn pdf_png_u32_to_int(

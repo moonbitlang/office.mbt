@@ -1,4 +1,5 @@
 ///|
+#derive(Debug)
 pub suberror XlsxError {
   MissingPart(path~ : String)
   SheetNotFound(name~ : String)
@@ -52,4 +53,4 @@ pub suberror XlsxError {
   InvalidPackage(msg~ : String)
   ReadCancelled
   ResourceLimitExceeded(kind~ : String, limit~ : Int32, actual~ : Int32)
-} derive(Debug)
+}

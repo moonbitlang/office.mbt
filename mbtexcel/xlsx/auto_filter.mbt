@@ -1,17 +1,19 @@
 ///|
+#derive(Debug)
 pub(all) struct AutoFilterOption {
   column : String
   expression : String
-} derive(Debug)
+}
 
 ///|
 /// A checkbox-list criterion. Values are literal cell text, not expressions:
 /// spaces, quotes, wildcards, and words such as "blanks" are preserved.
 /// `column` is an absolute worksheet column name (for example "C").
+#derive(Debug)
 pub(all) struct AutoFilterValuesOption {
   column : String
   values : Array[String]
-} derive(Debug)
+}
 
 ///|
 #deprecated("implicit trait-method promotion is being removed; call via the trait")
@@ -21,29 +23,33 @@ pub extend AutoFilterValuesOption with @debug.Debug::{to_repr}
 pub type AutoFilterOptions = AutoFilterOption
 
 ///|
+#derive(Debug)
 pub struct AutoFilterCustomFilter {
   operator : String
   value : String
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct AutoFilterCustomFilters {
   and_filter : Bool
   filters : Array[AutoFilterCustomFilter]
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct AutoFilterColumn {
   col : Int32
   filters : Array[String]?
   custom_filters : AutoFilterCustomFilters?
-} derive(Debug)
+}
 
 ///|
+#derive(Debug)
 pub struct AutoFilter {
   range_ref : String
   columns : Array[AutoFilterColumn]
-} derive(Debug)
+}
 
 ///|
 fn is_whitespace(ch : Char) -> Bool {

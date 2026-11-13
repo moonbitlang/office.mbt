@@ -2,12 +2,13 @@
 /// Colour specification used by cpdf draw operations.
 ///
 /// The `CYMK` spelling follows the OCaml source variant name in `cpdfdraw.ml`.
+#derive(Debug, Eq, ToJson)
 pub(all) enum PdfDrawColour {
   PdfDrawNoCol
   PdfDrawRGB(Double, Double, Double)
   PdfDrawGrey(Double)
   PdfDrawCYMK(Double, Double, Double, Double)
-} derive(Debug, Eq, ToJson)
+}
 
 ///|
 /// Convert a cpdf content colour into the draw colour variant.

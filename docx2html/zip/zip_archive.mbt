@@ -2,11 +2,12 @@
 /// In-memory ZIP archive used to read DOCX parts. OPC part-name comparison is
 /// case-insensitive, while `canonical_names` retains the archive's exact
 /// spelling so preservation edits always address the physical entry.
+#derive(Debug, Eq)
 pub struct ZipArchive {
   priv entries : StableStringMap[BytesView]
   priv canonical_names : StableStringMap[String]
   priv logical_names : StableStringMap[String]
-} derive(Debug, Eq)
+}
 
 ///|
 const MAX_ZIP_ENTRY_NAME_CHARS : Int32 = 65_535

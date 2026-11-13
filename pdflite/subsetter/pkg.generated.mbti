@@ -7,6 +7,7 @@ pub fn subset(Bytes, Int32, GlyphRemapper) -> Bytes raise SubsetError
 pub fn subset_with_variations(Bytes, Int32, ArrayView[(Tag, Float)], GlyphRemapper) -> Bytes raise SubsetError
 
 // Errors
+#derive(Eq)
 pub(all) suberror SubsetError {
   UnknownKind
   MalformedFont
@@ -14,7 +15,7 @@ pub(all) suberror SubsetError {
   SubsetError
   OverflowError
   CFFError
-} derive(Eq)
+}
 pub impl Show for SubsetError
 
 // Types and methods
@@ -30,9 +31,10 @@ pub fn GlyphRemapper::num_gids(Self) -> Int32
 pub fn GlyphRemapper::remap(Self, Int32) -> Int32
 pub fn GlyphRemapper::remapped_gids(Self) -> ArrayView[Int32]
 
+#derive(Eq, Hash)
 pub struct Tag {
   // private fields
-} derive(Eq, Hash)
+}
 pub fn Tag::from_bytes(BytesView) -> Self?
 pub fn Tag::from_str(StringView) -> Self?
 pub fn Tag::get(Self) -> Bytes

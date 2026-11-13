@@ -21,6 +21,7 @@
 ///   bubbles for negative size values.
 /// - `size_represents` (`<c:sizeRepresents val="…"/>`) — how the numeric size
 ///   maps to the bubble's drawn dimension (`area` or `w`idth).
+#derive(Eq, Debug)
 pub(all) struct BubbleChartBody {
   vary_colors : Bool?
   series : Array[BubbleSeriesCore]
@@ -31,7 +32,7 @@ pub(all) struct BubbleChartBody {
   size_represents : SizeRepresents?
   ax_ids : Array[Int32]
   extension : Array[@xml.XmlElement]
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend BubbleChartBody with @debug.Debug::{to_repr}
@@ -55,10 +56,11 @@ pub impl Show for BubbleChartBody with fn output(self, logger) {
 /// - `Area` (`val="area"`) — bubble area is proportional to the size value
 ///   (the default).
 /// - `Width` (`val="w"`) — bubble width (diameter) is proportional to size.
+#derive(Eq, Debug)
 pub(all) enum SizeRepresents {
   Area
   Width
-} derive(Eq, Debug)
+}
 
 ///|
 pub extend SizeRepresents with @debug.Debug::{to_repr}

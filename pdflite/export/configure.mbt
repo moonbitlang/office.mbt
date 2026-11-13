@@ -3,13 +3,14 @@
 
 ///|
 /// A PDF version.
+#derive(Eq, Compare, Debug)
 pub(all) enum PdfVersion {
   Pdf14
   Pdf15
   Pdf16
   Pdf17
   Pdf20
-} derive(Eq, Compare, Debug)
+}
 
 ///|
 pub fn PdfVersion::as_str(self : PdfVersion) -> String {
@@ -46,6 +47,7 @@ fn PdfVersion::specifies_associated_files(self : PdfVersion) -> Bool {
 
 ///|
 /// An archival (PDF/A) validator.
+#derive(Eq, Debug)
 pub(all) enum Archival {
   A1_A
   A1_B
@@ -58,20 +60,22 @@ pub(all) enum Archival {
   A4
   A4F
   A4E
-} derive(Eq, Debug)
+}
 
 ///|
 /// An accessibility (PDF/UA) validator.
+#derive(Eq, Debug)
 pub(all) enum Accessibility {
   UA1
-} derive(Eq, Debug)
+}
 
 ///|
 /// A validator.
+#derive(Eq, Debug)
 pub(all) enum Validator {
   A(Archival)
   Ua(Accessibility)
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Validator::as_str(self : Validator) -> String {
@@ -111,10 +115,11 @@ pub fn Archival::as_str(self : Archival) -> String {
 ///|
 /// The active validators: at most one archival and one accessibility
 /// validator.
+#derive(Eq, Debug)
 pub(all) struct Validators {
   a : Archival?
   ua : Accessibility?
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Validators::empty() -> Validators {
@@ -201,10 +206,11 @@ fn Validators::specifies_associated_files(self : Validators) -> Bool {
 
 ///|
 /// A configuration: a PDF version and validators.
+#derive(Eq, Debug)
 pub(all) struct Configuration {
   version : PdfVersion
   validators : Validators
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn Configuration::default() -> Configuration {
@@ -213,11 +219,12 @@ pub fn Configuration::default() -> Configuration {
 
 ///|
 /// A feature that requires a minimum PDF version.
+#derive(Eq, Debug)
 pub(all) enum VersionedFeature {
   StructureOrderTabbing
   HeaderFooterArtifactSubtypes
   TableHeaderScope
-} derive(Eq, Debug)
+}
 
 ///|
 pub fn VersionedFeature::minimum_pdf_version(
@@ -232,12 +239,13 @@ pub fn VersionedFeature::minimum_pdf_version(
 
 ///|
 /// An error raised when embedding a file.
+#derive(Eq, Debug)
 pub(all) enum EmbedError {
   Existence
   MissingDate
   MissingDescription
   MissingMimeType
-} derive(Eq, Debug)
+}
 
 ///|
 /// A location: an opaque identifier provided by the user (Typst passes raw
