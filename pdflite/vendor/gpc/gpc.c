@@ -1137,28 +1137,46 @@ void gpc_free_polygon(gpc_polygon *p)
 
 void gpc_read_polygon(FILE *fp, int read_hole_flags, gpc_polygon *p)
 {
-  int c, v;
+  int c, v, num_contours;
 
-  fscanf(fp, "%d", &(p->num_contours));
-  MALLOC(p->hole, p->num_contours * sizeof(int),
+  p->num_contours= 0;
+  p->hole= NULL;
+  p->contour= NULL;
+  if ((fscanf(fp, "%d", &num_contours) != 1) || (num_contours < 0))
+    return;
+
+  MALLOC(p->hole, num_contours * sizeof(int),
          "hole flag array creation", int);
-  MALLOC(p->contour, p->num_contours
+  MALLOC(p->contour, num_contours
          * sizeof(gpc_vertex_list), "contour creation", gpc_vertex_list);
+  for (c= 0; c < num_contours; c++)
+    p->contour[c].vertex= NULL;
+  p->num_contours= num_contours;
   for (c= 0; c < p->num_contours; c++)
   {
-    fscanf(fp, "%d", &(p->contour[c].num_vertices));
+    if ((fscanf(fp, "%d", &(p->contour[c].num_vertices)) != 1) ||
+        (p->contour[c].num_vertices < 0))
+      goto read_failure;
 
     if (read_hole_flags)
-      fscanf(fp, "%d", &(p->hole[c]));
+    {
+      if (fscanf(fp, "%d", &(p->hole[c])) != 1)
+        goto read_failure;
+    }
     else
       p->hole[c]= FALSE; /* Assume all contours to be external */
 
     MALLOC(p->contour[c].vertex, p->contour[c].num_vertices
            * sizeof(gpc_vertex), "vertex creation", gpc_vertex);
     for (v= 0; v < p->contour[c].num_vertices; v++)
-      fscanf(fp, "%lf %lf", &(p->contour[c].vertex[v].x),
-                            &(p->contour[c].vertex[v].y));
+      if (fscanf(fp, "%lf %lf", &(p->contour[c].vertex[v].x),
+                              &(p->contour[c].vertex[v].y)) != 2)
+        goto read_failure;
   }
+  return;
+
+read_failure:
+  gpc_free_polygon(p);
 }
 
 

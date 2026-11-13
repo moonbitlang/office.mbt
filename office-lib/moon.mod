@@ -17,7 +17,7 @@ import {
   "moonbitlang/ooxml@0.1.1",
   "moonbitlang/mbtexcel@0.3.1",
   "moonbitlang/docx2html@0.7.1",
-  "moonbitlang/async@0.22.5",
+  "moonbitlang/async@0.22.9",
   "moonbitlang/x@0.5.6",
   "moonbit-community/flate@0.10.0",
 }
