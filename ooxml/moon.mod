@@ -1,6 +1,6 @@
 name = "moonbitlang/ooxml"
 
-version = "0.1.1"
+version = "0.1.2"
 
 import {
   "moonbit-community/flate@0.10.0",

@@ -11,7 +11,7 @@
 
 name = "moonbitlang/docx2html"
 
-version = "0.7.1"
+version = "0.7.2"
 
 readme = "README.mbt.md"
 
@@ -24,7 +24,7 @@ keywords = [ "docx", "html", "markdown", "mammoth" ]
 description = "Native MoonBit DOCX to HTML/Markdown converter ported from Mammoth"
 
 import {
-  "moonbitlang/ooxml@0.1.0",
+  "moonbitlang/ooxml@0.1.2",
   "moonbitlang/async@0.22.9",
   "moonbit-community/flate@0.10.0",
 }

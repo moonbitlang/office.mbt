@@ -1,9 +1,9 @@
 name = "moonbitlang/pdf2md"
 
-version = "0.1.3"
+version = "0.1.4"
 
 import {
-  "moonbitlang/pdflite@0.4.0",
+  "moonbitlang/pdflite@0.4.2",
   "moonbitlang/async@0.22.9",
 }
 
