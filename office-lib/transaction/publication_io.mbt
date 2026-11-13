@@ -430,7 +430,7 @@ async fn publication_temp_publish(
   // whether the atomic rename committed.
   @async.pause()
   @async.protect_from_cancel(() => {
-    errdefer {
+    errdefer @async.protect_from_cancel(() => {
       temp.file.close()
       let restored = try {
         publication_set_permission(temp.path, 0o600)
@@ -441,7 +441,7 @@ async fn publication_temp_publish(
       if restored {
         temp.final_permission_applied = false
       }
-    }
+    })
     publication_set_permission(temp.path, permission) catch {
       error =>
         raise transaction_error(
@@ -498,7 +498,7 @@ async fn publication_temp_cleanup(
   output_path : String,
   fail_remove~ : Bool = false,
   cleanup_release? : String,
-) -> Unit {
+) -> Unit nocancel {
   @async.protect_from_cancel(() => {
     temp.file.close()
     match cleanup_release {
