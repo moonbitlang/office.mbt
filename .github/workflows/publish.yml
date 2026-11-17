@@ -89,10 +89,6 @@ jobs:
           mkdir -p "$HOME/.moon"
           trap 'rm -f "$HOME/.moon/credentials.json"' EXIT
           printf '%s\n' "$SECRET" > "$HOME/.moon/credentials.json"
-          for module in "${modules[@]}"; do
-            echo "::group::Publish $module"
-            (cd "$module" && moon publish)
-            echo "::endgroup::"
-          done
+          python3 scripts/ci/publish.py "${modules[@]}"
         env:
           SECRET: ${{ secrets.MOONCAKES_MOONBITLANG_TOKEN }}
