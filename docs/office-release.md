@@ -46,8 +46,9 @@ single module using the `module` input; its default, `all`, publishes the whole
 workspace in that order. Single-module publishing requires its dependencies
 to already be available in Mooncakes. Bump the versions of modules being
 published beforehand: published versions are immutable. If a release fails
-partway through, retry only the remaining modules rather than republishing
-versions that already succeeded.
+partway through, retry with `all` or the remaining modules. The workflow refreshes
+the registry index and skips exact module versions that are already published.
+Changes to an already published module require a new version.
 
 Use each module's current `moon.mod` for its version and dependency requirements;
 the versions in the historical section below are not current release targets.
@@ -55,6 +56,11 @@ The workflow runs source checks, tests, interface generation, and formatting
 checks in the workspace before publishing. `moon publish` packages each module
 and checks a freshly extracted copy against registry dependencies. Use this
 built-in validation rather than maintaining a separate copy-and-test pipeline.
+After each upload, the publishing script refreshes the registry index until
+the new version appears before proceeding to consumers. It makes up to 12
+attempts, waiting five seconds between attempts, and stops if the version is
+still missing. This handles index propagation delays without retrying uploads
+or hiding publish failures.
 
 ## Publish validation
 
