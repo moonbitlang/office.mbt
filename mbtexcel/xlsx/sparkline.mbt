@@ -929,7 +929,7 @@ fn parse_sparkline_color(tag : StringView) -> SparklineColor? raise XlsxError {
     None => None
   }
   let parsed_theme = match theme {
-    Some(v) => Some(@string.parse_int(v.to_string(), base=10) catch { _ => 0 })
+    Some(v) => Some(@string.parse_int(v.to_string(), radix=10) catch { _ => 0 })
     None => None
   }
   let parsed_tint = match tint {
@@ -1026,7 +1026,7 @@ fn parse_sparkline_groups(
     match attr_value(tag, "manualMax") {
       Some(value) =>
         options.manual_max = Some(
-          @string.parse_int(value.to_string(), base=10) catch {
+          @string.parse_int(value.to_string(), radix=10) catch {
             _ => raise InvalidXml(msg="sparkline manualMax invalid")
           },
         )
@@ -1035,7 +1035,7 @@ fn parse_sparkline_groups(
     match attr_value(tag, "manualMin") {
       Some(value) =>
         options.manual_min = Some(
-          @string.parse_int(value.to_string(), base=10) catch {
+          @string.parse_int(value.to_string(), radix=10) catch {
             _ => raise InvalidXml(msg="sparkline manualMin invalid")
           },
         )

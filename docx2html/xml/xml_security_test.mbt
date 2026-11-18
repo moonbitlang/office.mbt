@@ -365,7 +365,7 @@ test "strict XML normalizes source line endings but preserves references" {
 
 ///|
 fn near_splice_limit_transformed_xml(token_units : Int32) -> String {
-  let source = StringBuilder(size_hint=(token_units + 32) * 2)
+  let source = StringBuilder(capacity=(token_units + 32) * 2)
   source.write_string("<root>")
   source.write_string("x".repeat(token_units - 7))
   source.write_string("\r\n&amp;</root>")
@@ -422,7 +422,7 @@ test "tolerant XML preserves unknown entities beside decoded entities" {
 ///|
 test "tolerant XML fuses a near-limit padded entity attribute" {
   let token_units = 8 * 1024 * 1024 - 128
-  let source = StringBuilder(size_hint=(token_units + 32) * 2)
+  let source = StringBuilder(capacity=(token_units + 32) * 2)
   source.write_string("<root note=\"&#")
   source.write_string("0".repeat(token_units - 5))
   source.write_string("65;\"/>")

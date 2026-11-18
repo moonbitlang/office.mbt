@@ -338,7 +338,7 @@ fn parse_bu_blip(r : @xml.XmlReader) -> Bullet raise SlideError {
 ///|
 /// Parse `<a:r>` body — `<a:rPr>?` plus one or more `<a:t>` text runs.
 fn parse_run(r : @xml.XmlReader) -> Run raise SlideError {
-  let buf = StringBuilder(size_hint=32)
+  let buf = StringBuilder(capacity=32)
   let mut properties = RunProperties::default()
   let extension : Array[@xml.XmlElement] = []
   while true {
@@ -592,7 +592,7 @@ fn parse_field(
 ) -> Field raise SlideError {
   let id = optional_attr(attrs, "id")
   let field_type = optional_attr(attrs, "type")
-  let buf = StringBuilder(size_hint=16)
+  let buf = StringBuilder(capacity=16)
   let mut properties = RunProperties::default()
   let extension : Array[@xml.XmlElement] = []
   while true {

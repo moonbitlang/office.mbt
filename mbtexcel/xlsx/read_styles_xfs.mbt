@@ -8,7 +8,7 @@ fn attr_int_or(
 ) -> Int32 raise XlsxError {
   match attr_value(tag, name) {
     Some(value) =>
-      @string.parse_int(value, base=10) catch {
+      @string.parse_int(value, radix=10) catch {
         _ => raise InvalidXml(msg="\{name} invalid")
       }
     None => default
@@ -46,7 +46,7 @@ fn parse_num_fmts(xml : StringView) -> Map[Int32, String] raise XlsxError {
       Some(value) => value
       None => continue
     }
-    let id = @string.parse_int(id_text, base=10) catch {
+    let id = @string.parse_int(id_text, radix=10) catch {
       _ => raise InvalidXml(msg="numFmtId invalid")
     }
     num_fmts[id] = unescape_xml_text(fmt_text)

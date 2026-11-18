@@ -195,8 +195,8 @@ fn ReadBudget::charge_col_expansion(
     attr_value(tag, "max") is Some(max_text) else {
     return
   }
-  let min_col = @string.parse_int(min_text, base=10) catch { _ => return }
-  let max_col = @string.parse_int(max_text, base=10) catch { _ => return }
+  let min_col = @string.parse_int(min_text, radix=10) catch { _ => return }
+  let max_col = @string.parse_int(max_text, radix=10) catch { _ => return }
   if min_col <= 0 ||
     max_col < min_col ||
     min_col > cell_ref_max_cols ||

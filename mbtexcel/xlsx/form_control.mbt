@@ -809,7 +809,7 @@ fn parse_vml_textbox(
     let face = attr_value(attrs, "face")
     let size = match attr_value(attrs, "size") {
       Some(v) => {
-        let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
+        let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n > 0 {
           Some(Double::from_int(n) / 20.0)
         } else {
@@ -885,7 +885,7 @@ fn parse_form_controls_vml(
     let mut col0_opt : Int32? = None
     match extract_xml_text_tag(body, "x:Row") {
       Some(v) =>
-        try @string.parse_int(v, base=10) catch {
+        try @string.parse_int(v, radix=10) catch {
           _ => ()
         } noraise {
           value => row0_opt = Some(value)
@@ -894,7 +894,7 @@ fn parse_form_controls_vml(
     }
     match extract_xml_text_tag(body, "x:Column") {
       Some(v) =>
-        try @string.parse_int(v, base=10) catch {
+        try @string.parse_int(v, radix=10) catch {
           _ => ()
         } noraise {
           value => col0_opt = Some(value)
@@ -913,12 +913,12 @@ fn parse_form_controls_vml(
             if parts.length() < 4 {
               continue
             }
-            let col0 = try @string.parse_int(parts[0].trim(), base=10) catch {
+            let col0 = try @string.parse_int(parts[0].trim(), radix=10) catch {
               _ => continue
             } noraise {
               value => value
             }
-            let row0 = try @string.parse_int(parts[2].trim(), base=10) catch {
+            let row0 = try @string.parse_int(parts[2].trim(), radix=10) catch {
               _ => continue
             } noraise {
               value => value
@@ -952,7 +952,7 @@ fn parse_form_controls_vml(
     }
     match extract_xml_text_tag(body, "x:Val") {
       Some(v) => {
-        let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
+        let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
           control.current_val = Some(n)
         }
@@ -961,7 +961,7 @@ fn parse_form_controls_vml(
     }
     match extract_xml_text_tag(body, "x:Min") {
       Some(v) => {
-        let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
+        let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
           control.min_val = Some(n)
         }
@@ -970,7 +970,7 @@ fn parse_form_controls_vml(
     }
     match extract_xml_text_tag(body, "x:Max") {
       Some(v) => {
-        let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
+        let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
           control.max_val = Some(n)
         }
@@ -979,7 +979,7 @@ fn parse_form_controls_vml(
     }
     match extract_xml_text_tag(body, "x:Inc") {
       Some(v) => {
-        let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
+        let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
           control.inc_change = Some(n)
         }
@@ -988,7 +988,7 @@ fn parse_form_controls_vml(
     }
     match extract_xml_text_tag(body, "x:Page") {
       Some(v) => {
-        let n = @string.parse_int(v.trim(), base=10) catch { _ => 0 }
+        let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n >= 0 && n <= max_form_control_value {
           control.page_change = Some(n)
         }

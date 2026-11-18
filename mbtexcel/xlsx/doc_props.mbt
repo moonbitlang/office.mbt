@@ -422,7 +422,7 @@ fn parse_app_properties(xml : StringView) -> AppProperties raise XlsxError {
   match extract_tag_body(xml, "DocSecurity") {
     Some(value) =>
       props.doc_security = Some(
-        @string.parse_int(unescape_xml_text(value), base=10) catch {
+        @string.parse_int(unescape_xml_text(value), radix=10) catch {
           _ => 0
         },
       )
@@ -501,7 +501,7 @@ fn parse_custom_property_value(
       Some(value) =>
         return Some(
           Integer(
-            @string.parse_int(value, base=10) catch {
+            @string.parse_int(value, radix=10) catch {
               _ =>
                 raise InvalidWorkbookProperty(msg="custom property int invalid")
             },

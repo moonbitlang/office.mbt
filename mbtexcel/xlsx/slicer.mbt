@@ -197,7 +197,7 @@ fn parse_pivot_cache_slicer_id(
     Some(tag) =>
       match attr_value(tag, "pivotCacheId") {
         Some(raw) =>
-          try @string.parse_int(raw, base=10) catch {
+          try @string.parse_int(raw, radix=10) catch {
             _ => None
           } noraise {
             value => Some(value)

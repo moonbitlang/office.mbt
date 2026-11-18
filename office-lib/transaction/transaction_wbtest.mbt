@@ -1195,7 +1195,7 @@ fn wb_near_splice_limit_docx(token_units : Int32) -> (Bytes, Int32) raise {
     fail("near-limit DOCX token must leave room for transformed content")
   }
   let document = StringBuilder(
-    size_hint=(prefix.length() + token_units + suffix.length()) * 2,
+    capacity=(prefix.length() + token_units + suffix.length()) * 2,
   )
   document.write_string(prefix)
   document.write_string("x".repeat(token_units - 7))

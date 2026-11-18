@@ -19,7 +19,7 @@ fn remove_lexical_element_subtrees(
     Some(value) => value
     None => return xml.to_owned()
   }
-  let output = StringBuilder(size_hint=xml.length())
+  let output = StringBuilder(capacity=xml.length())
   let mut cursor = 0
   let mut start = first
   for ;; {
@@ -181,7 +181,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(val) =>
-          try @string.parse_int(val, base=10) catch {
+          try @string.parse_int(val, radix=10) catch {
             _ => ()
           } noraise {
             value => {
@@ -197,7 +197,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(val) =>
-          try @string.parse_int(val, base=10) catch {
+          try @string.parse_int(val, radix=10) catch {
             _ => ()
           } noraise {
             value => {
@@ -231,7 +231,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
       match attr_value(tag, "theme") {
         Some(val) =>
-          try @string.parse_int(val, base=10) catch {
+          try @string.parse_int(val, radix=10) catch {
             _ => raise InvalidXml(msg="rich text color theme invalid")
           } noraise {
             value => {
@@ -243,7 +243,7 @@ fn parse_rich_text_font(body : StringView) -> RichTextFont? raise XlsxError {
       }
       match attr_value(tag, "indexed") {
         Some(val) =>
-          try @string.parse_int(val, base=10) catch {
+          try @string.parse_int(val, radix=10) catch {
             _ => raise InvalidXml(msg="rich text color indexed invalid")
           } noraise {
             value => {

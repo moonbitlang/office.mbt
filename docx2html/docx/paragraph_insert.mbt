@@ -86,7 +86,7 @@ pub fn mint_para_id(used : Array[String]) -> String raise DocxError {
 fn render_para_id(value : Int32) -> String {
   let digits = "0123456789ABCDEF"
   let units = digits.code_units()
-  let builder = StringBuilder(size_hint=8)
+  let builder = StringBuilder(capacity=8)
   for shift in [28, 24, 20, 16, 12, 8, 4, 0] {
     let nibble = (value >> shift) & 0xF
     builder.write_char(units[nibble].to_int().unsafe_to_char())

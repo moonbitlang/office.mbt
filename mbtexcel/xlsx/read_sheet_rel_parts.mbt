@@ -87,7 +87,7 @@ fn parse_comments_xml(xml : StringView) -> Array[Comment] raise XlsxError {
     let (row, col) = cell_ref_to_rc(ref_value)
     let cell = cell_ref_from(row, col)
     let author_id = match attr_value(tag, "authorId") {
-      Some(value) => @string.parse_int(value, base=10) catch { _ => 0 }
+      Some(value) => @string.parse_int(value, radix=10) catch { _ => 0 }
       None => 0
     }
     let author = if author_id >= 0 && author_id < authors.length() {
@@ -306,7 +306,7 @@ fn parse_slicer_cache_definition(
     Some(cache_tag) => {
       match attr_value(cache_tag, "tableId") {
         Some(value) =>
-          try @string.parse_int(value, base=10) catch {
+          try @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="slicer cache tableId invalid")
           } noraise {
             val => table_id = Some(val)
@@ -315,7 +315,7 @@ fn parse_slicer_cache_definition(
       }
       match attr_value(cache_tag, "column") {
         Some(value) =>
-          try @string.parse_int(value, base=10) catch {
+          try @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="slicer cache column invalid")
           } noraise {
             val => table_column = Some(val)
@@ -349,7 +349,7 @@ fn parse_slicer_cache_definition(
         Some(pivot_tag) => {
           match attr_value(pivot_tag, "tabId") {
             Some(value) =>
-              try @string.parse_int(value, base=10) catch {
+              try @string.parse_int(value, radix=10) catch {
                 _ => raise InvalidXml(msg="slicer cache tabId invalid")
               } noraise {
                 val => pivot_tab_id = Some(val)

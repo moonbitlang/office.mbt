@@ -160,7 +160,7 @@ fn parse_id_from_path(path : StringView, prefix : StringView) -> Int32 {
       }
     None => return 0
   }
-  @string.parse_int(num.to_owned(), base=10) catch {
+  @string.parse_int(num.to_owned(), radix=10) catch {
     _ => 0
   }
 }

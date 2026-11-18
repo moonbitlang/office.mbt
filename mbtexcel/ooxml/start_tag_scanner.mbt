@@ -727,7 +727,7 @@ fn xml_entity_value(entity : StringView) -> Char? {
           return None
         }
       }
-      let value = @string.parse_int(digits, base~) catch { _ => return None }
+      let value = @string.parse_int(digits, radix=base) catch { _ => return None }
       if !is_valid_xml_char_reference(value) {
         return None
       }
@@ -1184,7 +1184,7 @@ fn XmlStartTagScanner::escaped_character_data(
     self.rewrite_output_chars -
     unchanged
   let value = self.xml[value_start:end]
-  let output = StringBuilder(size_hint=value.length().min(available))
+  let output = StringBuilder(capacity=value.length().min(available))
   let mut used = 0
   for index, unit in value {
     if (index & 4095) == 0 {

@@ -5193,9 +5193,9 @@ fn parse_date_parts(text : String) -> (Int32, Int32, Int32)? {
   if parts.length() != 3 {
     return None
   }
-  let p0 = @string.parse_int(parts[0], base=10) catch { _ => return None }
-  let p1 = @string.parse_int(parts[1], base=10) catch { _ => return None }
-  let p2 = @string.parse_int(parts[2], base=10) catch { _ => return None }
+  let p0 = @string.parse_int(parts[0], radix=10) catch { _ => return None }
+  let p1 = @string.parse_int(parts[1], radix=10) catch { _ => return None }
+  let p2 = @string.parse_int(parts[2], radix=10) catch { _ => return None }
   let year = if parts[0].length() == 4 {
     p0
   } else if parts[2].length() == 4 {
@@ -5252,16 +5252,16 @@ fn parse_time_parts(text : String) -> (Int32, Int32, Int32)? {
   if parts.length() == 0 || parts.length() > 3 {
     return None
   }
-  let hour = @string.parse_int(parts[0], base=10) catch { _ => return None }
+  let hour = @string.parse_int(parts[0], radix=10) catch { _ => return None }
   let minute = if parts.length() >= 2 {
-    @string.parse_int(parts[1], base=10) catch {
+    @string.parse_int(parts[1], radix=10) catch {
       _ => return None
     }
   } else {
     0
   }
   let second = if parts.length() == 3 {
-    @string.parse_int(parts[2], base=10) catch {
+    @string.parse_int(parts[2], radix=10) catch {
       _ => return None
     }
   } else {

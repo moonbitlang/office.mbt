@@ -8,7 +8,7 @@ fn parse_xml_int_tag(
     Some(value) => value
     None => raise InvalidXml(msg~)
   }
-  @string.parse_int(body, base=10) catch {
+  @string.parse_int(body, radix=10) catch {
     _ => raise InvalidXml(msg~)
   }
 }
@@ -158,7 +158,7 @@ fn parse_drawing_int_attr(
 ) -> Int32 raise XlsxError {
   match attr_value(tag, name) {
     Some(value) =>
-      @string.parse_int(value, base=10) catch {
+      @string.parse_int(value, radix=10) catch {
         _ => raise InvalidXml(msg=invalid_message)
       }
     None => raise InvalidXml(msg=missing_message)
@@ -500,7 +500,7 @@ fn parse_drawing_text_font(
   }
   let size = match attr_value(rpr_tag, "sz") {
     Some(value) => {
-      let parsed = @string.parse_int(value, base=10) catch {
+      let parsed = @string.parse_int(value, radix=10) catch {
         _ => raise InvalidXml(msg="drawing text size is invalid")
       }
       if parsed < 0 {
@@ -966,7 +966,7 @@ fn drawing_chart_frame_is_canonical(
   // classification) and the exact-attribute pass. Attribute values are
   // extracted during that exact pass, so there are no hidden rescans.
   charge_drawing_work(budget, wrapped_length)
-  let wrapper = StringBuilder(size_hint=wrapped_length)
+  let wrapper = StringBuilder(capacity=wrapped_length)
   wrapper.write_string(wrapper_prefix)
   wrapper.write_view(anchor_xml)
   wrapper.write_string(wrapper_suffix)
@@ -1030,7 +1030,7 @@ fn drawing_chart_frame_is_canonical(
           }
           frame_id = attributes[0]
           guard frame_id != "" else { return false }
-          let parsed_id = @string.parse_int(frame_id, base=10) catch {
+          let parsed_id = @string.parse_int(frame_id, radix=10) catch {
             _ => return false
           }
           parsed_id > 0 &&
@@ -1216,7 +1216,7 @@ fn parse_drawing_shapes(
                   Some(alpha_tag) =>
                     match attr_value(alpha_tag, "val") {
                       Some(alpha) =>
-                        try @string.parse_int(alpha, base=10) catch {
+                        try @string.parse_int(alpha, radix=10) catch {
                           _ => ()
                         } noraise {
                           value => {
@@ -1244,7 +1244,7 @@ fn parse_drawing_shapes(
       Some(tag) => {
         match attr_value(tag, "w") {
           Some(value) =>
-            try @string.parse_int(value, base=10) catch {
+            try @string.parse_int(value, radix=10) catch {
               _ => ()
             } noraise {
               value => line_width = value.to_double() / 12700.0

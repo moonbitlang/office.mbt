@@ -393,7 +393,7 @@ fn FormulaTranslationOutput::new(
   maximum_chars : Int32,
   budget : FormulaTranslationBudget,
 ) -> FormulaTranslationOutput {
-  { builder: StringBuilder(size_hint~), budget, maximum_chars, chars: 0, }
+  { builder: StringBuilder(capacity=size_hint), budget, maximum_chars, chars: 0, }
 }
 
 ///|

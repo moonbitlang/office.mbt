@@ -12,7 +12,7 @@ priv struct Writer {
 ///|
 /// Create a new writable stream of binary data.
 fn Writer::new() -> Writer {
-  { buf: Buffer(size_hint=1024), failed: false, }
+  { buf: Buffer(capacity=1024), failed: false, }
 }
 
 ///|

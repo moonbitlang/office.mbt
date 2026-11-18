@@ -694,7 +694,7 @@ fn eval_choose(call : EvalCall) -> FormulaValue {
       Ok(text) => text
       Err(err) => return err
     }
-    let idx = @string.parse_int(index_text, base=10) catch {
+    let idx = @string.parse_int(index_text, radix=10) catch {
       _ => return Error(formula_error_value)
     }
     if call.values.length() <= idx {

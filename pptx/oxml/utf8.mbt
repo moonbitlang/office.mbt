@@ -61,7 +61,7 @@ pub fn bytes_to_string(bytes : FixedArray[Byte]) -> String raise Utf8Error {
       return @xml.decode_xml_bytes(source) catch { _ => raise InvalidUtf16 }
     _ => ()
   }
-  let buf = StringBuilder(size_hint=bytes.length())
+  let buf = StringBuilder(capacity=bytes.length())
   let mut i = 0
   while i < bytes.length() {
     let b0 = bytes[i].to_int().land(0xFF)

@@ -382,7 +382,7 @@ fn vml_client_data_parts(
 fn parse_vml_coordinate(value : String?) -> Int32? {
   match value {
     Some(text) =>
-      try @string.parse_int(text.trim(), base=10) catch {
+      try @string.parse_int(text.trim(), radix=10) catch {
         _ => None
       } noraise {
         coordinate => Some(coordinate)
@@ -412,12 +412,12 @@ fn vml_client_data_coordinates(
   if parts.length() < 4 {
     return None
   }
-  let col0 = try @string.parse_int(parts[0].trim(), base=10) catch {
+  let col0 = try @string.parse_int(parts[0].trim(), radix=10) catch {
     _ => return None
   } noraise {
     value => value
   }
-  let row0 = try @string.parse_int(parts[2].trim(), base=10) catch {
+  let row0 = try @string.parse_int(parts[2].trim(), radix=10) catch {
     _ => return None
   } noraise {
     value => value
@@ -529,7 +529,7 @@ fn parse_vml_shape_numeric_id(value : StringView) -> Int32? {
   if !value.has_prefix(prefix) {
     return None
   }
-  try @string.parse_int(value[prefix.length():], base=10) catch {
+  try @string.parse_int(value[prefix.length():], radix=10) catch {
     _ => None
   } noraise {
     value => if value > 0 { Some(value) } else { None }

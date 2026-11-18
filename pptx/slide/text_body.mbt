@@ -614,7 +614,7 @@ pub extend Paragraph with Eq::{not_equal, equal}
 /// Convenience: concatenate every run/field text inside a paragraph,
 /// inserting `\n` for each `<a:br>`. Skips formatting entirely.
 pub fn Paragraph::plain_text(self : Paragraph) -> String {
-  let buf = StringBuilder(size_hint=64)
+  let buf = StringBuilder(capacity=64)
   for item in self.content {
     match item {
       RunContent(r) => buf.write_string(r.text)
@@ -845,7 +845,7 @@ pub extend TextBody with Eq::{not_equal, equal}
 /// with `\n`. Useful for quick `text_body.plain_text().contains("…")`
 /// queries without inspecting the typed tree.
 pub fn TextBody::plain_text(self : TextBody) -> String {
-  let buf = StringBuilder(size_hint=128)
+  let buf = StringBuilder(capacity=128)
   for i, p in self.paragraphs {
     if i > 0 {
       buf.write_char('\n')

@@ -627,7 +627,7 @@ fn build_top10_rule(
 ) -> String {
   let mut rank = 10
   if opt.value != "" {
-    rank = @string.parse_int(opt.value, base=10) catch { _ => rank }
+    rank = @string.parse_int(opt.value, radix=10) catch { _ => rank }
   }
   let sb = StringBuilder()
   sb.write_view("<cfRule type=\"top10\"")
@@ -972,7 +972,7 @@ fn parse_cf_rule(
   }
   match attr_value(tag, "dxfId") {
     Some(value) =>
-      try @string.parse_int(value, base=10) catch {
+      try @string.parse_int(value, radix=10) catch {
         _ => ()
       } noraise {
         id => opt.format = Some(id)

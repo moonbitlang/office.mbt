@@ -225,7 +225,7 @@ pub fn resolve_target(
   if segments.is_empty() {
     return "/"
   }
-  let buf = StringBuilder(size_hint=64)
+  let buf = StringBuilder(capacity=64)
   for seg in segments {
     buf.write_char('/')
     buf.write_view(seg)

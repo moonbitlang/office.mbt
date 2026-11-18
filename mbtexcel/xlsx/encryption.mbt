@@ -147,14 +147,14 @@ fn byte_xor(a : Byte, b : Byte) -> Byte {
 
 ///|
 fn u32_le_bytes(value : Int32) -> Bytes {
-  let out = @buffer.Buffer(size_hint=4)
+  let out = @buffer.Buffer(capacity=4)
   out.write_uint_le(value.reinterpret_as_uint())
   out.to_bytes()
 }
 
 ///|
 fn u64_le_bytes(value : UInt64) -> Bytes {
-  let out = @buffer.Buffer(size_hint=8)
+  let out = @buffer.Buffer(capacity=8)
   out.write_uint64_le(value)
   out.to_bytes()
 }
@@ -249,7 +249,7 @@ fn parse_required_attr(
 ///|
 fn parse_int_attr(tag : StringView, name : String) -> Int32 raise XlsxError {
   let text = parse_required_attr(tag, name)
-  @string.parse_int(text, base=10) catch {
+  @string.parse_int(text, radix=10) catch {
     _ => raise InvalidEncryptionInfo(msg="invalid \{name} value")
   }
 }
@@ -914,7 +914,7 @@ fn standard_key_encryption(password : String) -> (Bytes, Bytes) raise XlsxError 
     encrypted_key_value,
     pad_zero(verifier_hash_input_key, 16),
   )
-  let writer = @buffer.Buffer(size_hint=128)
+  let writer = @buffer.Buffer(capacity=128)
   writer.write_uint16_le((0x0003 : UInt16))
   writer.write_uint16_le((0x0002 : UInt16))
   writer.write_uint_le((0x24 : UInt32))
@@ -1898,7 +1898,7 @@ test "standard decryption accepts RC4-style verifier layout" {
   }
   let salt_bytes = Bytes::from_array(salt)
   // encryption info: version 3.2, flags, header size, 32-byte header
-  let info = @buffer.Buffer(size_hint=128)
+  let info = @buffer.Buffer(capacity=128)
   info.write_uint16_le((3 : UInt16)) // version major
   info.write_uint16_le((2 : UInt16)) // version minor
   info.write_uint_le((0x0000_0024 : UInt32)) // flags
@@ -1926,7 +1926,7 @@ test "standard decryption accepts RC4-style verifier layout" {
   let key = standard_convert_password_to_key(128, salt_bytes, password)
   let plaintext : Bytes = b"legacy standard payload!\x00\x00\x00\x00\x00\x00\x00\x00"
   let encrypted = aes_ecb_encrypt(key, plaintext)
-  let package_writer = @buffer.Buffer(size_hint=64)
+  let package_writer = @buffer.Buffer(capacity=64)
   package_writer.write_uint64_le((24 : UInt64)) // real payload length before padding
   package_writer.write_bytes(encrypted)
   let package_buf = package_writer.to_bytes()

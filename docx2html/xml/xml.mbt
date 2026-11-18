@@ -585,7 +585,7 @@ pub fn write_xml_fragment_limited(
   sizer.size_element(element, is_root=true, depth=0)
   let output_bytes = limit - sizer.remaining_bytes
   let writer = XmlWriter::{ namespaces, namespace_lookup, }
-  let builder = StringBuilder(size_hint=output_bytes)
+  let builder = StringBuilder(capacity=output_bytes)
   writer.write_element(builder, element, is_root=true)
   builder.to_string()
 }
@@ -1219,7 +1219,7 @@ fn xml_diagnostic_token(value : String) -> String {
 fn xml_string_builder_for_units(units : Int32) -> StringBuilder {
   let bytes = units.to_int64() * 2L
   if units > 0 && bytes <= 2147483647L {
-    StringBuilder(size_hint=bytes.to_int())
+    StringBuilder(capacity=bytes.to_int())
   } else {
     StringBuilder()
   }

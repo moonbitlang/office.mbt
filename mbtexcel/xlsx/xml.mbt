@@ -60,7 +60,7 @@ fn decode_xml_entity(entity : StringView) -> Char? {
       if !xml_entity_digits_are_valid(digits, base) {
         return None
       }
-      let codepoint = @string.parse_int(digits, base~) catch {
+      let codepoint = @string.parse_int(digits, radix=base) catch {
         _ => return None
       }
       if !is_valid_xml_char_reference(codepoint) {

@@ -1289,7 +1289,7 @@ pub fn package_part_name_key_cancellable(
   if cancelled() {
     raise ReadCancelled
   }
-  let output = StringBuilder(size_hint=name.length())
+  let output = StringBuilder(capacity=name.length())
   let mut offset = 0
   for character in name {
     if offset % 4096 == 0 && cancelled() {

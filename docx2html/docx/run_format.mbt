@@ -73,7 +73,7 @@ pub fn docx_direct_format(
           message="format color is a six-digit RGB value (RRGGBB or #RRGGBB)",
         )
       }
-      let builder = StringBuilder(size_hint=6)
+      let builder = StringBuilder(capacity=6)
       for ch in hex {
         let upper = if ch is ('a'..<='f') {
           (ch.to_int() - 32).unsafe_to_char()

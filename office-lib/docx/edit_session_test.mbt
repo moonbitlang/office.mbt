@@ -95,7 +95,7 @@ fn padded_entity_docx_session_fixture(token_units : Int32) -> Bytes raise {
   let suffix =
     #|65;"><w:body><w:p/><w:sectPr/></w:body></w:document>
   let document = StringBuilder(
-    size_hint=(prefix.length() + token_units + suffix.length()) * 2,
+    capacity=(prefix.length() + token_units + suffix.length()) * 2,
   )
   document.write_string(prefix)
   document.write_string("0".repeat(token_units - 5))

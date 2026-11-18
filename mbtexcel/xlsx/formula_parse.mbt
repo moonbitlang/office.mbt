@@ -614,7 +614,7 @@ fn parse_range_ref_token(
     return (start_ref, end_ref)
   }
   if row != "" && col == "" {
-    let row_index = @string.parse_int(row, base=10) catch {
+    let row_index = @string.parse_int(row, radix=10) catch {
       _ => raise InvalidCellRef(value=token.to_owned())
     }
     if row_index <= 0 || row_index > excel_max_rows {
@@ -685,8 +685,8 @@ fn parse_r1c1_token(text : StringView) -> (Int32, Int32)? {
   if col_text == "" || idx != chars.length() {
     return None
   }
-  let row = @string.parse_int(row_text, base=10) catch { _ => return None }
-  let col = @string.parse_int(col_text, base=10) catch { _ => return None }
+  let row = @string.parse_int(row_text, radix=10) catch { _ => return None }
+  let col = @string.parse_int(col_text, radix=10) catch { _ => return None }
   Some((row, col))
 }
 

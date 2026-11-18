@@ -238,7 +238,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(value) =>
-          try @string.parse_int(value, base=10) catch {
+          try @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="font charset invalid")
           } noraise {
             val => font.charset = Some(val)
@@ -259,7 +259,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
     Some(tag) =>
       match attr_value(tag, "val") {
         Some(value) =>
-          try @string.parse_int(value, base=10) catch {
+          try @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="font family invalid")
           } noraise {
             val => if val != 2 { font.family_number = Some(val) }
@@ -295,7 +295,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       }
       match attr_value(tag, "theme") {
         Some(value) =>
-          try @string.parse_int(value, base=10) catch {
+          try @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="font color theme invalid")
           } noraise {
             val => font.color_theme = Some(val)
@@ -304,7 +304,7 @@ fn parse_font_entry(xml : StringView) -> Font raise XlsxError {
       }
       match attr_value(tag, "indexed") {
         Some(value) =>
-          try @string.parse_int(value, base=10) catch {
+          try @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="font color indexed invalid")
           } noraise {
             val => font.color_indexed = Some(val)
@@ -529,7 +529,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
         Some(color_tag) => {
           match attr_value(color_tag, "theme") {
             Some(value) =>
-              try @string.parse_int(value, base=10) catch {
+              try @string.parse_int(value, radix=10) catch {
                 _ => raise InvalidXml(msg="fill fgColor theme invalid")
               } noraise {
                 val => fill.fg_theme = Some(val)
@@ -538,7 +538,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           }
           match attr_value(color_tag, "indexed") {
             Some(value) =>
-              try @string.parse_int(value, base=10) catch {
+              try @string.parse_int(value, radix=10) catch {
                 _ => raise InvalidXml(msg="fill fgColor indexed invalid")
               } noraise {
                 val => fill.fg_indexed = Some(val)
@@ -571,7 +571,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
         Some(color_tag) => {
           match attr_value(color_tag, "theme") {
             Some(value) =>
-              try @string.parse_int(value, base=10) catch {
+              try @string.parse_int(value, radix=10) catch {
                 _ => raise InvalidXml(msg="fill bgColor theme invalid")
               } noraise {
                 val => fill.bg_theme = Some(val)
@@ -580,7 +580,7 @@ fn parse_fill_entry(xml : StringView) -> Fill raise XlsxError {
           }
           match attr_value(color_tag, "indexed") {
             Some(value) =>
-              try @string.parse_int(value, base=10) catch {
+              try @string.parse_int(value, radix=10) catch {
                 _ => raise InvalidXml(msg="fill bgColor indexed invalid")
               } noraise {
                 val => fill.bg_indexed = Some(val)
@@ -883,7 +883,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
   match attr_value(tag, "textRotation") {
     Some(value) =>
       alignment.text_rotation = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="textRotation invalid")
         },
       )
@@ -892,7 +892,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
   match attr_value(tag, "indent") {
     Some(value) =>
       alignment.indent = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="indent invalid")
         },
       )
@@ -909,7 +909,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
   match attr_value(tag, "readingOrder") {
     Some(value) =>
       alignment.reading_order = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="readingOrder invalid")
         },
       )
@@ -918,7 +918,7 @@ fn parse_alignment_entry(xml : StringView) -> Alignment? raise XlsxError {
   match attr_value(tag, "relativeIndent") {
     Some(value) =>
       alignment.relative_indent = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="relativeIndent invalid")
         },
       )
@@ -986,7 +986,7 @@ fn parse_defined_names(
     let local_id = match attr_value(tag, "localSheetId") {
       Some(value) =>
         Some(
-          @string.parse_int(value, base=10) catch {
+          @string.parse_int(value, radix=10) catch {
             _ => raise InvalidXml(msg="definedName localSheetId invalid")
           },
         )
@@ -1654,7 +1654,7 @@ fn parse_conditional_formats_x14(
         }
         let mut priority = match attr_value(attrs, "priority") {
           Some(value) =>
-            @string.parse_int(value, base=10) catch {
+            @string.parse_int(value, radix=10) catch {
               _ => raise InvalidXml(msg="x14:cfRule priority invalid")
             }
           None => 1
@@ -1919,7 +1919,7 @@ fn parse_sheet_views(
     }
     match attr_value(tag, "workbookViewId") {
       Some(value) =>
-        view.workbook_view_id = @string.parse_int(value, base=10) catch {
+        view.workbook_view_id = @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="sheetView workbookViewId invalid")
         }
       None => ()
@@ -1978,7 +1978,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
       match attr_value(tag, "indexed") {
         Some(value) =>
           opts.tab_color_indexed = Some(
-            @string.parse_int(value, base=10) catch {
+            @string.parse_int(value, radix=10) catch {
               _ => raise InvalidXml(msg="tabColor indexed invalid")
             },
           )
@@ -1991,7 +1991,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
       match attr_value(tag, "theme") {
         Some(value) =>
           opts.tab_color_theme = Some(
-            @string.parse_int(value, base=10) catch {
+            @string.parse_int(value, radix=10) catch {
               _ => raise InvalidXml(msg="tabColor theme invalid")
             },
           )
@@ -2055,7 +2055,7 @@ fn parse_sheet_props(xml : StringView) -> SheetPropsOptions? raise XlsxError {
       match attr_value(tag, "baseColWidth") {
         Some(value) =>
           opts.base_col_width = Some(
-            @string.parse_int(value, base=10) catch {
+            @string.parse_int(value, radix=10) catch {
               _ => raise InvalidXml(msg="sheetFormatPr baseColWidth invalid")
             },
           )
@@ -2203,7 +2203,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
   match attr_value(tag, "paperSize") {
     Some(value) =>
       opts.size = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="pageSetup paperSize invalid")
         },
       )
@@ -2216,7 +2216,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
   match attr_value(tag, "firstPageNumber") {
     Some(value) =>
       opts.first_page_number = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="pageSetup firstPageNumber invalid")
         },
       )
@@ -2225,7 +2225,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
   match attr_value(tag, "scale") {
     Some(value) =>
       opts.adjust_to = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="pageSetup scale invalid")
         },
       )
@@ -2234,7 +2234,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
   match attr_value(tag, "fitToHeight") {
     Some(value) =>
       opts.fit_to_height = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="pageSetup fitToHeight invalid")
         },
       )
@@ -2243,7 +2243,7 @@ fn parse_page_layout(xml : StringView) -> PageLayoutOptions? raise XlsxError {
   match attr_value(tag, "fitToWidth") {
     Some(value) =>
       opts.fit_to_width = Some(
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="pageSetup fitToWidth invalid")
         },
       )
@@ -2325,7 +2325,7 @@ fn parse_sheet_protection(xml : StringView) -> SheetProtection? raise XlsxError 
   let mut spin_count = 0
   match attr_value(tag, "spinCount") {
     Some(value) =>
-      spin_count = @string.parse_int(value, base=10) catch {
+      spin_count = @string.parse_int(value, radix=10) catch {
         _ => raise InvalidXml(msg="sheetProtection spinCount invalid")
       }
     None => ()
@@ -2443,21 +2443,21 @@ fn parse_page_breaks(
     let tag = text[:end]
     let id = match attr_value(tag, "id") {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="brk id invalid")
         }
       None => raise InvalidXml(msg="brk id missing")
     }
     let min = match attr_value(tag, "min") {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="brk min invalid")
         }
       None => 0
     }
     let max = match attr_value(tag, "max") {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="brk max invalid")
         }
       None => 0
@@ -2518,7 +2518,7 @@ fn parse_auto_filter_columns(
     let tag = text[:end]
     let col_id = match attr_value(tag, "colId") {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="filterColumn colId invalid")
         }
       None => raise InvalidXml(msg="filterColumn colId missing")
@@ -2917,7 +2917,7 @@ fn parse_row_dimensions(
       Some(value) => value
       None => raise InvalidXml(msg="row index missing")
     }
-    let row = @string.parse_int(row_text, base=10) catch {
+    let row = @string.parse_int(row_text, radix=10) catch {
       _ => raise InvalidXml(msg="row index invalid")
     }
     if row <= 0 || row > cell_ref_max_rows {
@@ -2938,7 +2938,7 @@ fn parse_row_dimensions(
     }
     let outline_level = match attr_value(tag, "outlineLevel") {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="row outline level invalid")
         }
       None => 0
@@ -2946,7 +2946,7 @@ fn parse_row_dimensions(
     let style_attribute = attr_value(tag, "s")
     let style_id = match style_attribute {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="row style id invalid")
         }
       None => 0
@@ -3023,10 +3023,10 @@ fn parse_col_dimensions(
       Some(value) => value
       None => raise InvalidXml(msg="col max missing")
     }
-    let min_col = @string.parse_int(min_text, base=10) catch {
+    let min_col = @string.parse_int(min_text, radix=10) catch {
       _ => raise InvalidXml(msg="col min invalid")
     }
-    let max_col = @string.parse_int(max_text, base=10) catch {
+    let max_col = @string.parse_int(max_text, radix=10) catch {
       _ => raise InvalidXml(msg="col max invalid")
     }
     if min_col <= 0 ||
@@ -3051,7 +3051,7 @@ fn parse_col_dimensions(
     }
     let outline_level = match attr_value(tag, "outlineLevel") {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="col outline level invalid")
         }
       None => 0
@@ -3059,7 +3059,7 @@ fn parse_col_dimensions(
     let style_attribute = attr_value(tag, "style")
     let style_id = match style_attribute {
       Some(value) =>
-        @string.parse_int(value, base=10) catch {
+        @string.parse_int(value, radix=10) catch {
           _ => raise InvalidXml(msg="col style id invalid")
         }
       None => 0

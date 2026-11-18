@@ -455,7 +455,7 @@ fn eval_decimal(call : EvalCall) -> FormulaValue {
         (Ok(text), Ok(radix)) => {
           let base = Double::to_int(trunc_double(radix))
           let text_value = strip_hex_prefix(text)
-          let parsed = @string.parse_int(text_value, base~) catch {
+          let parsed = @string.parse_int(text_value, radix=base) catch {
             _ => return Error(formula_error_value)
           }
           Number(Double::from_int(parsed))

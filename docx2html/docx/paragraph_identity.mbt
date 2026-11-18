@@ -73,7 +73,7 @@ let max_reported_physical_para_ids : Int32 = 8
 /// and it rejects what it cannot vouch for.
 pub fn validated_para_id(raw : String) -> String? {
   guard raw.length() == 8 else { return None }
-  let builder = StringBuilder(size_hint=8)
+  let builder = StringBuilder(capacity=8)
   let mut all_zero = true
   for index, character in raw {
     let code = character.to_int()
