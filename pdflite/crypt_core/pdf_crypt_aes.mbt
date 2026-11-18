@@ -84,7 +84,7 @@ pub fn pdf_aes_cbc_decrypt(
   data : BytesView,
   remove_padding~ : Bool = true,
 ) -> @core.PdfBytes raise @core.PdfError {
-  guard data.length() > 16 else { return Bytes::new(0) }
+  guard data.length() > 16 else { return b"" }
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
@@ -158,7 +158,7 @@ pub fn pdf_aes_ecb_decrypt(
   data : BytesView,
   remove_padding~ : Bool = true,
 ) -> @core.PdfBytes raise @core.PdfError {
-  guard data.length() > 0 else { return Bytes::new(0) }
+  guard data.length() > 0 else { return b"" }
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
@@ -185,7 +185,7 @@ pub fn pdf_aes_ecb_encrypt(
   guard data.length() % 16 == 0 else {
     raise InvalidCryptoDataLength(data.length())
   }
-  guard data.length() > 0 else { return Bytes::new(0) }
+  guard data.length() > 0 else { return b"" }
   pdf_aes_check_key(key)
   pdf_aes_map_crypto_error(
     () => @crypto.aes_ecb_encrypt(key, data),

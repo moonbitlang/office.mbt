@@ -1257,7 +1257,7 @@ test "cpdfcontent operator state merges Form XObject resources" {
         ]),
       ),
     ]),
-    StreamGot(Bytes::new(0)),
+    StreamGot(b""),
   )
   let image_xobject = @syntax.pdf_dictionary([
     (subtype_key, PdfNameObject(content_operator_name_for_test("/Image"))),

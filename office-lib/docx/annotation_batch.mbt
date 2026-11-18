@@ -75,7 +75,7 @@ priv enum AnnotationOp {
     initials~ : String?,
     date~ : String?,
     body~ : Array[@document.DocumentElement],
-    label~ : String?
+    label~ : String?,
   )
   Reply(
     parent~ : CommentRef,
@@ -83,7 +83,7 @@ priv enum AnnotationOp {
     initials~ : String?,
     date~ : String?,
     body~ : Array[@document.DocumentElement],
-    label~ : String?
+    label~ : String?,
   )
   Resolve(target~ : CommentRef, done~ : Bool)
 }

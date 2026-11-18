@@ -245,8 +245,8 @@ test "PdfDocument upright_pages validates page range" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "upright_pages: range contains pages not present in pdf"
-      )
+        "upright_pages: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected page range validation")
   }

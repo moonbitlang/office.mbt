@@ -21,13 +21,13 @@ test "pdf_arc4_crypt decrypts by applying the same stream" {
   let plaintext = b"legacy PDF payload"
   let encrypted = try! pdf_arc4_crypt(key, plaintext)
   @test.assert_eq(try! pdf_arc4_crypt(key, encrypted), plaintext)
-  @test.assert_eq(try! pdf_arc4_crypt(key, Bytes::new(0)), Bytes::new(0))
+  @test.assert_eq(try! pdf_arc4_crypt(key, b""), b"")
 }
 
 ///|
 test "pdf_arc4_crypt rejects empty keys" {
   let result : Result[@core.PdfBytes, Error] = try
-    pdf_arc4_crypt(Bytes::new(0), b"data")
+    pdf_arc4_crypt(b"", b"data")
   catch {
     err => Err(err)
   } noraise {
@@ -41,7 +41,7 @@ test "pdf_arc4_crypt rejects empty keys" {
 ///|
 test "pdf_md5_digest matches RFC 1321 vectors" {
   @test.assert_eq(
-    pdf_md5_digest(Bytes::new(0)),
+    pdf_md5_digest(b""),
     crypt_bytes_for_test([
       0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04, 0xe9, 0x80, 0x09, 0x98, 0xec,
       0xf8, 0x42, 0x7e,
@@ -103,8 +103,8 @@ test "pdf_sha384_digest and pdf_sha512_digest match FIPS vectors" {
       0x64, 0x3c, 0xe8, 0x0e, 0x2a, 0x9a, 0xc9, 0x4f, 0xa5, 0x4c, 0xa4, 0x9f,
     ]),
   )
-  @test.assert_eq(pdf_sha384_digest(Bytes::new(0)).length(), 48)
-  @test.assert_eq(pdf_sha512_digest(Bytes::new(0)).length(), 64)
+  @test.assert_eq(pdf_sha384_digest(b"").length(), 48)
+  @test.assert_eq(pdf_sha512_digest(b"").length(), 64)
 }
 
 ///|
@@ -164,7 +164,7 @@ test "pdf_aes_cbc helpers match IV-prefixed CamlPDF data" {
     nist_plain,
   )
   @test.assert_eq(try! pdf_aes_cbc_decrypt(nist_key, nist_data), nist_plain)
-  @test.assert_eq(try! pdf_aes_cbc_decrypt(nist_key, nist_iv), Bytes::new(0))
+  @test.assert_eq(try! pdf_aes_cbc_decrypt(nist_key, nist_iv), b"")
   @test.assert_eq(
     pdf_aes_cbc_encrypt_no_padding_with_iv(nist_key, nist_iv, nist_plain),
     nist_data[16:].to_owned(),
@@ -240,9 +240,9 @@ test "pdf_aes_ecb_decrypt handles padding and checked errors" {
     try! pdf_aes_ecb_decrypt(key, ciphertext, remove_padding=false),
     plaintext,
   )
-  @test.assert_eq(try! pdf_aes_ecb_decrypt(key, Bytes::new(0)), Bytes::new(0))
+  @test.assert_eq(try! pdf_aes_ecb_decrypt(key, b""), b"")
   @test.assert_eq(try! pdf_aes_ecb_encrypt(key, plaintext), ciphertext)
-  @test.assert_eq(try! pdf_aes_ecb_encrypt(key, Bytes::new(0)), Bytes::new(0))
+  @test.assert_eq(try! pdf_aes_ecb_encrypt(key, b""), b"")
 
   let mismatched_padding_cipher = crypt_bytes_for_test([
     0x49, 0xd6, 0x87, 0x53, 0x99, 0x9b, 0xa6, 0x8c, 0xe3, 0x89, 0x7a, 0x68, 0x60,

@@ -718,7 +718,7 @@ test "PdfDocument change_pages transforms link annotations and open action" {
         PdfIndirect(_),
         PdfDictionary(_) as direct_dest_annotation,
         PdfDictionary(_) as direct_action_annotation,
-      ]
+      ],
     ) => {
       match direct_dest_annotation.lookup_immediate(key_dest) {
         Some(destination) =>

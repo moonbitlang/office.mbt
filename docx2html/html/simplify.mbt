@@ -40,14 +40,14 @@ fn append_simplified(result : Array[HtmlNode], node : HtmlNode) -> Unit {
           attributes=attrs_a,
           children=children_a,
           fresh=fresh_a,
-          separator=separator_a
+          separator=separator_a,
         ),
         Element(
           tag=tag_b,
           attributes=attrs_b,
           children=children_b,
           fresh=false,
-          separator=separator_b
+          separator=separator_b,
         ),
       ) =>
         if html_tag_matches(tag_b, tag_a) && attrs_a == attrs_b {

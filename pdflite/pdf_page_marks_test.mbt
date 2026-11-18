@@ -254,8 +254,8 @@ test "PdfDocument page mark overlays validate selected pages" {
   guard bad_show
     is Err(
       @core.PdfError::BadPageSpecification(
-        "show_page_boxes: range contains pages not present in pdf"
-      )
+        "show_page_boxes: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected show_page_boxes to reject an out-of-range page")
   }
@@ -270,8 +270,8 @@ test "PdfDocument page mark overlays validate selected pages" {
   guard bad_trim
     is Err(
       @core.PdfError::BadPageSpecification(
-        "trim_marks: range contains pages not present in pdf"
-      )
+        "trim_marks: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected trim_marks to reject an out-of-range page")
   }

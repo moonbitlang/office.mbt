@@ -159,7 +159,7 @@ pub fn PdfFont::content_is_vertical(self : PdfFont) -> Bool {
     PdfFontCIDKeyed({ encoding: PdfPredefinedCMap(name), .. }) =>
       name == pdf_text_identity_v_name
     PdfFontCIDKeyed(
-      { encoding: PdfExternalCMap(_, { wmode: Some(1), .. }), .. }
+      { encoding: PdfExternalCMap(_, { wmode: Some(1), .. }), .. },
     ) => true
     _ => false
   }

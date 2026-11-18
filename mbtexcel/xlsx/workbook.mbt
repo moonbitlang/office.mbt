@@ -1622,7 +1622,7 @@ fn normalize_cell_float_value(
   if precision < 0 {
     normalized
   } else {
-    let factor = @math.pow(10.0, Double::from_int(precision))
+    let factor = @math.pow(10.0, precision.to_double())
     (normalized * factor).round() / factor
   }
 }
@@ -1688,7 +1688,7 @@ pub fn Workbook::set_cell_int(
   reference : String,
   value : Int32,
 ) -> Unit raise XlsxError {
-  self.set_cell_value(sheet_name, reference, Numeric(Double::from_int(value)))
+  self.set_cell_value(sheet_name, reference, Numeric(value.to_double()))
 }
 
 ///|
@@ -1698,11 +1698,7 @@ pub fn Workbook::set_cell_uint(
   reference : String,
   value : UInt32,
 ) -> Unit raise XlsxError {
-  self.set_cell_value(
-    sheet_name,
-    reference,
-    Numeric(Double::convert_uint(value)),
-  )
+  self.set_cell_value(sheet_name, reference, Numeric(value.to_double()))
 }
 
 ///|

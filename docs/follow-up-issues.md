@@ -31,6 +31,13 @@ These are non-blocking follow-ups discovered while investigating slow tests.
    - Added `scripts/validate_demos.sh` to validate the canonical `mbtexcel/cmd/demos` output set and skip the encrypted demo using encrypted-shape detection (ZIP encrypted-package parts or encrypted container signatures).
    - This avoids false negatives from `secure_password.xlsx` when running bulk demo validation.
 
+## Toolchain compatibility follow-ups
+
+1. **Byte display snapshots use the old representation (open)**
+   - `pdflite/export/graphics_test.mbt` expects `b'\x04'` and `b'\x02'` for ICC profile version bytes; the current toolchain displays `4` and `2`.
+   - The `color utilities` example in `mbtexcel/xlsx/README.mbt.md` expects `b'\xFF'`; the current toolchain displays `255`.
+   - Migrate these snapshots or assert byte values directly. These three failures were observed during deprecated-API cleanup and left outside that change's scope.
+
 ## Architecture refactor backlog
 
 These are follow-ups discovered while reviewing the current package architecture

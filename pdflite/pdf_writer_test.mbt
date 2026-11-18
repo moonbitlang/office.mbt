@@ -197,7 +197,7 @@ test "pdf_write_hex_string renders byte strings as PDF hex strings" {
     writer_ascii_for_test("<000a0f10ff>"),
   )
   @test.assert_eq(
-    @pdflite.pdf_write_hex_string(Bytes::new(0)),
+    @pdflite.pdf_write_hex_string(b""),
     writer_ascii_for_test("<>"),
   )
 }
@@ -218,7 +218,7 @@ test "pdf_write_literal_string renders byte strings as PDF literal strings" {
     ]),
   )
   @test.assert_eq(
-    @pdflite.pdf_write_literal_string(Bytes::new(0)),
+    @pdflite.pdf_write_literal_string(b""),
     writer_ascii_for_test("()"),
   )
 }

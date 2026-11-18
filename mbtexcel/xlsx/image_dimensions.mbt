@@ -466,8 +466,8 @@ fn emf_dimensions(bytes : BytesView) -> (Int32, Int32)? {
       if w_01mm <= 0 || h_01mm <= 0 {
         return None
       }
-      let w_in = Double::from_int(w_01mm) / 100.0 / 25.4
-      let h_in = Double::from_int(h_01mm) / 100.0 / 25.4
+      let w_in = w_01mm.to_double() / 100.0 / 25.4
+      let h_in = h_01mm.to_double() / 100.0 / 25.4
       let w_px = Double::round(w_in * 96.0).to_int()
       let h_px = Double::round(h_in * 96.0).to_int()
       if w_px > 0 && h_px > 0 {
@@ -506,8 +506,8 @@ fn wmf_dimensions(bytes : BytesView) -> (Int32, Int32)? {
       if w_units <= 0 || h_units <= 0 {
         return None
       }
-      let w_in = Double::from_int(w_units) / Double::from_int(i)
-      let h_in = Double::from_int(h_units) / Double::from_int(i)
+      let w_in = w_units.to_double() / i.to_double()
+      let h_in = h_units.to_double() / i.to_double()
       let w_px = Double::round(w_in * 96.0).to_int()
       let h_px = Double::round(h_in * 96.0).to_int()
       if w_px > 0 && h_px > 0 {

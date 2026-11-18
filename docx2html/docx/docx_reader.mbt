@@ -2911,7 +2911,7 @@ fn wrap_item_with_hyperlink_into(
         source: run_source,
         local_effects,
         shape: ReaderRun(children~, properties~),
-      }
+      },
     ) =>
       out.push(
         New({
@@ -2927,7 +2927,7 @@ fn wrap_item_with_hyperlink_into(
         source: paragraph_source,
         local_effects,
         shape: ReaderParagraph(inputs~, children~, extras~, properties~),
-      }
+      },
     ) => {
       out.push(
         hyperlink_of([
@@ -4344,7 +4344,7 @@ fn BodyReader::table_cells_for_span(
           source: cell_source,
           local_effects: _,
           shape: ReaderTableCell(children=cell_children, col_span~, row_span~),
-        }
+        },
       ) => {
         cells.push({
           children: cell_children,
@@ -4386,7 +4386,7 @@ fn BodyReader::calculate_table_row_spans(
           source,
           local_effects: _,
           shape: ReaderTableRow(children~, is_header~),
-        }
+        },
       ) => {
         row_shells.push((children, is_header, source, pending.copy()))
         pending.clear()

@@ -15,7 +15,7 @@ pub fn pdf_content_concat_stream_views(
     }
   }
   if length == 0 {
-    return Bytes::new(0)
+    return b""
   }
   let output = Array::make(length, b' ')
   let mut position = 0
@@ -53,7 +53,7 @@ pub fn pdf_content_concat_streams(
     }
   }
   if length == 0 {
-    return Bytes::new(0)
+    return b""
   }
   let output = Array::make(length, b' ')
   let mut position = 0

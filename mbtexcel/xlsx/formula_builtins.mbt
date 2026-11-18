@@ -11,12 +11,12 @@ fn eval_function(
       match args {
         [] =>
           current_cell_rc(ctx).map_or(Error(formula_error_value), rc => {
-            Number(Double::from_int(rc.0))
+            Number(rc.0.to_double())
           })
         [arg] =>
           ref_bounds_opt(arg).map_or(Error(formula_error_value), bounds => {
             let (row1, _col1, row2, _col2) = bounds
-            Number(Double::from_int(Int32::min(row1, row2)))
+            Number(Int32::min(row1, row2).to_double())
           })
         _ => Error(formula_error_value)
       }
@@ -24,12 +24,12 @@ fn eval_function(
       match args {
         [] =>
           current_cell_rc(ctx).map_or(Error(formula_error_value), rc => {
-            Number(Double::from_int(rc.1))
+            Number(rc.1.to_double())
           })
         [arg] =>
           ref_bounds_opt(arg).map_or(Error(formula_error_value), bounds => {
             let (_row1, col1, _row2, col2) = bounds
-            Number(Double::from_int(Int32::min(col1, col2)))
+            Number(Int32::min(col1, col2).to_double())
           })
         _ => Error(formula_error_value)
       }
@@ -39,9 +39,7 @@ fn eval_function(
           ref_bounds_opt(arg).map_or(Error(formula_error_value), bounds => {
             let (row1, _col1, row2, _col2) = bounds
             Number(
-              Double::from_int(
-                Int32::max(row1, row2) - Int32::min(row1, row2) + 1,
-              ),
+              (Int32::max(row1, row2) - Int32::min(row1, row2) + 1).to_double(),
             )
           })
         _ => Error(formula_error_value)
@@ -52,9 +50,7 @@ fn eval_function(
           ref_bounds_opt(arg).map_or(Error(formula_error_value), bounds => {
             let (_row1, col1, _row2, col2) = bounds
             Number(
-              Double::from_int(
-                Int32::max(col1, col2) - Int32::min(col1, col2) + 1,
-              ),
+              (Int32::max(col1, col2) - Int32::min(col1, col2) + 1).to_double(),
             )
           })
         _ => Error(formula_error_value)
@@ -1315,7 +1311,7 @@ fn bitwise_values(
           "BITRSHIFT" => a >> b
           _ => 0
         }
-        Number(Double::from_int(result))
+        Number(result.to_double())
       }
     (Err(err), _) => err
     (_, Err(err)) => err
@@ -1388,7 +1384,7 @@ fn arabic_string_value(text : String) -> FormulaValue {
   if is_negative {
     number = -number
   }
-  Number(Double::from_int(number))
+  Number(number.to_double())
 }
 
 ///|
@@ -1499,11 +1495,11 @@ fn bin2dec_string(text : String) -> FormulaValue {
     let idx = length - i
     let ch = chars[idx]
     if i == 10 && ch == '1' {
-      decimal = decimal + @math.pow(-2.0, Double::from_int(i - 1))
+      decimal = decimal + @math.pow(-2.0, (i - 1).to_double())
       continue
     }
     if ch == '1' {
-      decimal = decimal + @math.pow(2.0, Double::from_int(i - 1))
+      decimal = decimal + @math.pow(2.0, (i - 1).to_double())
       continue
     }
     if ch != '0' {
@@ -1537,11 +1533,11 @@ fn hex2dec_string(text : String) -> FormulaValue {
     match hex_digit_value(ch) {
       Some(value) => {
         if i == 10 && ch == 'F' {
-          decimal = decimal + @math.pow(-16.0, Double::from_int(i - 1))
+          decimal = decimal + @math.pow(-16.0, (i - 1).to_double())
           continue
         }
         decimal = decimal +
-          Double::from_int(value) * @math.pow(16.0, Double::from_int(i - 1))
+          value.to_double() * @math.pow(16.0, (i - 1).to_double())
       }
       None => return Error(formula_error_num)
     }
@@ -1564,11 +1560,10 @@ fn oct2dec_string(text : String) -> FormulaValue {
       return Error(formula_error_num)
     }
     if i == 10 && ch == '7' {
-      decimal = decimal + @math.pow(-8.0, Double::from_int(i - 1))
+      decimal = decimal + @math.pow(-8.0, (i - 1).to_double())
       continue
     }
-    decimal = decimal +
-      Double::from_int(digit) * @math.pow(8.0, Double::from_int(i - 1))
+    decimal = decimal + digit.to_double() * @math.pow(8.0, (i - 1).to_double())
   }
   Number(decimal)
 }
@@ -1586,7 +1581,7 @@ fn combin_values(number : Double, chosen : Double) -> FormulaValue {
   let mut val = 1.0
   let k_int = Double::to_int(k)
   for i in 1..<=k_int {
-    let c = Double::from_int(i)
+    let c = i.to_double()
     val = val * (n + 1.0 - c) / c
   }
   Number(Double::ceil(val))
@@ -1601,7 +1596,7 @@ fn factorial_double(number : Double) -> Double {
   let n_int = Double::to_int(n)
   let mut value = 1.0
   for i in 2..<=n_int {
-    value = value * Double::from_int(i)
+    value = value * i.to_double()
   }
   value
 }
@@ -1620,7 +1615,7 @@ fn double_factorial_double(number : Double) -> Double {
   let mut value = 1.0
   let mut i = Double::to_int(n)
   while i > 1 {
-    value = value * Double::from_int(i)
+    value = value * i.to_double()
     i = i - 2
   }
   value
@@ -1742,7 +1737,7 @@ fn average_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if count == 0 {
     Error(formula_error_div)
   } else {
-    Number(sum / Double::from_int(count))
+    Number(sum / count.to_double())
   }
 }
 
@@ -1784,7 +1779,7 @@ fn averagea_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if count == 0 {
     Error(formula_error_div)
   } else {
-    Number(sum / Double::from_int(count))
+    Number(sum / count.to_double())
   }
 }
 
@@ -1852,7 +1847,7 @@ fn stdev_values(
     }
   }
   if count > 0 && sum >= 0.0 {
-    let result = @math.pow(sum / Double::from_int(count), 0.5)
+    let result = @math.pow(sum / count.to_double(), 0.5)
     Number(round_significant_digits(result, 15))
   } else {
     Error(formula_error_div)
@@ -1905,8 +1900,8 @@ fn variance_values(
     }
   }
   if count > minimum {
-    let count_d = Double::from_int(count)
-    let min_d = Double::from_int(minimum)
+    let count_d = count.to_double()
+    let min_d = minimum.to_double()
     let variance = (sum_sq * count_d - sum * sum) /
       (count_d * (count_d - min_d))
     Number(round_significant_digits(variance, 15))
@@ -1937,9 +1932,7 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     return Error(formula_error_div)
   }
   numbers.sort()
-  let discard = Double::floor(
-    Double::from_int(numbers.length()) * percent / 2.0,
-  ).to_int()
+  let discard = Double::floor(numbers.length().to_double() * percent / 2.0).to_int()
   let start = discard
   let end = numbers.length() - discard
   let mut sum = 0.0
@@ -1947,7 +1940,7 @@ fn trimmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for i in start..<end {
     sum = sum + numbers[i]
   }
-  Number(sum / Double::from_int(count))
+  Number(sum / count.to_double())
 }
 
 ///|
@@ -2554,7 +2547,7 @@ fn poisson_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let mut sum = 0.0
     let limit = Double::to_int(Double::floor(x))
     for i in 0..<=limit {
-      let i_double = Double::from_int(i)
+      let i_double = i.to_double()
       sum = sum + @math.pow(mean, i_double) / factorial_double(i_double)
     }
     @math.exp(-mean) * sum
@@ -2624,7 +2617,7 @@ fn binomdist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let mut sum = 0.0
     let limit = Double::to_int(Double::floor(successes))
     for i in 0..<=limit {
-      let i_double = Double::from_int(i)
+      let i_double = i.to_double()
       sum = sum + binomdist_double(i_double, trials, probability)
     }
     sum
@@ -2776,7 +2769,7 @@ fn hypgeom_dist_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     let mut sum = 0.0
     let limit = Double::to_int(Double::floor(sample_s))
     for i in 0..<=limit {
-      let i_double = Double::from_int(i)
+      let i_double = i.to_double()
       sum = sum + hypgeom_raw(i_double, number_sample, population_s, number_pop)
     }
     sum
@@ -3185,7 +3178,7 @@ fn ztest_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     }
   }
   let list = list_from_value(values[0])
-  let count = Double::from_int(list.length())
+  let count = list.length().to_double()
   let denom = sigma / Double::sqrt(count)
   if denom == 0.0 {
     return Error(formula_error_div)
@@ -3400,7 +3393,7 @@ fn chitest_values(
   } else {
     (actual_range.cols - 1) * (actual_range.rows - 1)
   }
-  let value = round_chisq_result(get_chidist(result, Double::from_int(degrees)))
+  let value = round_chisq_result(get_chidist(result, degrees.to_double()))
   number_or_num_error(value)
 }
 

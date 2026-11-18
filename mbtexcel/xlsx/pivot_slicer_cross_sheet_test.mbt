@@ -23,9 +23,9 @@ test "pivot+slicer cross-sheet multi-cache corpus" {
 
   for row in 1..<=4 {
     sheet_a.set_cell_value("A\{row}", String("Region\{row}"))
-    sheet_a.set_cell_value("B\{row}", Numeric(Double::from_int(row)))
+    sheet_a.set_cell_value("B\{row}", Numeric(row.to_double()))
     sheet_b.set_cell_value("A\{row}", String("Zone\{row}"))
-    sheet_b.set_cell_value("B\{row}", Numeric(Double::from_int(row * 10)))
+    sheet_b.set_cell_value("B\{row}", Numeric((row * 10).to_double()))
   }
 
   ignore(

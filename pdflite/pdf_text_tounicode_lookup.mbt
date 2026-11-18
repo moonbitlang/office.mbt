@@ -4,7 +4,7 @@ fn PdfFont::pdf_text_tounicode(
 ) -> Array[(Int32, @core.PdfBytes)]? {
   match self {
     PdfFontSimple(
-      { fontdescriptor: Some({ tounicode: Some(tounicode), .. }), .. }
+      { fontdescriptor: Some({ tounicode: Some(tounicode), .. }), .. },
     ) => Some(tounicode)
     PdfFontCIDKeyed(
       {
@@ -13,7 +13,7 @@ fn PdfFont::pdf_text_tounicode(
           ..
         },
         ..
-      }
+      },
     ) => Some(tounicode)
     _ => None
   }

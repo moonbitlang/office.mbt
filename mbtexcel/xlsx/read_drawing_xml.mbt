@@ -65,12 +65,12 @@ fn drawing_axis_position_emu_for_read(
   off_emu : Int32,
 ) -> Int64 raise XlsxError {
   let pixels = metrics.pixel_span(0, idx0)
-  let emu_per_pixel = Int64::from_int(picture_emu_per_pixel)
+  let emu_per_pixel = picture_emu_per_pixel.to_int64()
   let max_base = 0x7fff_ffff_ffff_ffffL - 0xffff_ffffL
   if pixels > max_base / emu_per_pixel {
     raise InvalidXml(msg="drawing span out of range")
   }
-  pixels * emu_per_pixel + Int64::from_int(off_emu)
+  pixels * emu_per_pixel + off_emu.to_int64()
 }
 
 ///|

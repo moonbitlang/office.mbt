@@ -180,7 +180,7 @@ async test "async file wrappers extract embedded font files" {
   }
   guard missing
     is Err(
-      @core.PdfError::SoftError("extract_fontfile: unsupported or unfound font")
+      @core.PdfError::SoftError("extract_fontfile: unsupported or unfound font"),
     ) else {
     fail("expected unsupported or unfound font")
   }
@@ -279,7 +279,7 @@ async test "async file wrappers extract single image files" {
   }
   guard merge
     is Err(
-      @core.PdfError::SoftError("combine_image_and_mask: imagemagick not found")
+      @core.PdfError::SoftError("combine_image_and_mask: imagemagick not found"),
     ) else {
     fail("expected ImageMagick merge error")
   }
@@ -404,7 +404,7 @@ async test "async file wrappers extract page image files" {
   }
   guard merge
     is Err(
-      @core.PdfError::SoftError("combine_image_and_mask: imagemagick not found")
+      @core.PdfError::SoftError("combine_image_and_mask: imagemagick not found"),
     ) else {
     fail("expected ImageMagick merge error")
   }

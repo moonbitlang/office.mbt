@@ -7,7 +7,7 @@ pub(all) enum HtmlNode {
     attributes~ : Map[String, String],
     children~ : Array[HtmlNode],
     fresh~ : Bool,
-    separator~ : String?
+    separator~ : String?,
   )
   TextNode(String)
   ForceWrite

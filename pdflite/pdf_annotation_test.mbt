@@ -149,7 +149,7 @@ fn annotation_json_helper_document_for_test() -> @pdflite.PdfDocument {
 ///|
 test "PdfDocument get_annotations returns old-style page content pairs" {
   let document = try! annotation_cpdf_helper_document_for_test()
-  let expected = [(1, b"first"), (2, b"second"), (2, Bytes::new(0))]
+  let expected = [(1, b"first"), (2, b"second"), (2, b"")]
   @test.assert_eq(
     try! document.get_annotations(encoding=PdfMetadataRaw),
     expected,
@@ -291,14 +291,14 @@ test "PdfDocument set_annotations_json imports cpdf annotation rows" {
   let expected_annotations = [
     (1, b"first"),
     (2, b"second"),
-    (2, Bytes::new(0)),
+    (2, b""),
     (2, b"json"),
     (2, b"dest"),
   ]
   @test.assert_eq(try! target.get_annotations(encoding=PdfMetadataRaw), [
     (1, b"first"),
     (2, b"second"),
-    (2, Bytes::new(0)),
+    (2, b""),
   ])
   @test.assert_eq(
     try! imported.get_annotations(encoding=PdfMetadataRaw),
@@ -396,7 +396,7 @@ test "PdfDocument remove_annotations removes selected page arrays" {
   @test.assert_eq(try! document.get_annotations(encoding=PdfMetadataRaw), [
     (1, b"first"),
     (2, b"second"),
-    (2, Bytes::new(0)),
+    (2, b""),
   ])
   @test.assert_eq(try! removed.get_annotations(encoding=PdfMetadataRaw), [
     (1, b"first"),

@@ -28,7 +28,7 @@ priv enum ReaderEffect {
   ProjectsText(
     source~ : ReaderNode,
     kind~ : ReaderProjectedTextKind,
-    value~ : String
+    value~ : String,
   )
   ProjectsVisibleNonText(source~ : ReaderNode)
   TransparentBoundary(source~ : ReaderNode)
@@ -83,7 +83,7 @@ priv enum ReaderTreeShape {
     /// passes implement, kept structural here so no conversion can quietly
     /// flatten it into ordinary children.
     extras~ : Array[ReaderItem],
-    properties~ : ParagraphProperties
+    properties~ : ParagraphProperties,
   )
   ReaderRun(children~ : Array[ReaderItem], properties~ : RunProperties)
   ReaderText(String)
@@ -93,7 +93,7 @@ priv enum ReaderTreeShape {
     children~ : Array[ReaderItem],
     href~ : String?,
     anchor~ : String?,
-    target_frame~ : String?
+    target_frame~ : String?,
   )
   ReaderNoteReference(note_type~ : String, note_id~ : String)
   ReaderCommentReference(String)
@@ -103,7 +103,7 @@ priv enum ReaderTreeShape {
   ReaderTableCell(
     children~ : Array[ReaderItem],
     col_span~ : Int32,
-    row_span~ : Int32
+    row_span~ : Int32,
   )
   ReaderBreak(@document.BreakType)
   ReaderBookmarkStart(String)

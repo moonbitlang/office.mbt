@@ -111,7 +111,7 @@ test "PdfDocument hard_box handles missing boxes like cpdf" {
   }
   guard missing
     is Err(
-      @core.PdfError::BadPageSpecification("hard_box: box /TrimBox not found")
+      @core.PdfError::BadPageSpecification("hard_box: box /TrimBox not found"),
     ) else {
     fail("expected hard_box to reject a missing selected box")
   }
@@ -249,8 +249,8 @@ test "PdfDocument copy_page_box handles missing sources like cpdf" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "copy_page_box: range contains pages not present in pdf"
-      )
+        "copy_page_box: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected copy_page_box to reject an out-of-range page")
   }
@@ -417,8 +417,8 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
   guard bad_count
     is Err(
       @core.PdfError::BadPageSpecification(
-        "set_mediaboxes: box count must match page count"
-      )
+        "set_mediaboxes: box count must match page count",
+      ),
     ) else {
     fail("expected set_mediaboxes to reject a partial page-indexed box list")
   }
@@ -433,8 +433,8 @@ test "PdfDocument set_mediaboxes validates page range and box count" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "set_mediaboxes: range contains pages not present in pdf"
-      )
+        "set_mediaboxes: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected set_mediaboxes to reject an out-of-range page")
   }
@@ -498,8 +498,8 @@ test "PdfDocument crop_pages validates page range and box count" {
   guard bad_count
     is Err(
       @core.PdfError::BadPageSpecification(
-        "crop_pages: box count must match page count"
-      )
+        "crop_pages: box count must match page count",
+      ),
     ) else {
     fail("expected crop_pages to reject a partial page-indexed box list")
   }
@@ -514,8 +514,8 @@ test "PdfDocument crop_pages validates page range and box count" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "crop_pages: range contains pages not present in pdf"
-      )
+        "crop_pages: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected crop_pages to reject an out-of-range page")
   }
@@ -586,8 +586,8 @@ test "PdfDocument set_page_box validates selected pages" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "set_page_box: range contains pages not present in pdf"
-      )
+        "set_page_box: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected set_page_box to reject an out-of-range page")
   }
@@ -660,8 +660,8 @@ test "PdfDocument shift_boxes validates selected pages and offset count" {
   guard bad_count
     is Err(
       @core.PdfError::BadPageSpecification(
-        "shift_boxes: offset count must match page count"
-      )
+        "shift_boxes: offset count must match page count",
+      ),
     ) else {
     fail("expected shift_boxes to reject a partial page-indexed offset list")
   }
@@ -676,8 +676,8 @@ test "PdfDocument shift_boxes validates selected pages and offset count" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "shift_boxes: range contains pages not present in pdf"
-      )
+        "shift_boxes: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected shift_boxes to reject an out-of-range page")
   }

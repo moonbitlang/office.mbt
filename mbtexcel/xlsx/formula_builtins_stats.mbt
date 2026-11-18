@@ -81,7 +81,7 @@ fn avedev_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if count == 0 {
     Error(formula_error_value)
   } else {
-    Number(round_significant_digits(sum / Double::from_int(count), 15))
+    Number(round_significant_digits(sum / count.to_double(), 15))
   }
 }
 
@@ -111,7 +111,7 @@ fn devsq_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for num in numbers {
     sum = sum + num
   }
-  let mean = sum / Double::from_int(numbers.length())
+  let mean = sum / numbers.length().to_double()
   let mut total = 0.0
   for num in numbers {
     let delta = num - mean
@@ -177,7 +177,7 @@ fn geomean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if count == 0 {
     return Error(formula_error_num)
   }
-  let result = @math.pow(product, 1.0 / Double::from_int(count))
+  let result = @math.pow(product, 1.0 / count.to_double())
   number_or_num_error(round_significant_digits(result, 15))
 }
 
@@ -238,7 +238,7 @@ fn harmean_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   if count == 0 {
     return Error(formula_error_na)
   }
-  let result = 1.0 / (total / Double::from_int(count))
+  let result = 1.0 / (total / count.to_double())
   number_or_num_error(round_significant_digits(result, 15))
 }
 
@@ -280,7 +280,7 @@ fn kurt_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for num in numbers {
     sum_numbers = sum_numbers + num
   }
-  let count = Double::from_int(numbers.length())
+  let count = numbers.length().to_double()
   let mean = sum_numbers / count
   let stdev = match sample_stdev(numbers) {
     Some(num) => num
@@ -337,7 +337,7 @@ fn skew_values(name : String, values : ArrayView[FormulaValue]) -> FormulaValue 
   for num in numbers {
     sum = sum + num
   }
-  let count = Double::from_int(numbers.length())
+  let count = numbers.length().to_double()
   let mean = sum / count
   let stdev = if name == "SKEW" {
     match sample_stdev(numbers) {
@@ -547,7 +547,7 @@ fn percentile_values(
   numbers.sort()
   let count = numbers.length()
   if exclusive {
-    let idx = k * Double::from_int(count + 1)
+    let idx = k * (count + 1).to_double()
     let base = @math.floor(idx)
     let base_index = base.to_int()
     let next_index = base_index - 1
@@ -559,7 +559,7 @@ fn percentile_values(
       (numbers[base_index] - numbers[next_index]) * proportion
     return Number(round_significant_digits(result, 15))
   }
-  let idx = k * Double::from_int(count - 1)
+  let idx = k * (count - 1).to_double()
   let base = @math.floor(idx)
   if idx == base {
     return Number(numbers[base.to_int()])
@@ -599,7 +599,7 @@ fn percentrank_values(
   if x < numbers[0] || x > numbers[count - 1] {
     return Error(formula_error_na)
   }
-  let mut pos = Double::from_int(index_of_double(numbers, x))
+  let mut pos = index_of_double(numbers, x).to_double()
   if pos < 0.0 {
     let mut idx = 0.0
     let mut cmp = numbers[0]
@@ -612,9 +612,9 @@ fn percentrank_values(
   }
   let pow = @math.pow(10.0, significance)
   let digit = if name == "PERCENTRANK.EXC" {
-    pow * (pos + 1.0) / (Double::from_int(count) + 1.0)
+    pow * (pos + 1.0) / (count.to_double() + 1.0)
   } else {
-    pow * pos / (Double::from_int(count) - 1.0)
+    pow * pos / (count.to_double() - 1.0)
   }
   let result = @math.floor(digit) / pow
   Number(round_significant_digits(result, 15))
@@ -672,7 +672,7 @@ fn rank_values(
   if idx < 0 {
     Error(formula_error_na)
   } else {
-    Number(Double::from_int(idx + 1))
+    Number((idx + 1).to_double())
   }
 }
 
@@ -685,13 +685,13 @@ fn sample_stdev(numbers : ArrayView[Double]) -> Double? {
   for num in numbers {
     sum = sum + num
   }
-  let mean = sum / Double::from_int(numbers.length())
+  let mean = sum / numbers.length().to_double()
   let mut sum_sq = 0.0
   for num in numbers {
     let delta = num - mean
     sum_sq = sum_sq + delta * delta
   }
-  let denom = Double::from_int(numbers.length() - 1)
+  let denom = (numbers.length() - 1).to_double()
   Some(@math.pow(sum_sq / denom, 0.5))
 }
 
@@ -737,13 +737,13 @@ fn correl_values(
   for num in ys {
     sum_y = sum_y + num
   }
-  let mean_x = sum_x / Double::from_int(xs.length())
-  let mean_y = sum_y / Double::from_int(ys.length())
+  let mean_x = sum_x / xs.length().to_double()
+  let mean_y = sum_y / ys.length().to_double()
   let mut sum = 0.0
   for i in 0..<xs.length() {
     sum = sum + (xs[i] - mean_x) * (ys[i] - mean_y)
   }
-  let denom = Double::from_int(xs.length() - 1)
+  let denom = (xs.length() - 1).to_double()
   let result = sum / denom / stdev_x / stdev_y
   number_or_num_error(round_significant_digits(result, 15))
 }
@@ -784,8 +784,8 @@ fn covar_values(
   if count_left == 0 || count_right == 0 {
     return Error(formula_error_div)
   }
-  let mean_left = sum_left / Double::from_int(count_left)
-  let mean_right = sum_right / Double::from_int(count_right)
+  let mean_left = sum_left / count_left.to_double()
+  let mean_right = sum_right / count_right.to_double()
   let mut sum = 0.0
   let mut count = 0
   for i in 0..<left.length() {
@@ -801,7 +801,7 @@ fn covar_values(
   if denom <= 0 {
     return Error(formula_error_div)
   }
-  let result = sum / Double::from_int(denom)
+  let result = sum / denom.to_double()
   Number(round_significant_digits(result, 15))
 }
 
@@ -848,8 +848,8 @@ fn pearson_product_values(
   if count == 0 {
     return Error(formula_error_div)
   }
-  let mean_x = sum_x / Double::from_int(count)
-  let mean_y = sum_y / Double::from_int(count)
+  let mean_x = sum_x / count.to_double()
+  let mean_y = sum_y / count.to_double()
   let mut sum = 0.0
   let mut delta_x = 0.0
   let mut delta_y = 0.0
@@ -1217,7 +1217,7 @@ fn count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       List(_) => ()
     }
   }
-  Number(Double::from_int(count))
+  Number(count.to_double())
 }
 
 ///|
@@ -1233,7 +1233,7 @@ fn counta_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       List(_) => ()
     }
   }
-  Number(Double::from_int(count))
+  Number(count.to_double())
 }
 
 ///|
@@ -1611,7 +1611,7 @@ fn countblank_values(range_values : RangeValues) -> FormulaValue {
       _ => ()
     }
   }
-  Number(Double::from_int(count))
+  Number(count.to_double())
 }
 
 ///|
@@ -1631,7 +1631,7 @@ fn countif_values(
       count = count + 1
     }
   }
-  Number(Double::from_int(count))
+  Number(count.to_double())
 }
 
 ///|
@@ -1714,7 +1714,7 @@ fn averageif_values(
   if count == 0 {
     Error(formula_error_div)
   } else {
-    Number(sum / Double::from_int(count))
+    Number(sum / count.to_double())
   }
 }
 

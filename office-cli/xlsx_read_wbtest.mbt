@@ -67,7 +67,7 @@ test "XLSX projection enforces its documented scan ceiling" {
   let malformed : OfficeReadPackage = {
     file: "malformed.xlsx",
     format: Xlsx,
-    bytes: Bytes::new(0),
+    bytes: b"",
     archive: Archive(),
   }
   let upfront = xlsx_cli_error(() => {
@@ -103,7 +103,7 @@ fn xlsx_bounded_test_source(
       max_total_uncompressed_bytes=office_read_max_zip_total_bytes,
     ),
   )
-  { file, format: Xlsx, bytes: Bytes::new(0), archive, }
+  { file, format: Xlsx, bytes: b"", archive, }
 }
 
 ///|
@@ -1257,7 +1257,7 @@ test "XLSX structured reads reject non-finite package numbers" {
   let source : OfficeReadPackage = {
     file: "non-finite.xlsx",
     format: Xlsx,
-    bytes: Bytes::new(0),
+    bytes: b"",
     archive: bounded,
   }
   let error = xlsx_cli_error(() => ignore(open_xlsx_projection(source, 10)))

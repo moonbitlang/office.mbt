@@ -71,8 +71,8 @@ fn apply_panes_for_write(
     let pane = SheetPane::new()
     pane.active_pane = panes.active_pane
     pane.top_left_cell = normalized_top_left
-    pane.x_split = Double::from_int(panes.x_split)
-    pane.y_split = Double::from_int(panes.y_split)
+    pane.x_split = panes.x_split.to_double()
+    pane.y_split = panes.y_split.to_double()
     if panes.freeze {
       pane.state = "frozen"
     }

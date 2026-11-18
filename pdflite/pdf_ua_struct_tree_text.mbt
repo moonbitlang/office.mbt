@@ -286,7 +286,7 @@ pub fn PdfDocument::struct_tree_text(
   let rolemap = self.pdf_ua_struct_tree_rolemap()
   let tree = self.pdf_ua_read_struct_tree_text(rolemap)
   if tree.name == pdf_ua_struct_tree_root_key() && tree.children.length() == 0 {
-    Bytes::new(0)
+    b""
   } else {
     let pruned = pdf_ua_remove_empty_struct_tree_text_nodes(tree)
     let page_lookup = pdf_ua_page_lookup(self.page_reference_numbers())

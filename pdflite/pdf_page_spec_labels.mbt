@@ -23,7 +23,7 @@ fn PdfDocumentPageSpecContext::read_page_label_reference(
     }
   }
   self.bad()
-  (Bytes::new(0), spec.length())
+  (b"", spec.length())
 }
 
 ///|
@@ -36,14 +36,14 @@ fn PdfDocumentPageSpecContext::page_number_bytes_for_label(
     let page_label = match
       @label.pdf_page_label_text_of_page_number(page_number, labels) {
       Some(value) => value
-      None => Bytes::new(0)
+      None => b""
     }
     if page_label[:] == label {
       return @ascii.encode(page_number.to_string())
     }
   }
   self.bad()
-  Bytes::new(0)
+  b""
 }
 
 ///|

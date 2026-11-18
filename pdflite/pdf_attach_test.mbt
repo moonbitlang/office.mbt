@@ -262,7 +262,7 @@ test "PdfDocument attach_file adds page attachment annotation and preserves exis
   let pages = try! attached.pages_of_pagetree()
   guard pages[1].rest.lookup_immediate(key_annots)
     is Some(
-      PdfArray([PdfDictionary(_) as annotation, PdfDictionary(_) as kept])
+      PdfArray([PdfDictionary(_) as annotation, PdfDictionary(_) as kept]),
     ) else {
     fail("expected new file annotation before existing annotation")
   }

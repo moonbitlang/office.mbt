@@ -372,7 +372,7 @@ pub fn pdf_print_metadata(
 ) -> @core.PdfBytes raise @core.PdfError {
   match document.metadata() {
     Some(data) => data
-    None => Bytes::new(0)
+    None => b""
   }
 }
 

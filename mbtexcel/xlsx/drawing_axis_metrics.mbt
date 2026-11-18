@@ -69,7 +69,7 @@ fn drawing_axis_metrics_for_sheet(
   for entry in overrides {
     let (index, delta) = entry
     override_indices.push(index)
-    delta_sum = delta_sum + Int64::from_int(delta)
+    delta_sum = delta_sum + delta.to_int64()
     prefix_deltas.push(delta_sum)
   }
   { axis: axis.to_owned(), limit, default_px, override_indices, prefix_deltas, }
@@ -113,7 +113,7 @@ fn DrawingAxisMetrics::pixel_span(
     raise InvalidXml(msg="drawing " + self.axis + " invalid")
   }
   let count = end_idx0 - start_idx0
-  let base = Int64::from_int(self.default_px) * Int64::from_int(count)
+  let base = self.default_px.to_int64() * count.to_int64()
   let delta = self.delta_before(end_idx0) - self.delta_before(start_idx0)
   let total = base + delta
   if total < 0L {

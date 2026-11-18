@@ -982,7 +982,7 @@ test "style map parser reads upstream document matcher forms" {
     ParagraphMatcher(
       style_id=None,
       style_name=Some(PrefixStyleName("Heading")),
-      numbering=None
+      numbering=None,
     ) => ()
     _ => fail("expected paragraph style-name prefix matcher")
   }
@@ -1076,7 +1076,7 @@ test "style map parser handles malformed and escaped edge cases" {
     ParagraphMatcher(
       style_id=Some("Heading"),
       style_name=Some(_),
-      numbering=None
+      numbering=None,
     ) => ()
     _ => fail("expected paragraph style ID before attributes")
   }

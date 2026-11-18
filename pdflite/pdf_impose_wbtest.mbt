@@ -270,8 +270,8 @@ test "pdf_impose_layout calculates fit sheets and spacing" {
   guard too_small
     is Err(
       @core.PdfError::BadNumberArgument(
-        "impose: not even a single page would fit"
-      )
+        "impose: not even a single page would fit",
+      ),
     ) else {
     fail("expected fit layout to reject too-small output")
   }
@@ -335,8 +335,8 @@ test "pdf_impose_layout calculates non-fit stacks and output boxes" {
   guard bad_zero
     is Err(
       @core.PdfError::BadNumberArgument(
-        "impose-xy: both dimensions cannot be zero"
-      )
+        "impose-xy: both dimensions cannot be zero",
+      ),
     ) else {
     fail("expected non-fit layout to reject zero dimensions")
   }
@@ -635,7 +635,7 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
   }
   guard bad_grid
     is Err(
-      @core.PdfError::BadNumberArgument("impose: x and y must be positive")
+      @core.PdfError::BadNumberArgument("impose: x and y must be positive"),
     ) else {
     fail("expected BadNumberArgument for non-positive imposition grid")
   }
@@ -657,7 +657,7 @@ test "pdf_impose_transforms rejects invalid grids and margins" {
   }
   guard bad_margin
     is Err(
-      @core.PdfError::BadNumberArgument("impose: margin would fill whole page")
+      @core.PdfError::BadNumberArgument("impose: margin would fill whole page"),
     ) else {
     fail("expected BadNumberArgument for over-large imposition margin")
   }
@@ -974,8 +974,8 @@ test "pdf_impose pattern matrix rewrite descends into form xobjects" {
   guard document.lookup_object_or_null(30).lookup_immediate(key_resources)
     is Some(
       PdfDictionary(
-        [(pattern_key, PdfDictionary([(name, PdfIndirect(number))]))]
-      )
+        [(pattern_key, PdfDictionary([(name, PdfIndirect(number))]))],
+      ),
     ) &&
     pattern_key == key_pattern &&
     name == pattern_name else {

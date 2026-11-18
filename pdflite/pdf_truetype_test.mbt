@@ -660,8 +660,8 @@ test "pdf_truetype_parse refuses subsets with no main encoding characters" {
   guard parsed
     is Err(
       @core.PdfError::SoftError(
-        "Cpdftruetype: Refusing to create font with no characters"
-      )
+        "Cpdftruetype: Refusing to create font with no characters",
+      ),
     ) else {
     fail("expected empty main TrueType subset to fail")
   }
@@ -756,7 +756,7 @@ test "pdf_truetype_loca_offsets reports source errors" {
   }
   guard unknown_format
     is Err(
-      @core.PdfError::SoftError("Unknown indexToLocFormat in read_loca_table")
+      @core.PdfError::SoftError("Unknown indexToLocFormat in read_loca_table"),
     ) else {
     fail("expected unknown indexToLocFormat to fail")
   }

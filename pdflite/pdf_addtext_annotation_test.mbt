@@ -616,8 +616,8 @@ test "PdfDocument addtext_rectangle validates selected pages" {
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(
-        "addtext_rectangle: range contains pages not present in pdf"
-      )
+        "addtext_rectangle: range contains pages not present in pdf",
+      ),
     ) else {
     fail(
       "expected BadPageSpecification for out-of-range addtext rectangle page",

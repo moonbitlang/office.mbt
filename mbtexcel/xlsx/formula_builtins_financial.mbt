@@ -128,7 +128,7 @@ fn coupdays_between(
   }
   days = days + to_day - from_day
   if days > 0 {
-    Double::from_int(days)
+    days.to_double()
   } else {
     0.0
   }
@@ -280,7 +280,7 @@ fn coupdays_value(
     return Ok(coupdays_between(pcd, next, basis, use_1904_dates~))
   }
   let year_days = get_year_days(0, basis)
-  Ok(Double::from_int(year_days) / frequency)
+  Ok(year_days.to_double() / frequency)
 }
 
 ///|
@@ -336,9 +336,9 @@ fn yearfrac_number(
 ///|
 fn round_half_up(value : Double) -> Double {
   if value < 0.0 {
-    -Double::from_int(Double::to_int(trunc_double(-value + 0.5)))
+    -Double::to_int(trunc_double(-value + 0.5)).to_double()
   } else {
-    Double::from_int(Double::to_int(trunc_double(value + 0.5)))
+    Double::to_int(trunc_double(value + 0.5)).to_double()
   }
 }
 
@@ -527,7 +527,7 @@ fn amorlinc_values(
     return number_or_num_error(round_significant_digits(rate2, 15))
   }
   if args.period - 1 == periods {
-    let result = delta - rate2 * Double::from_int(periods) - rate1
+    let result = delta - rate2 * periods.to_double() - rate1
     return number_or_num_error(round_significant_digits(result, 15))
   }
   Number(0.0)
@@ -1109,7 +1109,7 @@ fn euroconvert_values(values : ArrayView[FormulaValue]) -> FormulaValue {
     intermediate * target_rate
   }
   if !full_precision {
-    let ratio = @math.pow(10.0, Double::from_int(target_decimals))
+    let ratio = @math.pow(10.0, target_decimals.to_double())
     result = Double::round(result * ratio) / ratio
   }
   number_or_num_error(round_significant_digits(result, 15))
@@ -1202,7 +1202,7 @@ fn calc_npv(rate : Double, values : ArrayView[FormulaValue]) -> Double {
   for value in values {
     match value_as_number_opt_financial(value) {
       Some(num) => {
-        result = result + num / @math.pow(1.0 + rate, Double::from_int(period))
+        result = result + num / @math.pow(1.0 + rate, period.to_double())
         period = period + 1
       }
       None => ()
@@ -1225,7 +1225,7 @@ fn npv_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for idx in 1..<values.length() {
     match value_as_number_opt_financial(values[idx]) {
       Some(num) => {
-        result = result + num / @math.pow(1.0 + rate, Double::from_int(period))
+        result = result + num / @math.pow(1.0 + rate, period.to_double())
         period = period + 1
       }
       None => ()
@@ -1440,17 +1440,17 @@ fn mirr_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for idx in 0..<n {
     let value = value_as_number_financial(list_values[idx])
     if value >= 0.0 {
-      npv_pos = npv_pos + value / @math.pow(rr, Double::from_int(idx))
+      npv_pos = npv_pos + value / @math.pow(rr, idx.to_double())
     } else {
-      npv_neg = npv_neg + value / @math.pow(fr, Double::from_int(idx))
+      npv_neg = npv_neg + value / @math.pow(fr, idx.to_double())
     }
   }
   if npv_neg == 0.0 || npv_pos == 0.0 || reinvest_rate <= -1.0 {
     return Error(formula_error_div)
   }
   let result = @math.pow(
-      -npv_pos * @math.pow(rr, Double::from_int(n)) / (npv_neg * rr),
-      1.0 / (Double::from_int(n) - 1.0),
+      -npv_pos * @math.pow(rr, n.to_double()) / (npv_neg * rr),
+      1.0 / (n.to_double() - 1.0),
     ) -
     1.0
   number_or_num_error(round_significant_digits(result, 15))
@@ -2825,7 +2825,7 @@ fn duration_calc(
   let mut price = 0.0
   let coups_int = Double::to_int(trunc_double(coups))
   for t in 1..<coups_int {
-    let t_value = Double::from_int(t)
+    let t_value = t.to_double()
     let t_diff = t_value + diff
     let add = coupon_cash / @math.pow(yld_factor, t_diff)
     price = price + add
@@ -2938,7 +2938,7 @@ fn price_value(
     let t2 = 1.0 + yld_per
     let n_int = Double::to_int(trunc_double(n))
     for k in 0..<n_int {
-      let k_value = Double::from_int(k)
+      let k_value = k.to_double()
       result = result + t1 / @math.pow(t2, k_value + dsc)
     }
   } else {
@@ -3476,11 +3476,11 @@ fn aggr_between(
   let end_int = Double::to_int(trunc_double(end_period))
   if start_int <= end_int {
     for idx in start_int..<=end_int {
-      value = f(value, Double::from_int(idx))
+      value = f(value, idx.to_double())
     }
   } else {
     for idx in start_int>=..end_int {
-      value = f(value, Double::from_int(idx))
+      value = f(value, idx.to_double())
     }
   }
   value

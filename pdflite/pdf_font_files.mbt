@@ -11,13 +11,13 @@ pub fn PdfFontFile::object_number(self : PdfFontFile) -> Int32 {
 pub fn PdfFont::embedded_fontfile_number(self : PdfFont) -> Int32? {
   match self {
     PdfFontSimple(
-      { fontdescriptor: Some({ fontfile: Some(fontfile), .. }), .. }
+      { fontdescriptor: Some({ fontfile: Some(fontfile), .. }), .. },
     ) => Some(fontfile.object_number())
     PdfFontCIDKeyed(
       {
         composite: { cid_fontdescriptor: { fontfile: Some(fontfile), .. }, .. },
         ..
-      }
+      },
     ) => Some(fontfile.object_number())
     _ => None
   }

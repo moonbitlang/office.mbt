@@ -533,8 +533,8 @@ test "PdfDocument draft rejects page ranges outside the document" {
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(
-        "draft: range contains pages not present in pdf"
-      )
+        "draft: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected draft page range validation")
   }

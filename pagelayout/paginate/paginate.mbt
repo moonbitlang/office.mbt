@@ -47,14 +47,14 @@ pub(all) enum Block {
     input~ : @paragraph.ParagraphInput,
     keep_lines~ : Bool,
     keep_next~ : Bool,
-    widow_control~ : Bool
+    widow_control~ : Bool,
   )
   ParagraphWithImages(
     input~ : @paragraph.ParagraphInput,
     images~ : Array[@paragraph.InlineImage],
     keep_lines~ : Bool,
     keep_next~ : Bool,
-    widow_control~ : Bool
+    widow_control~ : Bool,
   )
   /// A table. `keep_next` glues it to the block that follows, as for a
   /// paragraph; rows split across pages unless a row says `cant_split`,
@@ -67,7 +67,7 @@ pub(all) enum Block {
     width_pt~ : Double,
     height_pt~ : Double,
     data~ : Bytes,
-    mime~ : String
+    mime~ : String,
   )
   PageBreak
 }

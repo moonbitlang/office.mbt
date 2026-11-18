@@ -8,7 +8,7 @@ test "integration pivot+slicer relationship consistency" {
   data.set_cell_value("B1", String("Value"))
   for row in 2..<=5 {
     data.set_cell_value("A\{row}", String("R\{row - 1}"))
-    data.set_cell_value("B\{row}", Numeric(Double::from_int(row * 10)))
+    data.set_cell_value("B\{row}", Numeric((row * 10).to_double()))
   }
 
   ignore(

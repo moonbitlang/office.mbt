@@ -227,11 +227,11 @@ pub(all) enum DocumentElement {
   Document(
     children~ : Array[DocumentElement],
     notes~ : Array[Note],
-    comments~ : Array[Comment]
+    comments~ : Array[Comment],
   )
   Paragraph(
     children~ : Array[DocumentElement],
-    properties~ : ParagraphProperties
+    properties~ : ParagraphProperties,
   )
   Run(children~ : Array[DocumentElement], properties~ : RunProperties)
   Text(String)
@@ -241,7 +241,7 @@ pub(all) enum DocumentElement {
     children~ : Array[DocumentElement],
     href~ : String?,
     anchor~ : String?,
-    target_frame~ : String?
+    target_frame~ : String?,
   )
   NoteReference(note_type~ : String, note_id~ : String)
   CommentReference(String)
@@ -251,7 +251,7 @@ pub(all) enum DocumentElement {
   TableCell(
     children~ : Array[DocumentElement],
     col_span~ : Int32,
-    row_span~ : Int32
+    row_span~ : Int32,
   )
   Break(BreakType)
   BookmarkStart(String)

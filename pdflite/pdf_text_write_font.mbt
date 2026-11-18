@@ -43,7 +43,7 @@ pub fn PdfDocument::write_font(
         encoding,
         fontdescriptor,
         ..
-      }
+      },
     ) =>
       match fontdescriptor {
         Some(_) =>
@@ -65,7 +65,7 @@ pub fn PdfDocument::write_font(
         fontdescriptor: Some(descriptor),
         encoding,
         ..
-      }
+      },
     ) =>
       self.pdf_text_add_font_object(
         self.pdf_text_make_true_type_font(

@@ -212,7 +212,7 @@ fn crypt_wb_aesv3_r5_random_for_test(
       crypt_wb_bytes_for_test([0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18])
     PdfAesV3OwnerKeySalt =>
       crypt_wb_bytes_for_test([0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20])
-    PdfAesV3PermissionsPadding => Bytes::new(4)
+    PdfAesV3PermissionsPadding => Bytes::make(4, b'\x00')
   }
 }
 
@@ -220,10 +220,10 @@ fn crypt_wb_aesv3_r5_random_for_test(
 test "private encryption password settings reject AESV3" {
   let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptAESV3(false),
-    user_entry: Bytes::new(0),
-    owner_entry: Bytes::new(0),
+    user_entry: b"",
+    owner_entry: b"",
     permissions: 0,
-    file_id: Bytes::new(0),
+    file_id: b"",
     encrypt_metadata: true,
     permissions_entry: None,
     user_encryption_key: None,
@@ -238,7 +238,7 @@ test "private encryption password settings reject AESV3" {
   }
   guard result
     is Err(
-      @core.PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV3(false))
+      @core.PdfError::EncryptionAuthenticationUnsupported(PdfCryptAESV3(false)),
     ) else {
     fail("expected unsupported AESV3 password settings")
   }
@@ -660,7 +660,7 @@ test "private encryption values derive raw file keys for authenticated passwords
     b"user",
     b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
-    fn(_, _, _) { Bytes::new(16) },
+    fn(_, _, _) { Bytes::make(16, b'\x00') },
     file_id=b"doc-id",
   )
   let aesv2_values = try! aesv2_doc.encryption_values()
@@ -701,7 +701,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
   @test.assert_eq(try! r2_values.authenticate_user_password(b"bad"), false)
 
   let r3_values = try! (try! pdf_document_empty().encrypt_128bit(
-    Bytes::new(0),
+    b"",
     b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     file_id=b"doc-id",
@@ -719,7 +719,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
     owner_encryption_key: None,
   }
   @test.assert_eq(
-    try! r3_values_with_entry_prefix.authenticate_user_password(Bytes::new(0)),
+    try! r3_values_with_entry_prefix.authenticate_user_password(b""),
     true,
   )
   let r3_values_with_short_entry = @crypt_core.PdfEncryptionValues::{
@@ -734,7 +734,7 @@ test "private encryption values authenticate R2 and R3 user entries" {
     owner_encryption_key: None,
   }
   @test.assert_eq(
-    try! r3_values_with_short_entry.authenticate_user_password(Bytes::new(0)),
+    try! r3_values_with_short_entry.authenticate_user_password(b""),
     false,
   )
 }
@@ -806,7 +806,7 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
     b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     crypt_wb_aesv3_r5_random_for_test,
-    fn(_, _, _) { Bytes::new(16) },
+    fn(_, _, _) { Bytes::make(16, b'\x00') },
     iso=true,
     file_id=b"doc-id",
   )
@@ -828,7 +828,7 @@ test "private AESV3 password authentication validates R5 SHA-256 entries" {
 ///|
 test "private encryption values authenticate owner through recovered user password" {
   let values = try! (try! pdf_document_empty().encrypt_128bit(
-    Bytes::new(0),
+    b"",
     b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
     file_id=b"doc-id",
@@ -943,14 +943,14 @@ test "PdfDocument AESV3 decrypt preserves parser-private object states" {
 test "private AESV3 saved dictionary requires permissions entry" {
   let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptAESV3(false),
-    user_entry: Bytes::new(48),
-    owner_entry: Bytes::new(48),
+    user_entry: Bytes::make(48, b'\x00'),
+    owner_entry: Bytes::make(48, b'\x00'),
     permissions: -3904,
     file_id: b"doc-id",
     encrypt_metadata: true,
     permissions_entry: None,
-    user_encryption_key: Some(Bytes::new(32)),
-    owner_encryption_key: Some(Bytes::new(32)),
+    user_encryption_key: Some(Bytes::make(32, b'\x00')),
+    owner_encryption_key: Some(Bytes::make(32, b'\x00')),
   }
   let result : Result[@syntax.PdfObject, Error] = try
     pdf_crypt_saved_aesv3_dictionary(values)
@@ -980,11 +980,15 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
     fail("expected invalid AESV3 CBC data length")
   }
   // Preserve the adapter's empty-input and IV truncation behavior.
-  let iv = Bytes::new(16)
+  let iv = Bytes::make(16, b'\x00')
   @test.assert_eq(pdf_aesv3_cbc_encrypt_no_padding_with_iv(b"", iv, b""), b"")
-  let block = Bytes::new(32)
+  let block = Bytes::make(32, b'\x00')
   @test.assert_eq(
-    pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(24), block),
+    pdf_aesv3_cbc_encrypt_no_padding_with_iv(
+      key,
+      Bytes::make(24, b'\x00'),
+      block,
+    ),
     pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, iv, block),
   )
   let short_iv = @test.expect_error(() => {
@@ -1006,10 +1010,10 @@ test "private AESV3 CBC no-padding encryption rejects partial blocks" {
 test "private document decrypt supports ISO AESV3 object crypt with a file key" {
   let values = @crypt_core.PdfEncryptionValues::{
     crypt_type: PdfCryptAESV3(true),
-    user_entry: Bytes::new(0),
-    owner_entry: Bytes::new(0),
+    user_entry: b"",
+    owner_entry: b"",
     permissions: 0,
-    file_id: Bytes::new(0),
+    file_id: b"",
     encrypt_metadata: true,
     permissions_entry: None,
     user_encryption_key: None,
@@ -1058,13 +1062,7 @@ test "private standard file key derivation matches CamlPDF R2 through R4" {
   )
   @test.assert_eq(
     @crypt_core.pdf_encryption_file_key(
-      false,
-      Bytes::new(0),
-      3,
-      owner,
-      -3904,
-      b"doc-id",
-      128,
+      false, b"", 3, owner, -3904, b"doc-id", 128,
     ),
     crypt_wb_bytes_for_test([
       0x48, 0xd9, 0x52, 0xab, 0x8e, 0xdc, 0x9b, 0x82, 0xa0, 0x3a, 0xf2, 0x1c, 0xb1,
@@ -1073,13 +1071,7 @@ test "private standard file key derivation matches CamlPDF R2 through R4" {
   )
   @test.assert_eq(
     @crypt_core.pdf_encryption_file_key(
-      true,
-      Bytes::new(0),
-      4,
-      owner,
-      -3904,
-      b"doc-id",
-      128,
+      true, b"", 4, owner, -3904, b"doc-id", 128,
     ),
     crypt_wb_bytes_for_test([
       0x78, 0xcf, 0xeb, 0x72, 0x67, 0x35, 0x0d, 0x09, 0x98, 0xf4, 0xd4, 0xd5, 0x23,
@@ -1103,13 +1095,7 @@ test "private user password entries match CamlPDF U values" {
   )
   @test.assert_eq(
     try! @crypt_core.pdf_make_user_password_entry(
-      false,
-      Bytes::new(0),
-      3,
-      owner,
-      -3904,
-      b"doc-id",
-      128,
+      false, b"", 3, owner, -3904, b"doc-id", 128,
     ),
     crypt_wb_bytes_for_test([
       0x3d, 0xae, 0x18, 0x1a, 0x3c, 0x13, 0x8f, 0x79, 0xa6, 0xe2, 0xfa, 0x16, 0x86,
@@ -1119,13 +1105,7 @@ test "private user password entries match CamlPDF U values" {
   )
   @test.assert_eq(
     try! @crypt_core.pdf_make_user_password_entry(
-      true,
-      Bytes::new(0),
-      4,
-      owner,
-      -3904,
-      b"doc-id",
-      128,
+      true, b"", 4, owner, -3904, b"doc-id", 128,
     ),
     crypt_wb_bytes_for_test([
       0x93, 0x47, 0x7f, 0x4b, 0x13, 0x20, 0xa8, 0x08, 0x4f, 0x6a, 0x03, 0x20, 0xdc,
@@ -1175,12 +1155,7 @@ test "private owner password entries match CamlPDF O values" {
     ]),
   )
   @test.assert_eq(
-    try! @crypt_core.pdf_make_owner_password_entry(
-      3,
-      b"owner",
-      Bytes::new(0),
-      128,
-    ),
+    try! @crypt_core.pdf_make_owner_password_entry(3, b"owner", b"", 128),
     crypt_wb_bytes_for_test([
       0x56, 0x6f, 0xa8, 0x73, 0xee, 0x33, 0xc7, 0x97, 0xcd, 0x3b, 0x90, 0x4f, 0xda,
       0xdf, 0x81, 0x4a, 0xfa, 0x34, 0xdf, 0x9a, 0x38, 0xf6, 0xed, 0x41, 0xb9, 0x84,
@@ -1188,12 +1163,7 @@ test "private owner password entries match CamlPDF O values" {
     ]),
   )
   @test.assert_eq(
-    try! @crypt_core.pdf_make_owner_password_entry(
-      2,
-      Bytes::new(0),
-      b"user",
-      40,
-    ),
+    try! @crypt_core.pdf_make_owner_password_entry(2, b"", b"user", 40),
     crypt_wb_bytes_for_test([
       0x8e, 0xc9, 0x9e, 0x00, 0xc3, 0xd1, 0x84, 0x91, 0x0a, 0x40, 0x64, 0xdf, 0x0f,
       0x95, 0x16, 0xb0, 0x41, 0x36, 0x2b, 0x9b, 0xf1, 0xdc, 0x3f, 0x68, 0xd1, 0x5b,
@@ -1218,10 +1188,7 @@ test "private owner-password recovery returns padded user password" {
     ]),
   )
   let owner_entry_r3 = try! @crypt_core.pdf_make_owner_password_entry(
-    3,
-    b"owner",
-    Bytes::new(0),
-    128,
+    3, b"owner", b"", 128,
   )
   @test.assert_eq(
     try! @crypt_core.pdf_user_password_from_owner_password(

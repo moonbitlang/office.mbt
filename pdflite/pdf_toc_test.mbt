@@ -703,8 +703,8 @@ test "PdfDocument toc_with_source handles cpdftoc font-source dispatch" {
   guard rejected
     is Err(
       @core.PdfError::SoftError(
-        "Cannot use existing font with -table-of-contents"
-      )
+        "Cannot use existing font with -table-of-contents",
+      ),
     ) else {
     fail("expected existing named font rejection")
   }
@@ -776,8 +776,8 @@ test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
   guard structured
     is Err(
       @core.PdfError::SoftError(
-        "typeset_table_of_contents: structured TOC output is not implemented"
-      )
+        "typeset_table_of_contents: structured TOC output is not implemented",
+      ),
     ) else {
     fail("expected structured TOC rejection")
   }
@@ -800,8 +800,8 @@ test "pdf_typeset_table_of_contents preserves cpdftoc argument order" {
   guard pdfua
     is Err(
       @core.PdfError::SoftError(
-        "typeset_table_of_contents: structured TOC output is not implemented"
-      )
+        "typeset_table_of_contents: structured TOC output is not implemented",
+      ),
     ) else {
     fail("expected PDF/UA TOC rejection")
   }

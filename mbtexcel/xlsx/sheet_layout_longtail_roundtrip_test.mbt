@@ -343,7 +343,7 @@ test "sparkline long-tail options survive read and rewrite" {
   for i in 1..<=5 {
     sheet.set_cell_value(
       "A\{i}",
-      Numeric(Double::from_int(i * (if i % 2 == 0 { -1 } else { 1 }))),
+      Numeric((i * (if i % 2 == 0 { -1 } else { 1 })).to_double()),
     )
   }
   let opts = @xlsx.SparklineOptions::new(["D1"], ["Sheet1!A1:A5"])

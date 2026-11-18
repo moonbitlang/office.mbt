@@ -94,8 +94,5 @@ test "pdf_list_spot_colours_blob returns cpdf stdout bytes" {
   let expected = b"/Spot\n/IndirectSpot\n"
   @test.assert_eq(document.list_spot_colours_blob(), expected)
   @test.assert_eq(@pdflite.pdf_list_spot_colours_blob(document), expected)
-  @test.assert_eq(
-    @pdflite.pdf_document_empty().list_spot_colours_blob(),
-    Bytes::new(0),
-  )
+  @test.assert_eq(@pdflite.pdf_document_empty().list_spot_colours_blob(), b"")
 }

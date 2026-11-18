@@ -120,8 +120,8 @@ test "PdfDocument rotate_pages validates rotation and page range" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "rotate_pages_by: range contains pages not present in pdf"
-      )
+        "rotate_pages_by: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected rotate_pages_by to reject invalid pages")
   }
@@ -278,8 +278,8 @@ test "PdfDocument rotate_contents validates selected pages" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "rotate_contents: range contains pages not present in pdf"
-      )
+        "rotate_contents: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected rotate_contents to reject invalid pages")
   }

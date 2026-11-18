@@ -174,13 +174,13 @@ priv enum InlineSpec {
     href~ : String?,
     anchor~ : String?,
     target_frame~ : String?,
-    runs~ : Array[InlineSpec]
+    runs~ : Array[InlineSpec],
   )
   ImageSpec(
     path~ : String,
     content_type~ : String,
     alt~ : String?,
-    at~ : String
+    at~ : String,
   )
   // A run holding one footnote/endnote reference; index is the dense
   // per-kind note index the writer consumes.

@@ -601,7 +601,7 @@ test "private object stream helpers cover malformed object streams" {
 ///|
 test "private reader xref helpers report malformed inputs" {
   let empty_token : Result[Bool, Error] = try
-    @reader.pdf_xref_token_in_use(Bytes::new(0))
+    @reader.pdf_xref_token_in_use(b"")
   catch {
     err => Err(err)
   } noraise {
@@ -701,7 +701,7 @@ test "private reader xref helpers report malformed inputs" {
   )
   @test.assert_eq(adjacent.absolute_position(), b"2 0 obj\n42\nendobj".length())
 
-  let empty_prefix = @core.byte_cursor_of_bytes(Bytes::new(0))
+  let empty_prefix = @core.byte_cursor_of_bytes(b"")
   let empty_prefix_result : Result[@syntax.PdfParsedIndirectObject, Error] = try
     pdf_cursor_read_reconstructed_indirect_prefix_at_current(empty_prefix)
   catch {

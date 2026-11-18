@@ -8,7 +8,7 @@ test "integration mixed feature workbook ooxml sanity" {
   data.set_cell_value("B1", String("Value"))
   for row in 2..<=6 {
     data.set_cell_value("A\{row}", String("R\{row - 1}"))
-    data.set_cell_value("B\{row}", Numeric(Double::from_int(row * 5)))
+    data.set_cell_value("B\{row}", Numeric((row * 5).to_double()))
   }
 
   ignore(

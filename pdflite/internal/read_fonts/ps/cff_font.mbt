@@ -8,7 +8,7 @@ priv enum CffFontKind {
   Sid(
     strings~ : Index,
     private_dict_start~ : UInt64,
-    private_dict_end~ : UInt64
+    private_dict_end~ : UInt64,
   )
   /// A CFF font with an externally defined encoding.
   Cid(fd_select~ : FdSelect?, fd_array~ : Index)

@@ -248,7 +248,7 @@ pub fn PdfDocument::read_colour_space(
       pdf_space_device_n_name =>
       self.pdf_space_read_device_n(resources, names, alternate, tint)
     PdfArray(
-      [PdfNameObject(kind), PdfArray(names), alternate, tint, attributes]
+      [PdfNameObject(kind), PdfArray(names), alternate, tint, attributes],
     ) if kind == pdf_space_device_n_name =>
       self.pdf_space_read_device_n(
         resources,

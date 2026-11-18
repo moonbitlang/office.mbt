@@ -1066,8 +1066,8 @@ test "cfb wb: DIFAT declarations and cycles are bounded by package sectors" {
     excessive_result
     is Err(
       XlsxError::InvalidEncryptionInfo(
-        msg="cfb DIFAT sector count exceeds package"
-      )
+        msg="cfb DIFAT sector count exceeds package",
+      ),
     ),
     content="true",
   )

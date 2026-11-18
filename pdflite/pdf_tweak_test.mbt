@@ -643,7 +643,7 @@ test "PdfDocument append_page_content no-ops for empty content and ops" {
   let unchanged_bytes = try! @pdflite.pdf_append_page_content(
     document,
     [1],
-    Bytes::new(0),
+    b"",
   )
   let unchanged_ops = try! document.append_page_content_ops([1], [])
   @test.assert_eq(

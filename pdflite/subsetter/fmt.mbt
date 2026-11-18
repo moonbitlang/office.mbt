@@ -232,7 +232,7 @@ fn parse_f32(s : String) -> Float? {
   if i != n {
     return None
   }
-  let m = @bigint.BigInt::from_string(mant.to_string())
+  let m = try! @string.parse_bigint(mant.to_string())
   let sign = if neg { -1.0 } else { 1.0 }
   if m.is_zero() {
     return Some(Float::from_double(sign * 0.0))

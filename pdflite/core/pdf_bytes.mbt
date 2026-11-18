@@ -61,7 +61,7 @@ pub fn pdf_bytes_concat_views(parts : ArrayView[BytesView]) -> PdfBytes {
     length += part.length()
   }
   if length == 0 {
-    return Bytes::new(0)
+    return b""
   }
   let output = Array::make(length, b' ')
   let mut position = 0

@@ -4,7 +4,7 @@ priv enum PdfImageResolutionObject {
   PdfImageResolutionForm(
     @geometry.TransformMatrix,
     @syntax.PdfObject,
-    @syntax.PdfObject
+    @syntax.PdfObject,
   )
 }
 

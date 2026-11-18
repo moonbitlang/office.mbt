@@ -23,7 +23,7 @@ pub(all) suberror DocxError {
     kind~ : String,
     limit~ : Int64,
     actual~ : Int64,
-    message~ : String
+    message~ : String,
   )
 }
 

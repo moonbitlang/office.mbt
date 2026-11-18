@@ -611,7 +611,7 @@ fn calc_mean_over_all(mtx : Array[Array[Double]], n : Int32) -> Double {
       sum = sum + mtx[col][row]
     }
   }
-  sum / Double::from_int(n)
+  sum / n.to_double()
 }
 
 ///|
@@ -639,7 +639,7 @@ fn calc_column_means(
     for k in 0..<r {
       sum = sum + mtx_x[i][k]
     }
-    put_double(mtx_res, i, sum / Double::from_int(r))
+    put_double(mtx_res, i, sum / r.to_double())
   }
 }
 
@@ -814,7 +814,7 @@ fn calc_row_means(
     for i in 0..<c {
       sum = sum + mtx_x[i][k]
     }
-    mtx_res[k][0] = sum / Double::from_int(c)
+    mtx_res[k][0] = sum / c.to_double()
   }
 }
 
@@ -1271,7 +1271,7 @@ fn sequence_values(values : ArrayView[FormulaValue]) -> FormulaValue {
   for row in 0..<rows {
     for col in 0..<cols {
       let idx = row * cols + col
-      let value = start + step * Double::from_int(idx)
+      let value = start + step * idx.to_double()
       out.push(Number(value))
     }
   }
@@ -1343,7 +1343,7 @@ fn randarray_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       } else {
         0
       }
-      out.push(Number(Double::from_int(rand_value + min_int)))
+      out.push(Number((rand_value + min_int).to_double()))
     }
   } else {
     let span = max - min
@@ -1425,8 +1425,8 @@ fn take_values(
   if rows_count == 0 || cols_count == 0 {
     return Error(formula_error_value)
   }
-  let row_count = Double::abs(Double::from_int(rows_count)).to_int()
-  let col_count = Double::abs(Double::from_int(cols_count)).to_int()
+  let row_count = Double::abs(rows_count.to_double()).to_int()
+  let col_count = Double::abs(cols_count.to_double()).to_int()
   if row_count > range.rows || col_count > range.cols {
     return Error(formula_error_value)
   }
@@ -1468,8 +1468,8 @@ fn drop_values(
     values[0],
     ctx,
   )
-  let drop_rows = Double::abs(Double::from_int(rows_value)).to_int()
-  let drop_cols = Double::abs(Double::from_int(cols_value)).to_int()
+  let drop_rows = Double::abs(rows_value.to_double()).to_int()
+  let drop_cols = Double::abs(cols_value.to_double()).to_int()
   if drop_rows > range.rows || drop_cols > range.cols {
     return Error(formula_error_value)
   }
@@ -2218,9 +2218,9 @@ fn frequency_values(
       count = count + 1
       idx = idx + 1
     }
-    out.push(Number(Double::from_int(count)))
+    out.push(Number(count.to_double()))
   }
-  out.push(Number(Double::from_int(data.length() - idx)))
+  out.push(Number((data.length() - idx).to_double()))
   if out.length() > 2 {
     let temp = out[1]
     out[1] = out[2]
@@ -3107,8 +3107,8 @@ fn array_shape_from_expr(
               if rows_count == 0 || cols_count == 0 {
                 None
               } else {
-                let row_count = Double::abs(Double::from_int(rows_count)).to_int()
-                let col_count = Double::abs(Double::from_int(cols_count)).to_int()
+                let row_count = Double::abs(rows_count.to_double()).to_int()
+                let col_count = Double::abs(cols_count.to_double()).to_int()
                 if row_count <= 0 ||
                   col_count <= 0 ||
                   row_count > range.rows ||
@@ -3142,8 +3142,8 @@ fn array_shape_from_expr(
               } else {
                 0
               }
-              let drop_rows = Double::abs(Double::from_int(rows_value)).to_int()
-              let drop_cols = Double::abs(Double::from_int(cols_value)).to_int()
+              let drop_rows = Double::abs(rows_value.to_double()).to_int()
+              let drop_cols = Double::abs(cols_value.to_double()).to_int()
               let row_count = range.rows - drop_rows
               let col_count = range.cols - drop_cols
               if row_count <= 0 ||
@@ -3488,7 +3488,7 @@ fn code_value(name : String, value : FormulaValue) -> FormulaValue {
     return if name == "CODE" { Number(0.0) } else { Error(formula_error_value) }
   }
   match text.get_char(0) {
-    Some(ch) => Number(Double::from_int(ch.to_int()))
+    Some(ch) => Number(ch.to_int().to_double())
     None =>
       if name == "CODE" {
         Number(0.0)
@@ -4571,7 +4571,7 @@ fn match_range_value(
   if match_type == 0 {
     for i in 0..<values.length() {
       match compare_values(values[i], lookup) {
-        Ok(0) => return Number(Double::from_int(i + 1))
+        Ok(0) => return Number((i + 1).to_double())
         Ok(_) => ()
         Err(err) => return err
       }
@@ -4593,7 +4593,7 @@ fn match_range_value(
     }
   }
   match best_idx {
-    Some(idx) => Number(Double::from_int(idx + 1))
+    Some(idx) => Number((idx + 1).to_double())
     None => Error(formula_error_na)
   }
 }
@@ -5719,7 +5719,7 @@ fn database_count_values(values : ArrayView[FormulaValue]) -> FormulaValue {
       List(_) => ()
     }
   }
-  Number(Double::from_int(count))
+  Number(count.to_double())
 }
 
 ///|
@@ -5889,7 +5889,7 @@ fn excel_serial_from_date(
   if serial < 0 {
     None
   } else {
-    Some(Double::from_int(serial))
+    Some(serial.to_double())
   }
 }
 
@@ -5904,7 +5904,7 @@ fn excel_time_fraction(
   }
   let total = hours * 3600 + minutes * 60 + seconds
   let wrapped = total % 86400
-  Some(Double::from_int(wrapped) / 86400.0)
+  Some(wrapped.to_double() / 86400.0)
 }
 
 ///|
@@ -6207,7 +6207,7 @@ fn normalized_formula_date_serial(
   let normalized = Double::floor(serial)
   if normalized < 0.0 ||
     normalized >
-    Double::from_int(maximum_supported_formula_date_serial(use_1904_dates)) {
+    maximum_supported_formula_date_serial(use_1904_dates).to_double() {
     return None
   }
   Some(Double::to_int(normalized))
@@ -6253,18 +6253,14 @@ fn workday_intl_adjust(
         break
       }
       if holiday > start_date {
-        if is_workday_mask(
-            weekend_mask,
-            Double::from_int(holiday),
-            use_1904_dates~,
-          ) {
+        if is_workday_mask(weekend_mask, holiday.to_double(), use_1904_dates~) {
           adjusted = adjusted + sign
           if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
             return None
           }
           while !is_workday_mask(
                   weekend_mask,
-                  Double::from_int(adjusted),
+                  adjusted.to_double(),
                   use_1904_dates~,
                 ) {
             adjusted = adjusted + sign
@@ -6279,18 +6275,14 @@ fn workday_intl_adjust(
         continue
       }
       if holiday < start_date {
-        if is_workday_mask(
-            weekend_mask,
-            Double::from_int(holiday),
-            use_1904_dates~,
-          ) {
+        if is_workday_mask(weekend_mask, holiday.to_double(), use_1904_dates~) {
           adjusted = adjusted + sign
           if !formula_date_serial_is_supported(adjusted, use_1904_dates) {
             return None
           }
           while !is_workday_mask(
                   weekend_mask,
-                  Double::from_int(adjusted),
+                  adjusted.to_double(),
                   use_1904_dates~,
                 ) {
             adjusted = adjusted + sign
@@ -6347,7 +6339,7 @@ fn networkdays_intl_value(
   while days_mod >= 0 {
     if is_workday_mask(
         weekend_mask,
-        Double::from_int(end - days_mod),
+        (end - days_mod).to_double(),
         use_1904_dates~,
       ) {
       count = count + 1
@@ -6355,13 +6347,13 @@ fn networkdays_intl_value(
     days_mod = days_mod - 1
   }
   for holiday in holidays {
-    if is_workday_mask(weekend_mask, Double::from_int(holiday), use_1904_dates~) &&
+    if is_workday_mask(weekend_mask, holiday.to_double(), use_1904_dates~) &&
       holiday >= start &&
       holiday <= end {
       count = count - 1
     }
   }
-  Number(Double::from_int(sign * count))
+  Number((sign * count).to_double())
 }
 
 ///|
@@ -6383,7 +6375,7 @@ fn workday_intl_value(
   holidays.sort()
   let days_int = Double::to_int(trunc_double(days))
   if days_int == 0 {
-    return Number(Double::from_int(start_date))
+    return Number(start_date.to_double())
   }
   let (weekend_mask, workdays) = match weekend_mask_from_value(weekend_value) {
     Ok(value) => value
@@ -6407,11 +6399,7 @@ fn workday_intl_value(
     return Error(formula_error_num)
   }
   if days_mod == 0 {
-    while !is_workday_mask(
-            weekend_mask,
-            Double::from_int(end_date),
-            use_1904_dates~,
-          ) {
+    while !is_workday_mask(weekend_mask, end_date.to_double(), use_1904_dates~) {
       end_date = end_date - sign
       if !formula_date_serial_is_supported(end_date, use_1904_dates) {
         return Error(formula_error_num)
@@ -6423,11 +6411,7 @@ fn workday_intl_value(
       if !formula_date_serial_is_supported(end_date, use_1904_dates) {
         return Error(formula_error_num)
       }
-      if is_workday_mask(
-          weekend_mask,
-          Double::from_int(end_date),
-          use_1904_dates~,
-        ) {
+      if is_workday_mask(weekend_mask, end_date.to_double(), use_1904_dates~) {
         if days_mod < 0 {
           days_mod = days_mod + 1
         } else {
@@ -6445,7 +6429,7 @@ fn workday_intl_value(
       start_date,
       use_1904_dates~,
     ) {
-    Some(adjusted) => Number(Double::from_int(adjusted))
+    Some(adjusted) => Number(adjusted.to_double())
     None => Error(formula_error_num)
   }
 }
@@ -6492,7 +6476,7 @@ fn yearfrac_basis0(
     }
   }
   let diff = (ey - sy) * 360 + (em - sm) * 30 + (end_day - start_day)
-  (Double::from_int(diff), 360.0)
+  (diff.to_double(), 360.0)
 }
 
 ///|
@@ -6518,7 +6502,7 @@ fn yearfrac_basis1(
     for y in sy..<=ey {
       day_count = day_count + days_in_year(y)
     }
-    Double::from_int(day_count) / Double::from_int(ey - sy + 1)
+    day_count.to_double() / (ey - sy + 1).to_double()
   } else if !is_year_different && is_leap_year(sy) {
     366.0
   } else if is_year_different && yearfrac_basis_cond(sy, sm, sd, ey, em, ed) {
@@ -6553,7 +6537,7 @@ fn yearfrac_basis4(
     end_day = 30
   }
   let diff = (ey - sy) * 360 + (em - sm) * 30 + (end_day - start_day)
-  (Double::from_int(diff), 360.0)
+  (diff.to_double(), 360.0)
 }
 
 ///|
@@ -6627,7 +6611,7 @@ fn round_significant_digits(value : Double, digits : Int32) -> Double {
   }
   let abs_value = Double::abs(value)
   let exponent = Double::floor(@math.log10(abs_value))
-  let scale = @math.pow(10.0, Double::from_int(digits - 1) - exponent)
+  let scale = @math.pow(10.0, (digits - 1).to_double() - exponent)
   round_half_away_from_zero(value * scale) / scale
 }
 
@@ -7375,8 +7359,8 @@ fn erf_double(value : Double) -> Double {
   let threshold = @math.pow(10.0, -18.0)
   while n < max_iter && Double::abs(term) > threshold {
     let n_int = n
-    let numerator = -x2 * Double::from_int(2 * n_int - 1)
-    let denominator = Double::from_int(n_int * (2 * n_int + 1))
+    let numerator = -x2 * (2 * n_int - 1).to_double()
+    let denominator = (n_int * (2 * n_int + 1)).to_double()
     term = term * numerator / denominator
     sum = sum + term
     n = n + 1
@@ -7652,10 +7636,10 @@ fn bessel_y2(x : Double, n : Double) -> Double {
 ///|
 fn round_with_digits(value : Double, digits : Int32) -> Double {
   if digits >= 0 {
-    let scale = Double::from_int(pow10_int(digits))
+    let scale = pow10_int(digits).to_double()
     round_half_away_from_zero(value * scale) / scale
   } else {
-    let scale = Double::from_int(pow10_int(-digits))
+    let scale = pow10_int(-digits).to_double()
     round_half_away_from_zero(value / scale) * scale
   }
 }
@@ -7663,10 +7647,10 @@ fn round_with_digits(value : Double, digits : Int32) -> Double {
 ///|
 fn round_down_with_digits(value : Double, digits : Int32) -> Double {
   if digits >= 0 {
-    let scale = Double::from_int(pow10_int(digits))
+    let scale = pow10_int(digits).to_double()
     trunc_double(value * scale) / scale
   } else {
-    let scale = Double::from_int(pow10_int(-digits))
+    let scale = pow10_int(-digits).to_double()
     trunc_double(value / scale) * scale
   }
 }
@@ -7674,7 +7658,7 @@ fn round_down_with_digits(value : Double, digits : Int32) -> Double {
 ///|
 fn round_up_with_digits(value : Double, digits : Int32) -> Double {
   if digits >= 0 {
-    let scale = Double::from_int(pow10_int(digits))
+    let scale = pow10_int(digits).to_double()
     let scaled = value * scale
     let truncated = trunc_double(scaled)
     let adjusted = if scaled == truncated {
@@ -7686,7 +7670,7 @@ fn round_up_with_digits(value : Double, digits : Int32) -> Double {
     }
     adjusted / scale
   } else {
-    let scale = Double::from_int(pow10_int(-digits))
+    let scale = pow10_int(-digits).to_double()
     let scaled = value / scale
     let truncated = trunc_double(scaled)
     let adjusted = if scaled == truncated {

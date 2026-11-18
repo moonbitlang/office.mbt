@@ -129,8 +129,8 @@ test "PdfDocument pad_before rejects missing pages" {
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(
-        "padbefore: range contains pages not present in pdf"
-      )
+        "padbefore: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected padbefore range error")
   }

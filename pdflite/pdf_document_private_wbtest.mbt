@@ -97,7 +97,7 @@ test "PdfDocument stream decompression preserves already-decrypted state" {
       {
         data: ObjectParsedAlreadyDecrypted(PdfStreamObject(decoded)),
         generation: 3,
-      }
+      },
     ) else {
     fail("expected already-decrypted stream")
   }

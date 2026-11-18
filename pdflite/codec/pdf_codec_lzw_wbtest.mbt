@@ -37,7 +37,7 @@ fn wbtest_lzw_codes(
 ///|
 test "private LZW code expansion rejects malformed tables" {
   let bad_next_code : Result[Int32?, Error] = try
-    pdf_lzw_next_code(@core.bitstream_of_bytes(Bytes::new(0)), 32)
+    pdf_lzw_next_code(@core.bitstream_of_bytes(b""), 32)
   catch {
     err => Err(err)
   } noraise {
@@ -96,12 +96,12 @@ test "private LZW code expansion rejects malformed tables" {
   let eod_encoded = wbtest_lzw_codes([257], 1)
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(eod_encoded),
-    (Bytes::new(0), eod_encoded.length()),
+    (b"", eod_encoded.length()),
   )
   let clear_eod_encoded = wbtest_lzw_codes([256, 257], 1)
   @test.assert_eq(
     try! pdf_lzw_decode_view_prefix(clear_eod_encoded),
-    (Bytes::new(0), clear_eod_encoded.length()),
+    (b"", clear_eod_encoded.length()),
   )
   let exact_byte_encoded = wbtest_lzw_codes(
     [65, 66, 67, 68, 69, 70, 71, 257],
@@ -173,7 +173,7 @@ test "private LZW code expansion rejects malformed tables" {
     fail("expected @core.PdfError::InvalidLZWData")
   }
   let empty_prefix : Result[(@core.PdfBytes, Int32), Error] = try
-    pdf_lzw_decode_view_prefix(Bytes::new(0))
+    pdf_lzw_decode_view_prefix(b"")
   catch {
     err => Err(err)
   } noraise {

@@ -101,10 +101,7 @@ test "@codec.pdf_ascii_hex_encode renders uppercase hex with terminator" {
     @codec.pdf_ascii_hex_encode(codec_bytes_for_test([0, 15, 160, 255])),
     codec_ascii_for_test("000FA0FF>"),
   )
-  @test.assert_eq(
-    @codec.pdf_ascii_hex_encode(Bytes::new(0)),
-    codec_ascii_for_test(">"),
-  )
+  @test.assert_eq(@codec.pdf_ascii_hex_encode(b""), codec_ascii_for_test(">"))
 }
 
 ///|
@@ -176,10 +173,7 @@ test "@codec.pdf_ascii85_encode renders full partial and zero chunks" {
     @codec.pdf_ascii85_encode(codec_bytes_for_test([0, 0, 0, 0])),
     codec_ascii_for_test("z~>"),
   )
-  @test.assert_eq(
-    @codec.pdf_ascii85_encode(Bytes::new(0)),
-    codec_ascii_for_test("~>"),
-  )
+  @test.assert_eq(@codec.pdf_ascii85_encode(b""), codec_ascii_for_test("~>"))
 }
 
 ///|

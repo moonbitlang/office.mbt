@@ -166,7 +166,7 @@ pub(all) enum GradientShape {
     r1~ : Double,
     x2~ : Double,
     y2~ : Double,
-    r2~ : Double
+    r2~ : Double,
   )
 }
 

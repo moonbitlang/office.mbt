@@ -816,7 +816,7 @@ test "chart options wb: combo branches and guards" {
   inspect(
     stock_result
     is Err(
-      XlsxError::InvalidSheetOperation(msg="stock chart requires 3 series")
+      XlsxError::InvalidSheetOperation(msg="stock chart requires 3 series"),
     ),
     content="true",
   )

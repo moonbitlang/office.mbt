@@ -54,7 +54,7 @@ pub(all) suberror SelectorError {
     code~ : String,
     offset~ : Int32,
     input~ : String,
-    message~ : String
+    message~ : String,
   )
 }
 

@@ -458,7 +458,7 @@ fn eval_decimal(call : EvalCall) -> FormulaValue {
           let parsed = @string.parse_int(text_value, radix=base) catch {
             _ => return Error(formula_error_value)
           }
-          Number(Double::from_int(parsed))
+          Number(parsed.to_double())
         }
         (Err(err), _) => err
         (_, Err(err)) => err

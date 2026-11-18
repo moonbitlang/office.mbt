@@ -530,7 +530,7 @@ fn eval_countifs(call : EvalCall) -> FormulaValue raise XlsxError {
         criterias.push(parse_formula_criteria(call.values[i * 2 + 1]))
       }
       let matches = ifs_match(ranges, criterias)
-      Number(Double::from_int(matches.length()))
+      Number(matches.length().to_double())
     }
   } else {
     Error(formula_error_value)
@@ -676,7 +676,7 @@ fn eval_averageifs(call : EvalCall) -> FormulaValue raise XlsxError {
       if count == 0 {
         Error(formula_error_div)
       } else {
-        Number(sum / Double::from_int(count))
+        Number(sum / count.to_double())
       }
     }
   } else {

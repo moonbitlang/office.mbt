@@ -237,7 +237,7 @@ test "PdfDocument struct_tree_text renders cpdf-style tree with role map and pag
   @test.assert_eq(try! @pdflite.pdf_ua_print_struct_tree(doc), expected)
 
   let without_tree = @pdflite.pdf_blank_document_paper(@geometry.paper_a4, 1)
-  @test.assert_eq(try! without_tree.struct_tree_text(), Bytes::new(0))
+  @test.assert_eq(try! without_tree.struct_tree_text(), b"")
 }
 
 ///|

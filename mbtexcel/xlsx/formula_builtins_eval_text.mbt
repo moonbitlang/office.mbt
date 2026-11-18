@@ -3,7 +3,7 @@ fn eval_len(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
       match value_as_string(v0) {
-        Ok(text) => Number(Double::from_int(text.length()))
+        Ok(text) => Number(text.length().to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -15,7 +15,7 @@ fn eval_lenb(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
       match value_as_string(v0) {
-        Ok(text) => Number(Double::from_int(dbcs_byte_length(text)))
+        Ok(text) => Number(dbcs_byte_length(text).to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -489,10 +489,10 @@ fn eval_find(call : EvalCall) -> FormulaValue {
         if start > len {
           Error(formula_error_value)
         } else if find_text.length() == 0 {
-          Number(Double::from_int(start_num))
+          Number(start_num.to_double())
         } else {
           match find_substring_from(within_text, find_text, start) {
-            Some(idx) => Number(Double::from_int(idx + 1))
+            Some(idx) => Number((idx + 1).to_double())
             None => Error(formula_error_value)
           }
         }
@@ -523,7 +523,7 @@ fn eval_findb(call : EvalCall) -> FormulaValue {
         1
       }
       match find_dbcs(within_text, find_text, start_num, false) {
-        Some(value) => Number(Double::from_int(value))
+        Some(value) => Number(value.to_double())
         None => Error(formula_error_value)
       }
     }
@@ -561,10 +561,10 @@ fn eval_search(call : EvalCall) -> FormulaValue {
         if start > len {
           Error(formula_error_value)
         } else if lower_find.length() == 0 {
-          Number(Double::from_int(start_num))
+          Number(start_num.to_double())
         } else {
           match wildcard_find(lower_text, lower_find, start) {
-            Some(idx) => Number(Double::from_int(idx + 1))
+            Some(idx) => Number((idx + 1).to_double())
             None => Error(formula_error_value)
           }
         }
@@ -597,7 +597,7 @@ fn eval_searchb(call : EvalCall) -> FormulaValue {
       let lower_find = find_text.to_lower()
       let lower_text = within_text.to_lower()
       match find_dbcs(lower_text, lower_find, start_num, true) {
-        Some(value) => Number(Double::from_int(value))
+        Some(value) => Number(value.to_double())
         None => Error(formula_error_value)
       }
     }

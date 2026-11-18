@@ -177,7 +177,7 @@ fn eval_sheet(call : EvalCall) -> FormulaValue {
   match call.args {
     [] =>
       match sheet_index_opt(call.workbook, call.sheet_name) {
-        Some(index) => Number(Double::from_int(index + 1))
+        Some(index) => Number((index + 1).to_double())
         None => Error(formula_error_na)
       }
     [arg] => {
@@ -187,7 +187,7 @@ fn eval_sheet(call : EvalCall) -> FormulaValue {
         _ => formula_value_string(call.values[0])
       }
       match sheet_index_opt(call.workbook, target_sheet) {
-        Some(index) => Number(Double::from_int(index + 1))
+        Some(index) => Number((index + 1).to_double())
         None => Error(formula_error_na)
       }
     }
@@ -198,7 +198,7 @@ fn eval_sheet(call : EvalCall) -> FormulaValue {
 ///|
 fn eval_sheets(call : EvalCall) -> FormulaValue {
   match call.args {
-    [] => Number(Double::from_int(call.workbook.sheets().length()))
+    [] => Number(call.workbook.sheets().length().to_double())
     [arg] =>
       match arg {
         Cell(_, _) | Range(_, _, _) => Number(1.0)

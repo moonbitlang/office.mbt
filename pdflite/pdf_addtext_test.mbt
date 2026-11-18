@@ -1235,8 +1235,8 @@ test "pdf_addtext_pages_with_font wrapper validates selected pages" {
   guard result
     is Err(
       @core.PdfError::BadPageSpecification(
-        "addtext_pages_with_font: range contains pages not present in pdf"
-      )
+        "addtext_pages_with_font: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected BadPageSpecification for out-of-range addtext page")
   }

@@ -45,18 +45,15 @@ fn content_wbtest_lzw_codes(
 test "private content helpers cover malformed operand fallbacks" {
   @test.assert_eq(
     pdf_content_op_section(Op_InlineImage(PdfNull, None, [])),
-    ([], Bytes::new(0)),
+    ([], b""),
   )
   @test.assert_eq(pdf_content_op_section(Op_Unknown(b"ZZ")), ([], b"ZZ"))
   @test.assert_eq(
-    pdf_content_read_complex_object(
-      @core.byte_cursor_of_bytes(Bytes::new(0)),
-      LexInt(7),
-    ),
+    pdf_content_read_complex_object(@core.byte_cursor_of_bytes(b""), LexInt(7)),
     PdfInteger(7),
   )
   let empty_object : Result[@syntax.PdfObject, Error] = try
-    pdf_content_read_object(@core.byte_cursor_of_bytes(Bytes::new(0)))
+    pdf_content_read_object(@core.byte_cursor_of_bytes(b""))
   catch {
     err => Err(err)
   } noraise {
@@ -67,7 +64,7 @@ test "private content helpers cover malformed operand fallbacks" {
   }
   @test.assert_eq(
     try! pdf_content_read_inline_image_data(@core.byte_cursor_of_bytes(b"EI ")),
-    Bytes::new(0),
+    b"",
   )
   @test.assert_eq(
     pdf_content_inline_image_data_length(

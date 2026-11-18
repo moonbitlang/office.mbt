@@ -105,7 +105,7 @@ fn crypt_decrypt_aesv3_r5_random_for_test(
       crypt_decrypt_model_bytes_for_test([
         0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
       ])
-    PdfAesV3PermissionsPadding => Bytes::new(4)
+    PdfAesV3PermissionsPadding => Bytes::make(4, b'\x00')
   }
 }
 

@@ -1107,7 +1107,7 @@ fn format_scientific_number(value : Double, info : NumberPatternInfo) -> String 
   }
   let abs_value = value.abs()
   let mut exp = Double::to_int(@math.log10(abs_value))
-  let mut mantissa = abs_value / @math.pow(10.0, Double::from_int(exp))
+  let mut mantissa = abs_value / @math.pow(10.0, exp.to_double())
   let mut mantissa_text = format_fixed_number(
     mantissa,
     info.max_decimals,
@@ -1416,7 +1416,7 @@ fn format_fixed_number(
   let scale64 = scale.to_uint64()
   let mut int_part = nonnegative_double_to_uint64(integer_double)
   let mut frac_part = nonnegative_double_to_uint64(
-    Double::round((abs_value - integer_double) * Double::from_int(scale)),
+    Double::round((abs_value - integer_double) * scale.to_double()),
   )
   if frac_part >= scale64 {
     if int_part == 0xffff_ffff_ffff_ffffUL {

@@ -413,7 +413,7 @@ fn PdfDocument::pdf_import_content(
   page : @syntax.PdfObject,
 ) -> (Array[(@core.PdfName, @syntax.PdfObject)], Bytes) raise @core.PdfError {
   match self.pdf_page_content_list(self.pdf_page_content_object(page)) {
-    [] => ([], Bytes::new(0))
+    [] => ([], b"")
     [single] =>
       match self.direct(single) {
         PdfStreamObject(stream) as object => {

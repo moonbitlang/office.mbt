@@ -55,7 +55,7 @@ fn pdf_crypt_deterministic_bytes(
   length : Int32,
 ) -> @core.PdfBytes {
   if length <= 0 {
-    Bytes::new(0)
+    b""
   } else {
     let rand = @random.Rand::chacha8(
       seed=pdf_crypt_deterministic_seed32(seed, purpose),

@@ -30,7 +30,7 @@ pub(all) enum PathElement {
     cx1~ : Float,
     cy1~ : Float,
     x~ : Float,
-    y~ : Float
+    y~ : Float,
   )
   Close
 }

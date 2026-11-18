@@ -190,8 +190,8 @@ test "PdfDocument chop validates grid and page range" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "chop_v: range contains pages not present in pdf"
-      )
+        "chop_v: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected bad chop page range")
   }

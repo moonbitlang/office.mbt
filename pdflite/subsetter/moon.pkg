@@ -7,6 +7,7 @@ import {
   "moonbitlang/core/double",
   "moonbitlang/core/cmp",
   "moonbitlang/core/math",
+  "moonbitlang/core/string",
 }
 
 warnings = "-missing_doc-implicit_impl_as_method"

@@ -13,7 +13,7 @@ pub(all) enum DocumentMatcher {
   ParagraphMatcher(
     style_id~ : String?,
     style_name~ : StyleNameMatcher?,
-    numbering~ : Numbering?
+    numbering~ : Numbering?,
   )
   RunMatcher(style_id~ : String?, style_name~ : StyleNameMatcher?)
   RunPropertyMatcher(String)

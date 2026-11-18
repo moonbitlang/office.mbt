@@ -13,7 +13,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding_with_iv(
     raise InvalidCryptoDataLength(data.length())
   }
   let iv = pdf_crypt_chop_view(pdf_crypt_iv_name, iv, 16)
-  guard data.length() > 0 else { return Bytes::new(0) }
+  guard data.length() > 0 else { return b"" }
   @crypt_core.pdf_aes_cbc_encrypt_no_padding_with_iv(key, iv, data)
 }
 
@@ -145,7 +145,7 @@ fn pdf_aesv3_cbc_encrypt_no_padding(
   key : BytesView,
   data : BytesView,
 ) -> @core.PdfBytes raise @core.PdfError {
-  pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::new(16), data)
+  pdf_aesv3_cbc_encrypt_no_padding_with_iv(key, Bytes::make(16, b'\x00'), data)
 }
 
 ///|
@@ -253,7 +253,7 @@ fn pdf_aesv3_unwrap_file_key(
   digest : @core.PdfBytes,
   encrypted_key : @core.PdfBytes,
 ) -> @core.PdfBytes raise @core.PdfError {
-  let zero_iv = Bytes::new(16)
+  let zero_iv = Bytes::make(16, b'\x00')
   let data = pdf_crypt_concat_bytes([zero_iv, encrypted_key])
   @crypt_core.pdf_aes_cbc_decrypt(digest, data, remove_padding=false)
 }

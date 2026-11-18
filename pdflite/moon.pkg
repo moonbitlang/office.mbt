@@ -46,6 +46,7 @@ import {
 }
 
 import {
+  "moonbitlang/core/encoding/utf16",
   "moonbitlang/core/test",
 } for "test"
 

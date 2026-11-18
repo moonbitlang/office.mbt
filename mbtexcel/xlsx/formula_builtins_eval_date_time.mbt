@@ -131,14 +131,14 @@ fn eval_datedif(call : EvalCall) -> FormulaValue {
             if em < sm || (em == sm && ed < sd) {
               diff = diff - 1
             }
-            Number(Double::from_int(diff))
+            Number(diff.to_double())
           }
           "m" => {
             let mut diff = (ey - sy) * 12 + (em - sm)
             if ed < sd {
               diff = diff - 1
             }
-            Number(Double::from_int(diff))
+            Number(diff.to_double())
           }
           "d" => Number(end_serial - start_serial)
           "ym" => {
@@ -149,7 +149,7 @@ fn eval_datedif(call : EvalCall) -> FormulaValue {
             if diff < 0 {
               diff = diff + 12
             }
-            Number(Double::from_int(diff))
+            Number(diff.to_double())
           }
           "yd" => {
             let mut target_year = sy
@@ -178,7 +178,7 @@ fn eval_datedif(call : EvalCall) -> FormulaValue {
               let dim = days_in_month(prev_year, prev_month)
               dim - sd + ed
             }
-            Number(Double::from_int(diff))
+            Number(diff.to_double())
           }
           _ => Error(formula_error_value)
         }
@@ -274,7 +274,7 @@ fn eval_days360(call : EvalCall) -> FormulaValue {
       let diff = (norm_year - sy) * 360 +
         (norm_month - sm) * 30 +
         (end_day - start_day)
-      Number(Double::from_int(diff))
+      Number(diff.to_double())
     }
     _ => Error(formula_error_value)
   }
@@ -306,7 +306,7 @@ fn eval_isoweeknum(call : EvalCall) -> FormulaValue {
         None => return Error(formula_error_num)
       }
       match iso_week_number(year, month, day) {
-        Some(week) => Number(Double::from_int(week))
+        Some(week) => Number(week.to_double())
         None => Error(formula_error_num)
       }
     }
@@ -429,13 +429,13 @@ fn eval_weekday(call : EvalCall) -> FormulaValue {
       }
       let weekday = weekday_sun1(year, month, day)
       if return_type == 1 {
-        Number(Double::from_int(weekday))
+        Number(weekday.to_double())
       } else if return_type == 3 {
         let value = (weekday + 6 - 1) % 7
-        Number(Double::from_int(value))
+        Number(value.to_double())
       } else if return_type >= 11 && return_type <= 17 {
         let value = (weekday + 6 - (return_type - 10)) % 7 + 1
-        Number(Double::from_int(value))
+        Number(value.to_double())
       } else {
         Error(formula_error_value)
       }
@@ -490,7 +490,7 @@ fn eval_weeknum(call : EvalCall) -> FormulaValue {
           }
         }
       }
-      Number(Double::from_int(week_num))
+      Number(week_num.to_double())
     }
     _ => Error(formula_error_value)
   }
@@ -671,7 +671,7 @@ fn eval_year(call : EvalCall) -> FormulaValue {
     [v0] =>
       match
         excel_serial_date_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
-        Ok((year, _, _)) => Number(Double::from_int(year))
+        Ok((year, _, _)) => Number(year.to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -684,7 +684,7 @@ fn eval_month(call : EvalCall) -> FormulaValue {
     [v0] =>
       match
         excel_serial_date_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
-        Ok((_, month, _)) => Number(Double::from_int(month))
+        Ok((_, month, _)) => Number(month.to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -697,7 +697,7 @@ fn eval_day(call : EvalCall) -> FormulaValue {
     [v0] =>
       match
         excel_serial_date_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
-        Ok((_, _, day)) => Number(Double::from_int(day))
+        Ok((_, _, day)) => Number(day.to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -709,7 +709,7 @@ fn eval_hour(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
       match excel_serial_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
-        Ok((_, _, _, hour, _, _)) => Number(Double::from_int(hour))
+        Ok((_, _, _, hour, _, _)) => Number(hour.to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -721,7 +721,7 @@ fn eval_minute(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
       match excel_serial_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
-        Ok((_, _, _, _, minute, _)) => Number(Double::from_int(minute))
+        Ok((_, _, _, _, minute, _)) => Number(minute.to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)
@@ -733,7 +733,7 @@ fn eval_second(call : EvalCall) -> FormulaValue {
   match call.values {
     [v0] =>
       match excel_serial_parts(v0, use_1904_dates=call.ctx.use_1904_dates) {
-        Ok((_, _, _, _, _, second)) => Number(Double::from_int(second))
+        Ok((_, _, _, _, _, second)) => Number(second.to_double())
         Err(err) => err
       }
     _ => Error(formula_error_value)

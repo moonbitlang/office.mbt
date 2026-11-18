@@ -99,10 +99,10 @@ test "formula builtins wb: workday functions normalize fractional dates" {
         workbook,
         "Sheet1",
         "WORKDAY",
-        [Number(Double::from_int(maximum_1900) + 0.5), Number(0.0)],
+        [Number(maximum_1900.to_double() + 0.5), Number(0.0)],
         ctx,
       ),
-      Double::from_int(maximum_1900),
+      maximum_1900.to_double(),
     ),
   )
   let maximum_1904 = maximum_supported_formula_date_serial(true)
@@ -113,10 +113,10 @@ test "formula builtins wb: workday functions normalize fractional dates" {
         workbook,
         "Sheet1",
         "WORKDAY.INTL",
-        [Number(Double::from_int(maximum_1904) + 0.5), Number(0.0), Number(1.0)],
+        [Number(maximum_1904.to_double() + 0.5), Number(0.0), Number(1.0)],
         ctx_1904,
       ),
-      Double::from_int(maximum_1904),
+      maximum_1904.to_double(),
     ),
   )
 }

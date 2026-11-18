@@ -115,7 +115,7 @@ priv enum OpKind {
     border_bottom~ : String,
     border_left~ : String,
     border_right~ : String,
-    border_color~ : String
+    border_color~ : String,
   )
   OpMerge(sheet~ : String, range~ : String)
   OpWidth(sheet~ : String, column~ : String, width~ : Double)
@@ -129,7 +129,7 @@ priv enum OpKind {
     categories~ : String,
     values~ : String,
     series_name~ : String,
-    title~ : String
+    title~ : String,
   )
   OpTable(
     sheet~ : String,
@@ -142,7 +142,7 @@ priv enum OpKind {
     row_stripes~ : Bool?,
     first_column~ : Bool,
     last_column~ : Bool,
-    column_stripes~ : Bool
+    column_stripes~ : Bool,
   )
   // `validation_type`, `operator`, and `error_style` hold the raw script
   // strings; they are mapped to engine enums at apply time (like `chart`'s
@@ -165,7 +165,7 @@ priv enum OpKind {
     input_message~ : String,
     error_title~ : String,
     error_message~ : String,
-    error_style~ : String
+    error_style~ : String,
   )
   // A conditional-formatting rule. `cf_type` is the raw script `type`
   // (validated at apply, like `chart`/`validate`). One op adds one rule to
@@ -201,7 +201,7 @@ priv enum OpKind {
     bar_border_color~ : String,
     icon_style~ : String,
     reverse_icons~ : Bool?,
-    stop_if_true~ : Bool?
+    stop_if_true~ : Bool?,
   )
   // Sheet management. `action` (rename/delete/hide/show/very-hide) is the raw
   // script string, validated at apply. `to` is the new name, for `rename`.
@@ -215,7 +215,7 @@ priv enum OpKind {
     action~ : String,
     at~ : Int32,
     count~ : Int32,
-    height~ : Double?
+    height~ : Double?,
   )
   // Column dimensions. `action` (hide/show) validated at apply; `at` a resolved
   // 1-based column and `count` the band size. Column width stays the `width` op.
@@ -1489,7 +1489,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       border_bottom~,
       border_left~,
       border_right~,
-      border_color~
+      border_color~,
     ) => {
       let base = build_style(
         bold~,
@@ -1551,7 +1551,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       categories~,
       values~,
       series_name~,
-      title~
+      title~,
     ) => {
       if categories == "" || values == "" {
         raise BatchError("chart requires non-empty 'categories' and 'values'")
@@ -1578,7 +1578,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       row_stripes~,
       first_column~,
       last_column~,
-      column_stripes~
+      column_stripes~,
     ) => {
       // Column names come from the header row of `range` (the engine
       // auto-names blanks/duplicates), so the script sets headers first,
@@ -1613,7 +1613,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       input_message~,
       error_title~,
       error_message~,
-      error_style~
+      error_style~,
     ) => {
       // Validate every enum-valued string up front, independent of whether
       // the type uses it, so an unknown value is always rejected rather than
@@ -1743,7 +1743,7 @@ pub fn apply_op(workbook : @xlsx.Workbook, op : BatchOp) -> Unit raise {
       bar_border_color~,
       icon_style~,
       reverse_icons~,
-      stop_if_true~
+      stop_if_true~,
     ) => {
       if !is_supported_cf_type(cf_type) {
         raise BatchError(

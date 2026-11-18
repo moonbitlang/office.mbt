@@ -101,7 +101,7 @@ test "deterministic AES providers derive stable bytes from seed and callsite" {
     false,
   )
   @test.assert_eq(random_provider(PdfAesV3PermissionsPadding, 4).length(), 4)
-  @test.assert_eq(random_provider(PdfAesV3PermissionsPadding, 0), Bytes::new(0))
+  @test.assert_eq(random_provider(PdfAesV3PermissionsPadding, 0), b"")
 }
 
 ///|
@@ -390,7 +390,7 @@ test "PdfDocument AESV2 passwords use revision 4 keys" {
     b"user",
     b"owner",
     @crypt_core.pdf_permissions_of_p(-3904),
-    fn(_, _, _) { Bytes::new(16) },
+    fn(_, _, _) { Bytes::make(16, b'\x00') },
     file_id=b"doc-id",
   )
   @test.assert_eq(try! doc.what_encryption(), Some(PdfEncryptionAES128(true)))
@@ -523,7 +523,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
           crypt_name_for_test("/OE"),
           PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
         ),
-        (crypt_name_for_test("/Perms"), PdfString(Bytes::new(15))),
+        (crypt_name_for_test("/Perms"), PdfString(Bytes::make(15, b'\x00'))),
       ],
       owner_entry,
       user_entry,
@@ -570,7 +570,7 @@ test "PdfDocument decrypt_with_password authenticates AESV3 revision 5 passwords
           crypt_name_for_test("/OE"),
           PdfString(crypt_aesv3_r5_owner_encryption_key_for_test()),
         ),
-        (crypt_name_for_test("/Perms"), PdfString(Bytes::new(16))),
+        (crypt_name_for_test("/Perms"), PdfString(Bytes::make(16, b'\x00'))),
       ],
       owner_entry,
       user_entry,

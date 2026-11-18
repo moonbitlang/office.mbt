@@ -1711,7 +1711,7 @@ fn Worksheet::default_col_width_pixels(self : Worksheet) -> Int32 {
     Some(w) => convert_col_width_to_pixels(w)
     None => {
       let base = props.base_col_width.unwrap_or(default_sheet_base_col_width)
-      convert_col_width_to_pixels(Double::from_int(base))
+      convert_col_width_to_pixels(base.to_double())
     }
   }
 }
@@ -2110,11 +2110,11 @@ pub fn Worksheet::add_image(
     Some((w, h)) => (w, h)
     None => (default_picture_width_px, default_picture_height_px)
   }
-  let mut base_w_px = Double::from_int(img_w_px)
-  let mut base_h_px = Double::from_int(img_h_px)
+  let mut base_w_px = img_w_px.to_double()
+  let mut base_h_px = img_h_px.to_double()
   if auto_fit {
-    let cw = Double::from_int(cell_width_px)
-    let ch = Double::from_int(cell_height_px)
+    let cw = cell_width_px.to_double()
+    let ch = cell_height_px.to_double()
     if auto_fit_ignore_aspect {
       base_w_px = cw
       base_h_px = ch
@@ -2341,12 +2341,12 @@ pub fn Worksheet::add_chart_with_options(
   // Convert the pixel dimension before multiplying. Multiplying as Int first
   // can wrap on both native and Wasm before any later range check sees it.
   let width_emu = drawing_scaled_extent_for_write(
-    Double::from_int(opts.dimension.width),
+    opts.dimension.width.to_double(),
     scale_x,
     "drawing chart width",
   )
   let height_emu = drawing_scaled_extent_for_write(
-    Double::from_int(opts.dimension.height),
+    opts.dimension.height.to_double(),
     scale_y,
     "drawing chart height",
   )

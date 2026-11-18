@@ -727,7 +727,9 @@ fn xml_entity_value(entity : StringView) -> Char? {
           return None
         }
       }
-      let value = @string.parse_int(digits, radix=base) catch { _ => return None }
+      let value = @string.parse_int(digits, radix=base) catch {
+        _ => return None
+      }
       if !is_valid_xml_char_reference(value) {
         return None
       }

@@ -334,7 +334,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
         (text_cmap_name_for_test("/Length"), PdfInteger(0)),
         (text_cmap_name_for_test("/CIDSystemInfo"), PdfInteger(1)),
       ]),
-      StreamGot(Bytes::new(0)),
+      StreamGot(b""),
     ),
   )
   @test.assert_eq((try! doc.parse_cmap(PdfIndirect(20))).cid_system_info, None)
@@ -368,7 +368,7 @@ test "PdfDocument parse_cmap reads stream dictionary metadata" {
         (text_cmap_name_for_test("/CIDSystemInfo"), PdfIndirect(24)),
         (text_cmap_name_for_test("/UseCMap"), PdfIndirect(25)),
       ]),
-      StreamGot(Bytes::new(0)),
+      StreamGot(b""),
     ),
   )
   let indirect = try! doc.parse_cmap(PdfIndirect(26))

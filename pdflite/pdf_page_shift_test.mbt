@@ -271,8 +271,8 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
   guard mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
-        "shift_pages: offset count must match page count"
-      )
+        "shift_pages: offset count must match page count",
+      ),
     ) else {
     fail("expected offset count validation")
   }
@@ -286,8 +286,8 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "shift_pages: range contains pages not present in pdf"
-      )
+        "shift_pages: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected page range validation")
   }
@@ -302,8 +302,8 @@ test "PdfDocument shift_pages rejects invalid offset lists" {
   guard cpdf_mismatch
     is Err(
       @core.PdfError::BadPageSpecification(
-        "shift_pdf: offset count must match page count"
-      )
+        "shift_pdf: offset count must match page count",
+      ),
     ) else {
     fail("expected cpdf shift_pdf offset count validation")
   }

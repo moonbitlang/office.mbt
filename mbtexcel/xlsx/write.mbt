@@ -673,7 +673,7 @@ fn drawing_pixel_offset_for_write(
   field : StringView,
 ) -> Int32 raise XlsxError {
   drawing_int64_to_int_for_write(
-    Int64::from_int(value) * Int64::from_int(emu_per_pixel),
+    value.to_int64() * emu_per_pixel.to_int64(),
     field,
   )
 }
@@ -711,7 +711,7 @@ fn drawing_axis_boundary_emu_for_write(
   idx0 : Int32,
 ) -> Int64 raise XlsxError {
   let pixels = metrics.pixel_span(0, idx0)
-  let factor = Int64::from_int(emu_per_pixel)
+  let factor = emu_per_pixel.to_int64()
   let max_pixels = (0x7fff_ffff_ffff_ffffL - 0xffff_ffffL) / factor
   if pixels > max_pixels {
     raise InvalidSheetOperation(msg="drawing grid geometry out of range")
@@ -731,8 +731,8 @@ fn two_cell_axis_to(
   }
   ignore(drawing_extent_for_write(size_emu, "drawing extent"))
   let start = drawing_axis_boundary_emu_for_write(metrics, start_idx0) +
-    Int64::from_int(start_off_emu)
-  let target = start + Int64::from_int(size_emu)
+    start_off_emu.to_int64()
+  let target = start + size_emu.to_int64()
   let grid_end = drawing_axis_boundary_emu_for_write(metrics, metrics.limit)
   if target > grid_end {
     raise InvalidSheetOperation(msg="drawing extends beyond worksheet grid")

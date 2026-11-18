@@ -98,11 +98,10 @@ fn AesEncryptKey::new(key : BytesView) -> AesEncryptKey {
     let mut word = words[index - 1]
     if index % key_words == 0 {
       word = (word << 8) | (word >> 24)
-      word = aes_packed_sub_bytes(UInt64::extend_uint(word)).to_uint() ^
-        (rcon << 24)
+      word = aes_packed_sub_bytes(word.to_uint64()).to_uint() ^ (rcon << 24)
       rcon = ((rcon << 1) ^ ((0U - (rcon >> 7)) & 0x1bU)) & 0xffU
     } else if key_words == 8 && index % key_words == 4 {
-      word = aes_packed_sub_bytes(UInt64::extend_uint(word)).to_uint()
+      word = aes_packed_sub_bytes(word.to_uint64()).to_uint()
     }
     words[index] = words[index - key_words] ^ word
   }
@@ -129,10 +128,10 @@ fn AesEncryptKey::encrypt(
   }
   for round = 1; round <= schedule.rounds; round = round + 1 {
     let first_pair = aes_packed_sub_bytes(
-      (UInt64::extend_uint(state[0]) << 32) | UInt64::extend_uint(state[1]),
+      (state[0].to_uint64() << 32) | state[1].to_uint64(),
     )
     let second_pair = aes_packed_sub_bytes(
-      (UInt64::extend_uint(state[2]) << 32) | UInt64::extend_uint(state[3]),
+      (state[2].to_uint64() << 32) | state[3].to_uint64(),
     )
     let column_0 = (first_pair >> 32).to_uint()
     let column_1 = first_pair.to_uint()

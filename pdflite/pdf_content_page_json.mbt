@@ -139,7 +139,7 @@ pub fn PdfDocument::test_extract_text(
       output_length += text.length()
       page_texts.push(text)
     } else {
-      page_texts.push(Bytes::new(0))
+      page_texts.push(b"")
     }
   }
   let output = Array::make(output_length, b'\n')

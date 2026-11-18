@@ -59,7 +59,7 @@ test "pdf_print_tree_to_buffer appends cpdf tree layout to existing buffer" {
     line_prefix="| ",
   )
   @test.assert_eq(
-    output.to_string(),
+    try! @utf16.decode(output.to_bytes(), endianness=Little, ignore_bom=true),
     "before\n| root\n| ├── left\n| │   └── leaf\n| └── right\n",
   )
   let alias_output = Buffer()
@@ -71,7 +71,11 @@ test "pdf_print_tree_to_buffer appends cpdf tree layout to existing buffer" {
     line_prefix="| ",
   )
   @test.assert_eq(
-    alias_output.to_string(),
+    try! @utf16.decode(
+      alias_output.to_bytes(),
+      endianness=Little,
+      ignore_bom=true,
+    ),
     "| root\n| ├── left\n| │   └── leaf\n| └── right\n",
   )
 }

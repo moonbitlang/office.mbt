@@ -10099,8 +10099,8 @@ fn acceptance_assert_resource_heavy_change_pages_for_test(
         [
           PdfIndirect(indirect_annotation),
           PdfDictionary(_) as action_annotation,
-        ]
-      )
+        ],
+      ),
     ) => {
       match
         doc

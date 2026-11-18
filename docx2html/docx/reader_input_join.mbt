@@ -58,13 +58,13 @@ priv enum ReaderInputJoinRefusal {
   ChildCountMismatch(
     parent~ : SourceElementId,
     dom_count~ : Int32,
-    cooked_source_count~ : Int32
+    cooked_source_count~ : Int32,
   )
   NameMismatch(
     source~ : SourceElementId,
     dom_name~ : String,
     source_uri~ : String,
-    source_local_name~ : String
+    source_local_name~ : String,
   )
   StructureMismatch(detail~ : String)
 }

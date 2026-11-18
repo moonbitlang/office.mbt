@@ -16,7 +16,7 @@ test "calc wildcard criteria edges" {
         let sheet = workbook.sheet("Sheet1").unwrap()
         for i, text in ["Moon", "MoonBit", "Mo*n", "Mo?n", "moonbit", "Sun"] {
           workbook.set_cell("Sheet1", "A\{i + 1}", text)
-          sheet.set_cell_value("B\{i + 1}", Numeric(Double::from_int(i + 1)))
+          sheet.set_cell_value("B\{i + 1}", Numeric((i + 1).to_double()))
         }
       },
       [
@@ -65,7 +65,7 @@ test "calc xlookup mode matrix" {
         ]
         for i in 0..<5 {
           let key = (i + 1) * 10
-          sheet.set_cell_value("A\{i + 1}", Numeric(Double::from_int(key)))
+          sheet.set_cell_value("A\{i + 1}", Numeric(key.to_double()))
           workbook.set_cell("Sheet1", "B\{i + 1}", "v\{key}")
           workbook.set_cell("Sheet1", "C\{i + 1}", names[i])
         }

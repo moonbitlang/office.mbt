@@ -226,17 +226,13 @@ test "pdf_content_bytes_of_op renders one content operator" {
 
 ///|
 test "pdf_content_bytes_of_ops preserves empty unknown spacing" {
-  @test.assert_eq(try! @pdflite.pdf_content_bytes_of_ops([]), Bytes::new(0))
+  @test.assert_eq(try! @pdflite.pdf_content_bytes_of_ops([]), b"")
   @test.assert_eq(
-    try! @pdflite.pdf_content_bytes_of_ops([Op_Unknown(Bytes::new(0)), Op_Q]),
+    try! @pdflite.pdf_content_bytes_of_ops([Op_Unknown(b""), Op_Q]),
     content_bytes_for_test("Q"),
   )
   @test.assert_eq(
-    try! @pdflite.pdf_content_bytes_of_ops([
-      Op_q,
-      Op_Unknown(Bytes::new(0)),
-      Op_Q,
-    ]),
+    try! @pdflite.pdf_content_bytes_of_ops([Op_q, Op_Unknown(b""), Op_Q]),
     content_bytes_for_test("q  Q"),
   )
 }
@@ -662,18 +658,15 @@ test "pdf_content_concat_streams inserts whitespace between split bytes" {
     ]),
     content_bytes_for_test("q Q BT"),
   )
-  @test.assert_eq(@pdflite.pdf_content_concat_streams([]), Bytes::new(0))
+  @test.assert_eq(@pdflite.pdf_content_concat_streams([]), b"")
   @test.assert_eq(
-    @pdflite.pdf_content_concat_streams([
-      Bytes::new(0),
-      content_bytes_for_test("q"),
-    ]),
+    @pdflite.pdf_content_concat_streams([b"", content_bytes_for_test("q")]),
     content_bytes_for_test("q"),
   )
   @test.assert_eq(
     @pdflite.pdf_content_concat_streams([
       content_bytes_for_test("q"),
-      Bytes::new(0),
+      b"",
       content_bytes_for_test("Q"),
     ]),
     content_bytes_for_test("q  Q"),

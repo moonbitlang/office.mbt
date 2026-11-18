@@ -123,7 +123,7 @@ test "core byte-view helpers cover boundary cases through root facade" {
   @test.assert_eq(@core.pdf_find_last_ascii(view, [120]), -1)
 
   let empty_number : Result[Int32, Error] = try
-    @core.pdf_parse_ascii_int_view(Bytes::new(0))
+    @core.pdf_parse_ascii_int_view(b"")
   catch {
     err => Err(err)
   } noraise {
@@ -156,7 +156,7 @@ test "core byte-view helpers cover boundary cases through root facade" {
     try! @core.pdf_parse_ascii_int_view(b"2147483647"),
     2147483647,
   )
-  @test.assert_eq(@syntax.pdf_number_view_int(Bytes::new(0)), None)
+  @test.assert_eq(@syntax.pdf_number_view_int(b""), None)
   @test.assert_eq(@syntax.pdf_number_view_int(b"+"), None)
   @test.assert_eq(@syntax.pdf_number_view_int(b"-"), None)
 }

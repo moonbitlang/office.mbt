@@ -170,8 +170,8 @@ test "PdfDocument redact_pages validates selected pages" {
   guard bad
     is Err(
       @core.PdfError::BadPageSpecification(
-        "redact_pages: range contains pages not present in pdf"
-      )
+        "redact_pages: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected redact_pages to reject an out-of-range page")
   }

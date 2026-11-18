@@ -354,8 +354,8 @@ fn form_control_end_anchor(
     Some(v) => if v <= 0.0 { 1.0 } else { v }
     None => 1.0
   }
-  let width_px = (Double::from_int(base_width_px) * scale_x).to_int()
-  let height_px = (Double::from_int(base_height_px) * scale_y).to_int()
+  let width_px = (base_width_px.to_double() * scale_x).to_int()
+  let height_px = (base_height_px.to_double() * scale_y).to_int()
   let mut col_end0 = col0
   let mut x2 = width_px
   let mut cur_col = col
@@ -811,7 +811,7 @@ fn parse_vml_textbox(
       Some(v) => {
         let n = @string.parse_int(v.trim(), radix=10) catch { _ => 0 }
         if n > 0 {
-          Some(Double::from_int(n) / 20.0)
+          Some(n.to_double() / 20.0)
         } else {
           None
         }

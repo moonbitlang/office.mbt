@@ -80,7 +80,7 @@ pub(all) enum PdfColourSpace {
     PdfTristimulusPoint,
     PdfTristimulusPoint,
     Array[Double],
-    Array[Double]
+    Array[Double],
   )
   PdfLab(PdfTristimulusPoint, PdfTristimulusPoint, Array[Double])
   PdfICCBased(
@@ -88,7 +88,7 @@ pub(all) enum PdfColourSpace {
     PdfColourSpace,
     Array[Double],
     @syntax.PdfObject?,
-    @syntax.PdfObject
+    @syntax.PdfObject,
   )
   PdfIndexed(PdfColourSpace, Array[(Int32, Array[Int32])])
   PdfPattern
@@ -98,7 +98,7 @@ pub(all) enum PdfColourSpace {
     Array[@core.PdfName],
     PdfColourSpace,
     @syntax.PdfObject,
-    @syntax.PdfObject
+    @syntax.PdfObject,
   )
 }
 

@@ -249,8 +249,8 @@ test "join refuses structural disagreement instead of guessing" {
       ChildCountMismatch(
         parent=SourceElementId(1),
         dom_count=1,
-        cooked_source_count=2
-      )
+        cooked_source_count=2,
+      ),
     ) else {
     fail("expected a child count mismatch under body")
   }
@@ -523,7 +523,7 @@ test "joined paragraph inputs record the deleted prefix paragraphs" {
         source: _,
         local_effects: _,
         shape: ReaderParagraph(inputs~, children=_, extras=_, properties=_),
-      }
+      },
     ) else {
     fail("expected the joined paragraph")
   }

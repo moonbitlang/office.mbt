@@ -45,7 +45,7 @@ test "private text ToUnicode CMap helpers reject malformed ranges" {
   let bfchar_entries : Array[(Int32, @core.PdfBytes)] = []
   pdf_text_push_tounicode_bfchar_entry(
     bfchar_entries,
-    Bytes::new(0),
+    b"",
     cmap_wbtest_text_bytes([0x00, 0x41]),
   )
   @test.assert_eq(bfchar_entries, [])

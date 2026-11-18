@@ -15,11 +15,11 @@ fn excel_serial_day_and_clock(
   if value.is_nan() ||
     value.is_inf() ||
     value < 0.0 ||
-    value >= Double::from_int(maximum_day + 1) {
+    value >= (maximum_day + 1).to_double() {
     return None
   }
   let mut serial_day = Double::to_int(Double::floor(value))
-  let fraction = value - Double::from_int(serial_day)
+  let fraction = value - serial_day.to_double()
   let mut total_seconds = Double::to_int(Double::round(fraction * 86400.0))
   if total_seconds >= 86400 {
     total_seconds = total_seconds - 86400

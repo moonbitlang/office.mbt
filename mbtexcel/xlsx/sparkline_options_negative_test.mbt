@@ -9,7 +9,7 @@ test "sparkline group flags and weight parse and rewrite" {
   for i in 1..<=5 {
     sheet.set_cell_value(
       "A\{i}",
-      Numeric(Double::from_int(if i % 2 == 0 { -i } else { i })),
+      Numeric((if i % 2 == 0 { -i } else { i }).to_double()),
     )
   }
   let weighted = @xlsx.SparklineOptions::new(["C1"], ["Sheet1!A1:A5"])
@@ -114,7 +114,7 @@ test "malformed sparkline attributes are rejected" {
   let workbook = @xlsx.Workbook::new()
   let sheet = workbook.add_sheet("Sheet1")
   for i in 1..<=3 {
-    sheet.set_cell_value("A\{i}", Numeric(Double::from_int(i)))
+    sheet.set_cell_value("A\{i}", Numeric(i.to_double()))
   }
   let opts = @xlsx.SparklineOptions::new(["C1"], ["Sheet1!A1:A3"])
   opts.set_manual_min(-2)

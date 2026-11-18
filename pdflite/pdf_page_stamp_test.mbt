@@ -295,8 +295,8 @@ test "PdfDocument stamp_pages rejects invalid page ranges and empty overlays" {
   guard bad_page
     is Err(
       @core.PdfError::BadPageSpecification(
-        "stamp_pages: range contains pages not present in pdf"
-      )
+        "stamp_pages: range contains pages not present in pdf",
+      ),
     ) else {
     fail("expected stamp_pages to reject invalid pages")
   }

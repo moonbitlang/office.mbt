@@ -164,7 +164,7 @@ fn write_any_real(buf : @buffer.Buffer, v : Double) -> Unit {
   // round to the same `f32`, as ryu chooses them.
   let bits = f.reinterpret_as_uint()
   let decimal = ryu_f2d(bits & 0x7FFFFFU, (bits >> 23) & 0xFFU)
-  let mut digits = UInt64::extend_uint(decimal.mantissa).reinterpret_as_int64()
+  let mut digits = decimal.mantissa.to_uint64().reinterpret_as_int64()
   let mut exp = decimal.exponent
   while digits != 0L && digits % 10L == 0L {
     digits = digits / 10L

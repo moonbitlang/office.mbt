@@ -14,7 +14,7 @@ pub fn PdfStreamDataCrypt::deep_copy(
       object_number,
       generation,
       file_key,
-      key_length_bits
+      key_length_bits,
     ) =>
       PdfStreamDataArc4Decrypt(
         object_number,
@@ -26,7 +26,7 @@ pub fn PdfStreamDataCrypt::deep_copy(
       object_number,
       generation,
       file_key,
-      key_length_bits
+      key_length_bits,
     ) =>
       PdfStreamDataAesV2Decrypt(
         object_number,

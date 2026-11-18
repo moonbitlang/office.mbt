@@ -19,8 +19,7 @@ test "packed AES S-box matches scalar field inversion in every byte lane" {
     let bytes = Bytes::makei(8, lane => ((value + lane * 37) % 256).to_byte())
     let mut packed = 0UL
     for lane in 0..<8 {
-      packed = packed |
-        (UInt64::extend_uint(bytes[lane].to_uint()) << (lane * 8))
+      packed = packed | (bytes[lane].to_uint().to_uint64() << (lane * 8))
     }
     let actual = aes_packed_sub_bytes(packed)
     for lane in 0..<8 {

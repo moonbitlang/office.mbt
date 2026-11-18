@@ -59,7 +59,7 @@ test "pdf_objects_of_entries derives max object number without event log" {
   @test.assert_eq(objects.log(), [])
   guard objects.get_entry(1)
     is Some(
-      { data: ObjectParsedAlreadyDecrypted(PdfInteger(10)), generation: 3, }
+      { data: ObjectParsedAlreadyDecrypted(PdfInteger(10)), generation: 3, },
     ) else {
     fail("expected parsed state and generation to be preserved")
   }
@@ -92,7 +92,7 @@ test "PdfObjects map_objects_in_place preserves parsed state tags" {
   }
   guard objects.get_entry(2)
     is Some(
-      { data: ObjectParsedAlreadyDecrypted(PdfInteger(21)), generation: 3, }
+      { data: ObjectParsedAlreadyDecrypted(PdfInteger(21)), generation: 3, },
     ) else {
     fail("expected mapped already-decrypted object")
   }

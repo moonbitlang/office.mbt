@@ -131,7 +131,7 @@ priv enum ReaderProjectionRefusal {
   SourceShapeMismatch(
     source~ : SourceElementId,
     expected~ : String,
-    actual~ : String
+    actual~ : String,
   )
   /// Visible content that no logical paragraph ever owns (flow-level
   /// content after the final paragraph). Zero-width markers in the same
