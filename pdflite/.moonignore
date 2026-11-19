@@ -49,7 +49,6 @@ cram/
 # Internal plans and archived migration notes.
 /ARCHITECTURE_PROPOSAL.md
 /EXECUTION_PLAN.md
-/OCaml2MoonBit.md
 /PdfMarkdownAcceptancePlan.md
 /docs/history/
 

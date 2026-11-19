@@ -75,5 +75,5 @@ test "digest and permission helpers expose PDF primitives" {
 - Prefer published-vector tests and exact byte assertions in regular tests;
   README examples should stay small and deterministic.
 - Run `moon test crypt_core/README.mbt.md` after editing this file.
-- Run `moon info` before review; this README should not change
+- Run `moon fmt` before review; this README should not change
   `crypt_core/pkg.generated.mbti`.

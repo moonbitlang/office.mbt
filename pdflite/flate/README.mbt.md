@@ -85,5 +85,5 @@ test "prefix decoder reports consumed compressed bytes" {
   library: a failure there means that every PDF this package writes changed, or
   that damaged input is read differently.
 - Run `moon test flate/README.mbt.md` after editing this file.
-- Run `moon info` before review; this README should not change
+- Run `moon fmt` before review; this README should not change
   `flate/pkg.generated.mbti`.

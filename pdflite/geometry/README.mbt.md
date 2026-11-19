@@ -74,5 +74,5 @@ test "transforms apply to points and render as PDF matrices" {
 - Use exact assertions for simple unit conversions and tolerance-based tests for
   rotations or decompositions.
 - Run `moon test geometry/README.mbt.md` after editing this file.
-- Run `moon info` before review; this README should not change
+- Run `moon fmt` before review; this README should not change
   `geometry/pkg.generated.mbti`.

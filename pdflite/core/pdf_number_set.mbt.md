@@ -52,5 +52,5 @@ test "number set pushes only unseen values" {
 - README examples are blackbox tests for the core package API.
 - Tests should cover duplicate suppression and mutation of the visited set.
 - Run `moon test core/pdf_number_set.mbt.md` after editing this file.
-- Run `moon info` before review; this README should not change
+- Run `moon fmt` before review; this README should not change
   `core/pkg.generated.mbti`.

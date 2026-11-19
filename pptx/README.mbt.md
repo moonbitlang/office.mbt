@@ -56,7 +56,6 @@ Run all commands from the **repository root**:
 ```sh
 moon check --deny-warn
 moon test --target native
-moon info
 moon fmt
 ```
 

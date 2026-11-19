@@ -124,6 +124,6 @@ test "name writer escapes delimiter bytes" {
 - `README.mbt.md` blocks are blackbox tests for the root package.
 - Most root tests should run on all MoonBit targets. Native-only random or file
   behavior belongs in targeted test files or the `async_io` package.
-- For public API changes, run `moon info` and review `pkg.generated.mbti`.
+- For public API changes, run `moon fmt` and review `pkg.generated.mbti`.
 - For behavior changes, run `moon test`; for native reader/writer coverage, also
   run native-target tests.

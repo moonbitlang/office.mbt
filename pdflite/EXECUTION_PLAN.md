@@ -39,10 +39,7 @@ These carry near-zero behavior risk and unblock everything else.
 - Move ONLY the three genuinely-historical CamlPDF docs into `docs/history/`
   (use `git mv`): `CamlPDFArchitecturePlan.md`, `CamlPDFMigrationPlan.md`,
   `CamlPDFMigrationTodo.md`.
-- KEEP at root (verified to be living, not historical): `OCaml2MoonBit.md` is an
-  actively-maintained porting guide ("Update it whenever a reusable porting rule
-  ... is verified"); `PdfMarkdownAcceptancePlan.md` is an active plan ("This plan
-  tracks ..."). Archiving these was rejected after reading them.
+- Keep `PdfMarkdownAcceptancePlan.md` at root for Markdown acceptance planning.
 - No code touched. Gate: `moon check` (should be a no-op) + repo builds.
 
 ### Commit A2 — Land planning docs
@@ -151,7 +148,7 @@ For one domain at a time: demote `pub` methods that are only used by blackbox te
 to non-`pub`, convert those specific `_test.mbt` files to `_wbtest.mbt` (whitebox)
 so they can still call them, and KEEP a blackbox suite around the genuine public
 API. Shrinks root's `.mbti` toward the real ~11-method external surface. Review the
-`moon info` diff each time.
+`.mbti` diff after `moon fmt` each time.
 
 ## Checkpoints
 

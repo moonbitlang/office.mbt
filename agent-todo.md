@@ -11,7 +11,7 @@ References:
 
 1. Add/extend MoonBit API (+ docs if needed)
 2. Add focused tests (prefer snapshots via `inspect`)
-3. Run `moon info && moon fmt`
+3. Run `moon fmt`
 4. Run `moon test` (use `moon test --update` if snapshots legitimately change)
 5. Commit with a detailed message and push to `origin/main`
 

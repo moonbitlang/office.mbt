@@ -3,8 +3,8 @@
 # Run the CI lint checks and an additional corpus CLI smoke check locally.
 # --fast omits the Wasm and JS type checks, not the corpus checks.
 #
-# Unlike CI, this script leaves the fixes applied: `moon fmt` and `moon info`
-# rewrite the tree in place, so a failure here is usually one `git add -u`
+# Unlike CI, this script leaves the fixes applied: `moon fmt` rewrites source
+# and generated interfaces in place, so a failure here is usually one `git add -u`
 # away from green.
 #
 # Usage:
@@ -81,13 +81,12 @@ run "corpus CLI smoke" bash docx2html/tests/corpus/run.sh
 
 snapshot_content > "$snapshot_dir/before" || exit 1
 run "moon fmt" moon fmt
-run "moon info" moon info
 
 snapshot_content > "$snapshot_dir/after" || exit 1
 if ! cmp -s "$snapshot_dir/before" "$snapshot_dir/after"; then
   fail "formatting/interface drift"
-  printf '\n%smoon fmt / moon info changed source or interface content.%s\n' "$red" "$reset"
-  printf 'CI rejects this in its "Format check" / "Interface check" steps.\n'
+  printf '\n%smoon fmt changed source or interface content.%s\n' "$red" "$reset"
+  printf 'CI rejects this in its "Format and interface check" step.\n'
   printf 'The corrections are already applied here — review and stage them:\n\n'
   git --no-pager diff --stat
   printf '\n    git add -u\n\n'

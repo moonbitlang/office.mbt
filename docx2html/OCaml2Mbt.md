@@ -16,7 +16,7 @@ When in doubt, probe with `moon run -c '...'`. Probes in this guide were verifie
 3. Choose MoonBit package boundaries and imports before coding. Add imports to `moon.pkg`; MoonBit source files do not use OCaml-style `open`.
 4. Port one behavioral slice at a time with tests. Prefer a thin public API skeleton, then fill parser/serializer/algorithm internals behind it.
 5. Probe uncertain language or library behavior with `moon run -c` and, when needed, a small OCaml toplevel probe. Keep probes minimal.
-6. Finish each slice with `moon check`, `moon test`, `moon info`, and `moon fmt`. You can add more warnings `moon check --warn-list +...` to be more strict.
+6. Finish each slice with `moon check`, `moon test`, and `moon fmt`. You can add more warnings `moon check --warn-list +...` to be more strict.
 
 ## Type-Mapping Cheatsheet
 
@@ -631,14 +631,14 @@ moon test package/dir --filter 'glob'      # targeted test glob
 moon test --update                         # refresh snapshots, then review diff
 moon test --target native                  # required for async I/O tests
 moon coverage analyze > uncovered.log      # coverage report
-moon info && moon fmt                      # final interface update and format
+moon fmt                                  # final interface update and format
 ```
 
 Validation rule for each migration patch:
 
 1. Add or update tests before or with the ported code.
 2. Run targeted `moon test` while developing.
-3. Finish with `moon check --warn-list +73`, `moon test`, `moon info`, and `moon fmt`.
+3. Finish with `moon check --warn-list +73`, `moon test`, and `moon fmt`.
 
 ## Update Discipline
 

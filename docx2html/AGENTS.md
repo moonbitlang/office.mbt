@@ -26,20 +26,13 @@ You can browse and install extra skills here:
 
 ## Tooling
 
-- `moon fmt` is used to format your code properly.
+- In the last step, run `moon fmt` to format the code and update generated
+  interfaces. It automatically runs `moon info`; do not run it separately.
+  Each package's `.mbti` file describes its public interface. Review its diff
+  to confirm that any public API changes are expected.
 
 - `moon ide` provides project navigation helpers like `peek-def`, `outline`, and
   `find-references`. See $moonbit-agent-guide for details.
-
-- `moon info` is used to update the generated interface of the package, each
-  package has a generated interface file `.mbti`, it is a brief formal
-  description of the package. If nothing in `.mbti` changes, this means your
-  change does not bring the visible changes to the external package users, it is
-  typically a safe refactoring.
-
-- In the last step, run `moon info && moon fmt` to update the interface and
-  format the code. Check the diffs of `.mbti` file to see if the changes are
-  expected.
 
 - Run `moon test` to check tests pass. MoonBit supports snapshot testing; when
   changes affect outputs, run `moon test --update` to refresh snapshots.

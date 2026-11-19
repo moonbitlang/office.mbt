@@ -29,10 +29,10 @@ That is all — the hooks are already executable and committed.
 | Hook         | Runs                                            | Cost |
 | ------------ | ----------------------------------------------- | ---- |
 | `pre-commit` | `moon check`                                    | seconds (warm) |
-| `pre-push`   | `scripts/ci/local-gate.sh` — `moon fmt`, `moon info`, `moon check` for native/wasm/js | ~13 s (warm) |
+| `pre-push`   | `scripts/ci/local-gate.sh` — `moon fmt`, `moon check` for native/wasm/js | ~13 s (warm) |
 
-`moon fmt` and `moon info` rewrite files, so they belong in `pre-push` rather
-than `pre-commit`: rewriting mid-commit would leave the corrected copies
+`moon fmt` rewrites source and generated interfaces, so it belongs in `pre-push`
+rather than `pre-commit`: rewriting mid-commit would leave the corrected copies
 unstaged and commit the uncorrected ones.
 
 Run the gate by hand at any time:

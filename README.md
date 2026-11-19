@@ -42,7 +42,6 @@ Run these commands from the repository root:
 moon update
 moon check
 moon test
-moon info
 moon fmt
 moon run office-cli -- help all --json
 moon run mbtexcel/cmd/xlsx -- --help

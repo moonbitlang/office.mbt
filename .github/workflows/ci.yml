@@ -86,24 +86,13 @@ jobs:
       - name: DOCX corpus projection regression
         run: python3 docx2html/tests/corpus/projection_check.py
 
-      - name: Format check
+      # moon fmt also regenerates every member's committed .mbti interfaces.
+      - name: Format and interface check
         run: |
           moon fmt
           if ! git diff --quiet; then
             echo "::error::moon fmt changed files; run moon fmt and commit the result (or scripts/ci/local-gate.sh)."
             git --no-pager diff
-            exit 1
-          fi
-
-      # Regenerate every member's `pkg.generated.mbti` and fail if the committed
-      # interfaces drift from the source (all members commit their .mbti).
-      # Run `moon info` and commit the result to fix.
-      - name: Interface check
-        run: |
-          moon info
-          if ! git diff --quiet -- '*pkg.generated.mbti'; then
-            echo "::error::pkg.generated.mbti out of date; run moon info and commit (or scripts/ci/local-gate.sh)."
-            git --no-pager diff --stat -- '*pkg.generated.mbti'
             exit 1
           fi
 

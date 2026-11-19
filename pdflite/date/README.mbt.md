@@ -65,5 +65,5 @@ test "bad date syntax raises shared PdfError" {
 - README examples are blackbox tests for the public date API.
 - Add tests for both round trips and malformed input when changing parser rules.
 - Run `moon test date/README.mbt.md` after editing this file.
-- Run `moon info` before review; this README should not change
+- Run `moon fmt` before review; this README should not change
   `date/pkg.generated.mbti`.

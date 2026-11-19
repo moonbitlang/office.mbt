@@ -54,7 +54,7 @@ large PR.
   the final quiet local run was intentionally stopped after the product
   priority changed to functional completeness. Do not record that local matrix
   as a full PASS; exact-head GitHub CI remains authoritative for it.
-- Before merge, commit this handoff, run `moon info && moon fmt`, obtain a
+- Before merge, commit this handoff, run `moon fmt`, obtain a
   brand-new ephemeral `gpt-5.6-sol` Ultra review of the exact HEAD with
   functional correctness and maintainability as its merge criteria, push that
   exact HEAD, and require its GitHub CI matrix to be green. If either gate finds
@@ -389,7 +389,7 @@ clear revert story.
 For every PR:
 
 1. Rebase on current `origin/main`; do not review a stale stacked base.
-2. Run `moon info && moon fmt`, inspect all `.mbti` changes, then run
+2. Run `moon fmt`, inspect all `.mbti` changes, then run
    `moon check` and the focused tests.
 3. Run the relevant native, Wasm, and JS gates. For Office CLI changes, build
    the native CLI and run `moon cram test office-cli/cram` from the same
@@ -413,7 +413,6 @@ CI-equivalent local commands are documented in `.github/workflows/ci.yml`. The
 complete matrix currently includes:
 
 ```text
-moon info
 moon fmt
 moon check
 moon check --target wasm

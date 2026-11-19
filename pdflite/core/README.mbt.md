@@ -66,5 +66,5 @@ test "byte validation raises PdfError" {
 - README examples are blackbox tests for the public `core` API.
 - Add assertion tests for exact byte arrays and exact `PdfError` variants.
 - Run `moon test core/README.mbt.md` after editing this file.
-- Run `moon info` before review; this README should not change
+- Run `moon fmt` before review; this README should not change
   `core/pkg.generated.mbti`.

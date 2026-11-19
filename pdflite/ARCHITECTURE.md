@@ -84,7 +84,6 @@ but every exception should have an obvious next extraction step.
 
    ```bash
    moon check
-   moon info
    moon fmt
    moon test
    ```

@@ -72,7 +72,6 @@ jobs:
           done
           test "${#packages[@]}" -gt 0
           moon check "${packages[@]}"
-          moon info "${packages[@]}"
           git diff --exit-code -- "${modules[@]}"
           moon test "${packages[@]}"
           moon fmt "${packages[@]}"

@@ -196,7 +196,7 @@ origin/main after #70 lands, before merging (it touches ci.yml + agent-json-sche
 
 ## Quality gates (every PR)
 
-- Finish with `moon info && moon fmt` (AGENTS.md order); then inspect
+- Finish with `moon fmt` (as required by AGENTS.md); then inspect
   `git diff -- '*moon.pkg'` and revert ONLY hunks that are the nightly pkgtype
   migration — never blanket `git checkout -- '**/moon.pkg'` when a PR intentionally
   edits or adds manifests (re-apply intentional edits after fmt if needed); review the

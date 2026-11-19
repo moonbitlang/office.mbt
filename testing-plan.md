@@ -75,7 +75,6 @@ Out of scope for now:
 ## Tooling & Commands
 
 - `moon check`
-- `moon info`
 - `moon fmt`
 - `moon test --filter "mbtexcel*"` for focused wrapper tests
 - `moon test` (full suite)

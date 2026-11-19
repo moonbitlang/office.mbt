@@ -61,7 +61,7 @@ Mammoth's dynamic JS surface.
 Use this gate before publishing or claiming a parity milestone:
 
 ```bash
-moon info && moon fmt
+moon fmt
 moon test --target native
 moon check --target native --warn-list +73
 moon check --target all --warn-list +73
@@ -69,7 +69,7 @@ node scripts/stress_compare.mjs
 git diff --check
 ```
 
-When public APIs change, inspect `pkg.generated.mbti` after `moon info` and
+When public APIs change, inspect `pkg.generated.mbti` after `moon fmt` and
 bump `moon.mod` before publishing because Mooncakes versions are immutable.
 
 ## Coverage Notes

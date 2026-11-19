@@ -2,7 +2,7 @@
 #
 # Keep the commit-time gate cheap and non-mutating: `moon check` only.
 # The formatting and interface gates live in `pre-push`, because `moon fmt`
-# and `moon info` rewrite files — doing that mid-commit would leave the
+# rewrites source and generated interfaces — doing that mid-commit would leave the
 # rewritten copies unstaged and the commit subtly wrong.
 
 set -e

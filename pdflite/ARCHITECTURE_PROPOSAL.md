@@ -221,7 +221,7 @@ disappearing root, both wrong):
 > general gate/`.mbti`-review discipline still apply.
 
 The ordering matters because of the keystone. Each slice ends with
-`moon check && moon info && moon fmt && moon test` and an intentional review of
+`moon check && moon fmt && moon test` and an intentional review of
 the `.mbti` diff.
 
 ### Slice 0 — Tooling & hygiene (low risk, unblocks the rest)
