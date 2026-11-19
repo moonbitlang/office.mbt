@@ -141,7 +141,7 @@ test "ByteOutput writes repeated bytes for padding and fill" {
   let empty = try! @core.byte_output_new()
   try! empty.write_repeated_byte(0, value=0x41)
   @test.assert_eq(empty.position(), 0)
-  @test.assert_eq(empty.to_bytes(), Bytes::new(0))
+  @test.assert_eq(empty.to_bytes(), b"")
   let bad_length : Result[Unit, Error] = try
     output.write_repeated_byte(-1)
   catch {

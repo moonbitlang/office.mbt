@@ -11,7 +11,7 @@ test "byte view ascii search helpers cover boundaries" {
 ///|
 test "byte view ascii integer parser rejects malformed input" {
   let empty_number : Result[Int32, Error] = try
-    @core.pdf_parse_ascii_int_view(Bytes::new(0))
+    @core.pdf_parse_ascii_int_view(b"")
   catch {
     err => Err(err)
   } noraise {

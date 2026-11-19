@@ -705,7 +705,7 @@ test "color utilities" {
 
   // HSL to RGB
   let (r, _, _) = @xlsx.hsl_to_rgb(0.0, 1.0, 0.5) // Red
-  inspect(r, content="b'\\xFF'") // 255
+  inspect(r.to_int(), content="255")
 
   // Theme color with tint
   let tinted = @xlsx.theme_color("FF0000", 0.5)

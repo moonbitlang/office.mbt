@@ -2180,7 +2180,7 @@ fn fixture_acceptance_assert_cpdf_h1_no_struct_tree_entries_for_test(
     ),
     [],
   )
-  @test.assert_eq(document.struct_tree_text(), Bytes::new(0))
+  @test.assert_eq(document.struct_tree_text(), b"")
   let struct_json = document.extract_struct_tree().stringify()
   @test.assert_eq(struct_json.contains("\"/StructTreeRoot\""), false)
 }

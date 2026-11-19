@@ -1332,7 +1332,7 @@ test "no_device_cs uses ICC-based sRGB and sGrey color spaces" {
     ),
   )
   // The v4 sRGB profile for PDF 1.7.
-  inspect(p.stream_data(profile)[8], content="b'\\x04'")
+  inspect(p.stream_data(profile)[8].to_int(), content="4")
   // Transparency groups, shadings and separations use the ICC-based spaces.
   let x0 = p.path(res, ["XObject", "x0"])
   inspect(p.show(p.path(x0, ["Group", "CS"])) == p.show(srgb), content="true")
@@ -1383,7 +1383,7 @@ test "PDF/A uses ICC-based colors and an sRGB output intent" {
   )
   // PDF 1.4 to 1.6 use the v2 profile.
   let profile = p.get(oi[0], "DestOutputProfile")
-  inspect(p.stream_data(profile)[8], content="b'\\x02'")
+  inspect(p.stream_data(profile)[8].to_int(), content="2")
   // The page's color space uses the same profile.
   let cs = p.path(p.page(0), ["Resources", "ColorSpace", "c0"])
   inspect(p.show(p.items(cs)[1]) == p.show(p.resolve(profile)), content="true")
