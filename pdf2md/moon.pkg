@@ -1,6 +1,5 @@
 import {
   "moonbitlang/pdflite/markdown",
-  "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/core/argparse",
   "moonbitlang/core/encoding/utf8",

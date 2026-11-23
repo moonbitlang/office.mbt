@@ -1,7 +1,6 @@
 import {
   "moonbitlang/mbtexcel/demos" @demo_api,
   "moonbitlang/mbtexcel/xlsx",
-  "moonbitlang/async",
   "moonbitlang/async/fs" @async/fs,
   "moonbitlang/core/env",
 }
