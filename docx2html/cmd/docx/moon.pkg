@@ -8,7 +8,6 @@ import {
   "moonbitlang/docx2html/paths",
   "moonbitlang/docx2html/opc",
   "moonbitlang/docx2html/internal/cli",
-  "moonbitlang/async",
   "moonbitlang/async/fs" @afs,
   "moonbitlang/async/os_error",
   "moonbitlang/core/argparse",
